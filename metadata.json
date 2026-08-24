@@ -1,0 +1,6 @@
+{
+  "name": "EMIZA Warehouse Operations (WOP)",
+  "description": "Production-ready warehouse operations platform for Inward Gate Entry, RTO/B2C & B2B Returns, Barcode Scanning, Masters, and PDF Manifests.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

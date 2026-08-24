@@ -1,0 +1,741 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Smartphone,
+  QrCode,
+  Camera,
+  CameraOff,
+  Volume2,
+  VolumeX,
+  Vibrate,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  ArrowLeft,
+  X,
+  List,
+  Sparkles,
+  Zap,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  ShieldCheck,
+  Building2,
+  Truck,
+  Calendar,
+  Layers,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
+import {
+  ReturnBatch,
+  ScannedReturnItem,
+  ReturnRemarkType,
+  Warehouse,
+  Client,
+  Courier,
+  User,
+} from '../types';
+
+interface HandheldScannerViewProps {
+  activeBatch: ReturnBatch;
+  batches: ReturnBatch[];
+  scannedItems: ScannedReturnItem[];
+  clients: Client[];
+  couriers: Courier[];
+  activeWarehouse: Warehouse;
+  currentUser: User;
+  onScanItem: (batchId: string, trackingNumber: string, remark: ReturnRemarkType) => { success: boolean; message: string; item?: ScannedReturnItem };
+  onSelectBatch: (batchId: string) => void;
+  onCloseBatchRequest: (batch: ReturnBatch) => void;
+  onExitDeviceMode: () => void;
+}
+
+export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
+  activeBatch,
+  batches,
+  scannedItems,
+  clients,
+  couriers,
+  activeWarehouse,
+  currentUser,
+  onScanItem,
+  onSelectBatch,
+  onCloseBatchRequest,
+  onExitDeviceMode,
+}) => {
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [selectedRemark, setSelectedRemark] = useState<ReturnRemarkType>('Good');
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [vibrateEnabled, setVibrateEnabled] = useState(true);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [showRecentDrawer, setShowRecentDrawer] = useState(false);
+  const [showBatchPicker, setShowBatchPicker] = useState(false);
+  const [lastScan, setLastScan] = useState<{ success: boolean; msg: string; awb: string; time: string } | null>(null);
+  const [scanAnimation, setScanAnimation] = useState<'success' | 'error' | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scanBufferRef = useRef<string>('');
+  const lastKeyTimeRef = useRef<number>(0);
+
+  const activeClient = clients.find(c => c.id === activeBatch.clientId);
+  const activeCourier = couriers.find(cr => cr.id === activeBatch.courierId);
+  const batchItems = scannedItems.filter(i => i.batchId === activeBatch.id);
+  const openBatches = batches.filter(b => b.warehouseId === activeWarehouse.id && b.status === 'Open');
+
+  // Keep focus on input for hardware laser guns / PDA wedge
+  useEffect(() => {
+    const focusTimer = setInterval(() => {
+      if (!isCameraActive && !showBatchPicker && document.activeElement !== inputRef.current) {
+        inputRef.current?.focus();
+      }
+    }, 1500);
+
+    inputRef.current?.focus();
+    return () => clearInterval(focusTimer);
+  }, [isCameraActive, showBatchPicker, activeBatch.id]);
+
+  // Global Hardware Barcode Gun / Wedge key listener (captures rapid laser scanner bursts)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in standard text inputs elsewhere
+      if (document.activeElement?.tagName === 'TEXTAREA') return;
+
+      const now = Date.now();
+      const elapsed = now - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = now;
+
+      // Barcode scanners type very rapidly (< 50ms per key)
+      if (e.key === 'Enter') {
+        if (scanBufferRef.current.length >= 3) {
+          e.preventDefault();
+          const scannedCode = scanBufferRef.current.trim().toUpperCase();
+          scanBufferRef.current = '';
+          processScan(scannedCode);
+        }
+      } else if (e.key.length === 1) {
+        if (elapsed > 200) {
+          scanBufferRef.current = '';
+        }
+        scanBufferRef.current += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [activeBatch.id, selectedRemark]);
+
+  // Haptic feedback & Audio Beep
+  const triggerFeedback = (isSuccess: boolean) => {
+    if (vibrateEnabled && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        if (isSuccess) {
+          navigator.vibrate(80);
+        } else {
+          navigator.vibrate([150, 80, 150]);
+        }
+      } catch (e) {
+        // ignore vibrate errors
+      }
+    }
+
+    if (soundEnabled) {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (isSuccess) {
+          osc.frequency.setValueAtTime(1046.5, ctx.currentTime); // High C
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, ctx.currentTime); // Low A
+          gain.gain.setValueAtTime(0.25, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        }
+      } catch (e) {
+        // audio context not allowed without prior user gesture
+      }
+    }
+  };
+
+  // Process AWB Scan
+  const processScan = (rawAwb: string) => {
+    const awb = rawAwb.trim().toUpperCase();
+    if (!awb) return;
+
+    const result = onScanItem(activeBatch.id, awb, selectedRemark);
+    triggerFeedback(result.success);
+
+    setLastScan({
+      success: result.success,
+      msg: result.message,
+      awb: awb,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    });
+
+    setScanAnimation(result.success ? 'success' : 'error');
+    setTimeout(() => setScanAnimation(null), 800);
+
+    setBarcodeInput('');
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (barcodeInput.trim()) {
+      processScan(barcodeInput);
+    }
+  };
+
+  // Camera Scanner Setup
+  const startCamera = async () => {
+    setCameraError(null);
+    setIsCameraActive(true);
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera API is not supported on this browser/device.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      });
+
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+
+      // If Native BarcodeDetector is supported (Android Chrome / Edge / modern browsers)
+      if ('BarcodeDetector' in window) {
+        const barcodeDetector = new (window as any).BarcodeDetector({
+          formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'data_matrix'],
+        });
+
+        const detectLoop = async () => {
+          if (!mediaStreamRef.current || !videoRef.current) return;
+          try {
+            if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+              const barcodes = await barcodeDetector.detect(videoRef.current);
+              if (barcodes.length > 0) {
+                const detectedVal = barcodes[0].rawValue;
+                if (detectedVal) {
+                  processScan(detectedVal);
+                  // Brief pause before next auto detect
+                  await new Promise(r => setTimeout(r, 1200));
+                }
+              }
+            }
+          } catch (err) {
+            // frame detect error
+          }
+          if (isCameraActive) {
+            requestAnimationFrame(detectLoop);
+          }
+        };
+
+        requestAnimationFrame(detectLoop);
+      }
+    } catch (err: any) {
+      setCameraError(err?.message || 'Could not access device camera. Please grant camera permissions.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsCameraActive(false);
+    setTorchOn(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const toggleTorch = async () => {
+    if (!mediaStreamRef.current) return;
+    const track = mediaStreamRef.current.getVideoTracks()[0];
+    if (track && (track.getCapabilities?.() as any)?.torch) {
+      try {
+        const nextTorch = !torchOn;
+        await (track as any).applyConstraints({
+          advanced: [{ torch: nextTorch }],
+        });
+        setTorchOn(nextTorch);
+      } catch (e) {
+        // torch not supported
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const conditionButtons: { key: ReturnRemarkType; label: string; badge: string; color: string; activeColor: string }[] = [
+    { key: 'Good', label: 'Good (QC Pass)', badge: '1', color: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80', activeColor: 'bg-emerald-600 text-white border-emerald-400 ring-2 ring-emerald-300 shadow-lg shadow-emerald-600/40' },
+    { key: 'Damage', label: 'Damage', badge: '2', color: 'bg-rose-950/60 text-rose-300 border-rose-800/80', activeColor: 'bg-rose-600 text-white border-rose-400 ring-2 ring-rose-300 shadow-lg shadow-rose-600/40' },
+    { key: 'Open Box', label: 'Open Box', badge: '3', color: 'bg-amber-950/60 text-amber-300 border-amber-800/80', activeColor: 'bg-amber-600 text-white border-amber-400 ring-2 ring-amber-300 shadow-lg shadow-amber-600/40' },
+    { key: 'Wrong Product', label: 'Wrong Product', badge: '4', color: 'bg-purple-950/60 text-purple-300 border-purple-800/80', activeColor: 'bg-purple-600 text-white border-purple-400 ring-2 ring-purple-300 shadow-lg shadow-purple-600/40' },
+    { key: 'Short Qty', label: 'Short Qty', badge: '5', color: 'bg-orange-950/60 text-orange-300 border-orange-800/80', activeColor: 'bg-orange-600 text-white border-orange-400 ring-2 ring-orange-300 shadow-lg shadow-orange-600/40' },
+    { key: 'Missing Product', label: 'Missing Prod', badge: '6', color: 'bg-red-950/60 text-red-300 border-red-800/80', activeColor: 'bg-red-600 text-white border-red-400 ring-2 ring-red-300 shadow-lg shadow-red-600/40' },
+    { key: 'Others', label: 'Others', badge: '7', color: 'bg-slate-800 text-slate-300 border-slate-700', activeColor: 'bg-slate-600 text-white border-slate-400 ring-2 ring-white/40 shadow-lg shadow-slate-600/40' },
+  ];
+
+  return (
+    <div className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans select-none ${
+      scanAnimation === 'success' ? 'ring-8 ring-inset ring-emerald-500/40 transition-all duration-300' : ''
+    } ${
+      scanAnimation === 'error' ? 'ring-8 ring-inset ring-rose-500/40 transition-all duration-300' : ''
+    }`}>
+      {/* 1. TOP DEVICE STATUS BAR */}
+      <div className="bg-slate-900/95 border-b border-slate-800/90 px-3 py-2 sticky top-0 z-30 shadow-md backdrop-blur">
+        <div className="flex items-center justify-between gap-2 max-w-lg mx-auto">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onExitDeviceMode}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 text-xs font-bold transition-all active:scale-95"
+              title="Exit Device Mode"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden xs:inline">Desktop</span>
+            </button>
+
+            <button
+              onClick={() => setShowBatchPicker(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-left transition-all active:scale-95"
+            >
+              <div className="text-[9px] uppercase font-extrabold tracking-wider text-indigo-400 flex items-center gap-1">
+                <Layers className="w-2.5 h-2.5" /> Batch Switch
+              </div>
+              <div className="text-xs font-black font-mono text-white truncate max-w-[130px]">
+                {activeBatch.batchNumber}
+              </div>
+            </button>
+          </div>
+
+          {/* Quick Counter HUD */}
+          <div className="flex items-center gap-2">
+            <div className="text-right">
+              <div className="text-[9px] text-slate-400 uppercase font-extrabold">Scanned</div>
+              <div className="text-lg font-black font-mono text-emerald-400 leading-none">
+                {activeBatch.totalScanned}
+                <span className="text-[10px] text-slate-500 font-normal">/{activeBatch.expectedCount || 50}</span>
+              </div>
+            </div>
+
+            {/* Sound & Vibrate Controls */}
+            <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`p-1.5 rounded-lg transition-colors ${soundEnabled ? 'text-emerald-400' : 'text-slate-500'}`}
+                title="Sound Audio"
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => setVibrateEnabled(!vibrateEnabled)}
+                className={`p-1.5 rounded-lg transition-colors ${vibrateEnabled ? 'text-indigo-400' : 'text-slate-500'}`}
+                title="Vibration Haptics"
+              >
+                <Vibrate className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Client & Courier Strip */}
+        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 max-w-lg mx-auto">
+          <span className="truncate font-semibold text-slate-200">
+            {activeClient?.name} • <span className="text-indigo-300 font-mono">{activeCourier?.name}</span>
+          </span>
+          <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            {activeWarehouse.code}
+          </span>
+        </div>
+      </div>
+
+      {/* 2. MAIN SCANNING INTERFACE (ERGONOMIC 1-HAND READY) */}
+      <div className="flex-1 px-3 py-2 max-w-lg w-full mx-auto flex flex-col justify-between space-y-3 overflow-y-auto">
+        {/* CAMERA SCANNER VIEWFINDER (IF ACTIVE) */}
+        {isCameraActive && (
+          <div className="relative rounded-2xl overflow-hidden bg-black border-2 border-emerald-500 shadow-2xl aspect-[4/3] flex items-center justify-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+            />
+            {/* Laser Scan Animation Line */}
+            <div className="absolute inset-x-4 top-1/2 h-0.5 bg-red-500 shadow-[0_0_12px_#ef4444] animate-pulse pointer-events-none"></div>
+
+            {/* Target Reticle */}
+            <div className="absolute inset-10 border-2 border-dashed border-emerald-400/80 rounded-xl pointer-events-none flex items-center justify-center">
+              <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2 py-0.5 rounded backdrop-blur">
+                Align AWB Barcode Inside Box
+              </span>
+            </div>
+
+            {/* Camera Overlay Controls */}
+            <div className="absolute top-2 right-2 flex items-center gap-1.5">
+              <button
+                onClick={toggleTorch}
+                className={`p-2 rounded-xl text-xs font-bold backdrop-blur ${
+                  torchOn ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/50' : 'bg-black/60 text-white'
+                }`}
+                title="Torch Light"
+              >
+                <Zap className="w-4 h-4" />
+              </button>
+              <button
+                onClick={stopCamera}
+                className="p-2 rounded-xl bg-black/60 text-white text-xs font-bold backdrop-blur hover:bg-rose-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* SCAN ALERT BANNER */}
+        {lastScan && (
+          <div
+            className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-between transition-all animate-in fade-in zoom-in-95 duration-200 ${
+              lastScan.success
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-lg shadow-emerald-950'
+                : 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-lg shadow-rose-950'
+            }`}
+          >
+            <div className="flex items-center gap-2 truncate">
+              {lastScan.success ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+              )}
+              <div className="truncate">
+                <div className="font-black font-mono text-sm text-white">{lastScan.awb}</div>
+                <div className="text-[11px] font-medium opacity-90 truncate">{lastScan.msg}</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-2">{lastScan.time}</span>
+          </div>
+        )}
+
+        {/* POINT 1: AWB NO OR ORDER NO INPUT & CAMERA BUTTON */}
+        <form onSubmit={handleFormSubmit} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+              <QrCode className="w-4 h-4 text-indigo-400" />
+              AWB No / Order No *
+            </label>
+            <span className="text-[10px] text-emerald-400 font-bold animate-pulse">
+              ● Ready for Hardware Laser / Gun
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={barcodeInput}
+                onChange={e => setBarcodeInput(e.target.value.toUpperCase())}
+                placeholder="Scan with Laser Gun or Type..."
+                className="w-full bg-slate-900 text-emerald-300 placeholder:text-slate-600 px-3.5 py-2.5 rounded-xl text-sm font-mono font-black border-2 border-indigo-500/80 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 shadow-inner"
+              />
+              {barcodeInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBarcodeInput('');
+                    inputRef.current?.focus();
+                  }}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Phone Camera Scanner Button */}
+            <button
+              type="button"
+              onClick={isCameraActive ? stopCamera : startCamera}
+              className={`p-3 rounded-xl font-bold flex items-center justify-center transition-all active:scale-95 border ${
+                isCameraActive
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-600/30'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-600/30'
+              }`}
+              title={isCameraActive ? 'Stop Camera' : 'Start Camera Scanner'}
+            >
+              {isCameraActive ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Thumb Scan Submit Button */}
+          <button
+            type="submit"
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+          >
+            <Zap className="w-3.5 h-3.5" /> Submit Scan (Enter)
+          </button>
+        </form>
+
+        {/* Quick Sample Barcodes for instant device testing */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+          <span className="text-slate-500 font-bold uppercase whitespace-nowrap">Samples:</span>
+          {['DEL-8839210', 'BD-5541908', 'SF-7729104', 'EK-9021844'].map(testAwb => (
+            <button
+              key={testAwb}
+              type="button"
+              onClick={() => processScan(testAwb)}
+              className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 font-mono font-bold text-slate-300 whitespace-nowrap active:scale-95"
+            >
+              {testAwb}
+            </button>
+          ))}
+        </div>
+
+        {/* POINT 2: COMPACT CONDITIONS SELECTION */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider">
+              Condition:
+            </label>
+            <span className="text-[10px] font-black text-indigo-400 uppercase">
+              Selected: <strong className="text-white underline">{selectedRemark}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1">
+            {conditionButtons.map(cond => (
+              <button
+                type="button"
+                key={cond.key}
+                onClick={() => {
+                  setSelectedRemark(cond.key);
+                  if (vibrateEnabled && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                    try { navigator.vibrate(40); } catch (e) {}
+                  }
+                  inputRef.current?.focus();
+                }}
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-black border transition-all text-center truncate active:scale-95 ${
+                  selectedRemark === cond.key
+                    ? cond.activeColor
+                    : `${cond.color} hover:bg-slate-800/80`
+                }`}
+              >
+                {cond.key}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* RECENT 5 SCANNED TRACKING IDs (LINE ITEMS ON DEVICE SCREEN) */}
+        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <List className="w-3 h-3 text-indigo-400" />
+              Recent 5 Scanned Parcels:
+            </span>
+            <span className="text-[9px] text-emerald-400 font-mono font-bold">
+              {batchItems.length} Scanned
+            </span>
+          </div>
+
+          {batchItems.length === 0 ? (
+            <div className="py-3 text-center text-slate-500 text-[11px]">
+              No scans yet in this batch.
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {batchItems.slice(-5).reverse().map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="w-4 h-4 rounded-full bg-slate-800 text-slate-400 font-mono text-[9px] font-bold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="font-mono font-black text-white text-xs truncate">
+                      {item.trackingNumber}
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-mono">
+                      {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`px-2 py-0.5 rounded text-[9px] font-black shrink-0 ${
+                      item.remark === 'Good'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : item.remark === 'Damage' || item.remark === 'Missing Product'
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {item.remark}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. BOTTOM DEVICE NAVIGATION & DRAWER */}
+      <div className="bg-slate-900/95 border-t border-slate-800 px-3 py-2 sticky bottom-0 z-30 shadow-2xl backdrop-blur">
+        <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
+          {/* View Recent Scanned List Button */}
+          <button
+            onClick={() => setShowRecentDrawer(true)}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all active:scale-95"
+          >
+            <List className="w-4 h-4 text-blue-400" />
+            <span>Recent Scans ({batchItems.length})</span>
+          </button>
+
+          {/* Close Batch Button */}
+          <button
+            onClick={() => onCloseBatchRequest(activeBatch)}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all active:scale-95"
+          >
+            <Lock className="w-4 h-4" />
+            <span>Close Batch & Sign</span>
+          </button>
+        </div>
+      </div>
+
+      {/* RECENT SCANNED ITEMS DRAWER / BOTTOM SHEET */}
+      {showRecentDrawer && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col justify-end p-0">
+          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col w-full max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                  <List className="w-4 h-4 text-indigo-400" />
+                  Scanned Items in {activeBatch.batchNumber}
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Total: <strong className="text-emerald-400">{batchItems.length} parcels scanned</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRecentDrawer(false)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 overflow-y-auto flex-1 space-y-2 divide-y divide-slate-800/60">
+              {batchItems.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  No items scanned yet in this batch.
+                </div>
+              ) : (
+                batchItems.slice().reverse().map((item, idx) => (
+                  <div key={item.id} className="pt-2 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-mono font-black text-white">{item.trackingNumber}</div>
+                      <div className="text-[10px] text-slate-400">
+                        {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {item.scannedByName}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold ${
+                        item.remark === 'Good'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : item.remark === 'Damage' || item.remark === 'Missing Product'
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      }`}
+                    >
+                      {item.remark}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-800">
+              <button
+                onClick={() => setShowRecentDrawer(false)}
+                className="w-full py-3 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs"
+              >
+                Back to Scanner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BATCH SELECTOR MODAL */}
+      {showBatchPicker && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-400" /> Switch Active Batch
+              </h3>
+              <button onClick={() => setShowBatchPicker(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {openBatches.map(b => {
+                const client = clients.find(c => c.id === b.clientId);
+                const isSelected = b.id === activeBatch.id;
+
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      onSelectBatch(b.id);
+                      setShowBatchPicker(false);
+                    }}
+                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-indigo-600/30 border-indigo-500 text-white font-bold ring-1 ring-indigo-500'
+                        : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-mono">
+                      <span>{b.batchNumber}</span>
+                      <span className="text-emerald-400 font-bold">{b.totalScanned} Scanned</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">{client?.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
