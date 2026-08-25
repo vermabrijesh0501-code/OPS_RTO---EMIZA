@@ -22,8 +22,15 @@ import { MastersModule } from './components/MastersModule';
 import { ReportsModule } from './components/ReportsModule';
 import { SupabaseNetlifyHub } from './components/SupabaseNetlifyHub';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
+import { LoginPage } from './components/LoginPage';
 
 export default function App() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const session = StorageService.getAuthSession();
+    return session.isLoggedIn;
+  });
+
   // Navigation & View State
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
@@ -275,6 +282,96 @@ export default function App() {
     };
   };
 
+  // Update Scanned Return Item (AWB / Remark condition)
+  const handleUpdateItem = (
+    itemId: string,
+    updates: { trackingNumber?: string; remark?: ReturnRemarkType }
+  ) => {
+    const targetItem = scannedItems.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    const oldRemark = targetItem.remark;
+    const newRemark = updates.remark || oldRemark;
+    const oldTracking = targetItem.trackingNumber;
+    const newTracking = updates.trackingNumber ? updates.trackingNumber.trim().toUpperCase() : oldTracking;
+
+    const updatedItems = scannedItems.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          trackingNumber: newTracking,
+          orderNumber: `ORD-${newTracking.slice(-6)}`,
+          remark: newRemark,
+        };
+      }
+      return item;
+    });
+    setScannedItems(updatedItems);
+    StorageService.saveScannedItems(updatedItems);
+
+    if (oldRemark !== newRemark) {
+      const updatedBatches = batches.map(b => {
+        if (b.id === targetItem.batchId) {
+          const breakdown = { ...b.remarksBreakdown };
+          breakdown[oldRemark] = Math.max(0, (breakdown[oldRemark] || 1) - 1);
+          breakdown[newRemark] = (breakdown[newRemark] || 0) + 1;
+          return {
+            ...b,
+            remarksBreakdown: breakdown,
+          };
+        }
+        return b;
+      });
+      setBatches(updatedBatches);
+      StorageService.saveReturnBatches(updatedBatches);
+    }
+
+    StorageService.addActivityLog({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      action: 'Updated Scanned AWB',
+      module: 'RTO',
+      details: `Edited AWB ${oldTracking} -> ${newTracking} [${newRemark}]`,
+    });
+    setLogs(StorageService.getActivityLogs());
+  };
+
+  // Delete Scanned Return Item from Batch
+  const handleDeleteItem = (itemId: string) => {
+    const targetItem = scannedItems.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    const updatedItems = scannedItems.filter(i => i.id !== itemId);
+    setScannedItems(updatedItems);
+    StorageService.saveScannedItems(updatedItems);
+
+    const updatedBatches = batches.map(b => {
+      if (b.id === targetItem.batchId) {
+        const breakdown = { ...b.remarksBreakdown };
+        breakdown[targetItem.remark] = Math.max(0, (breakdown[targetItem.remark] || 1) - 1);
+        return {
+          ...b,
+          totalScanned: Math.max(0, b.totalScanned - 1),
+          remarksBreakdown: breakdown,
+        };
+      }
+      return b;
+    });
+    setBatches(updatedBatches);
+    StorageService.saveReturnBatches(updatedBatches);
+
+    StorageService.addActivityLog({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      action: 'Removed Scanned AWB',
+      module: 'RTO',
+      details: `Removed AWB ${targetItem.trackingNumber} [${targetItem.remark}] from batch`,
+    });
+    setLogs(StorageService.getActivityLogs());
+  };
+
   // Close Return Batch
   const handleCloseBatch = (
     batchId: string,
@@ -321,6 +418,33 @@ export default function App() {
   const handleAddAuditRecord = (record: Omit<AuditRecord, 'id' | 'scannedAt'>) => {
     const newRec = StorageService.addAuditRecord(record);
     setAuditRecords(StorageService.getAuditRecords());
+
+    // Dynamically register or activate scanning gun in real-time
+    if (record.auditorDeviceId) {
+      const existing = auditorDevices.find(d => d.id === record.auditorDeviceId);
+      let updatedDevices: AuditorDevice[];
+      if (!existing) {
+        const newDevice: AuditorDevice = {
+          id: record.auditorDeviceId,
+          name: `Scanner Gun (${record.auditorDeviceId})`,
+          assignedPerson: record.auditorName || currentUser.name,
+          zone: record.location ? `Zone ${record.location.slice(0, 3)}` : 'Floor',
+          status: 'Active',
+          batteryPercent: 100,
+          lastActiveAt: 'Just now',
+        };
+        updatedDevices = [...auditorDevices, newDevice];
+      } else {
+        updatedDevices = auditorDevices.map(d =>
+          d.id === record.auditorDeviceId
+            ? { ...d, status: 'Active' as const, lastActiveAt: 'Just now' }
+            : d
+        );
+      }
+      setAuditorDevices(updatedDevices);
+      StorageService.saveAuditorDevices(updatedDevices);
+    }
+
     StorageService.addActivityLog({
       userId: currentUser.id,
       userName: currentUser.name,
@@ -628,8 +752,29 @@ export default function App() {
     g => g.warehouseId === activeWarehouse.id && g.status !== 'Completed'
   ).length;
 
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    setUsers(StorageService.getUsers());
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    StorageService.clearAuthSession();
+    setIsAuthenticated(false);
+  };
+
+  // If user is not authenticated, render the dedicated Login & Team Credential Page
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        users={users}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[#0B141E] text-[#FFFFFF] font-sans selection:bg-[#635BFF] selection:text-white flex flex-col">
       {/* Header Bar */}
       <Header
         currentUser={currentUser}
@@ -640,21 +785,23 @@ export default function App() {
         onOpenUniversalSearch={() => setIsUniversalSearchOpen(true)}
         onOpenSupabaseHub={() => setActiveTab('supabase_hub')}
         supabaseStatus={supabaseConfig.connectedStatus}
+        onLogout={handleLogout}
       />
 
       {/* Main Container Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Navigation */}
+        {/* Dual Sidebar Navigation */}
         <Sidebar
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           openBatchCount={openBatchCount}
           pendingGateEntriesCount={pendingGateEntriesCount}
           auditCount={auditRecords.length}
+          activeWarehouseCode={activeWarehouse?.code || 'WH-MAIN-01'}
         />
 
         {/* Main Content View Container */}
-        <main className="flex-1 overflow-y-auto bg-slate-950">
+        <main className="flex-1 overflow-y-auto bg-[#0B141E]">
           {activeTab === 'dashboard' && (
             <DashboardView
               warehouse={activeWarehouse}
@@ -696,6 +843,8 @@ export default function App() {
               couriers={couriers}
               onAddBatch={handleAddBatch}
               onScanItem={handleScanItem}
+              onUpdateItem={handleUpdateItem}
+              onDeleteItem={handleDeleteItem}
               onCloseBatch={handleCloseBatch}
               isOpenCreateModal={isNewBatchModalOpen}
               onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}

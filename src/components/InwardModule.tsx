@@ -59,8 +59,8 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [courierId, setCourierId] = useState(couriers[0]?.id || '');
   const [invoiceChallanNumber, setInvoiceChallanNumber] = useState('');
-  const [invoiceValue, setInvoiceValue] = useState<number>(100000);
-  const [expectedBoxCount, setExpectedBoxCount] = useState<number>(50);
+  const [invoiceValue, setInvoiceValue] = useState<number | ''>('');
+  const [expectedBoxCount, setExpectedBoxCount] = useState<number | ''>('');
   const [remarks, setRemarks] = useState('');
 
   // Selected vehicle for Dock allocation modal
@@ -98,9 +98,9 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
       driverMobile,
       driverLicense,
       invoiceChallanNumber,
-      invoiceValue,
-      expectedBoxCount,
-      receivedBoxCount: expectedBoxCount,
+      invoiceValue: Number(invoiceValue) || 0,
+      expectedBoxCount: Number(expectedBoxCount) || 0,
+      receivedBoxCount: Number(expectedBoxCount) || 0,
       status: 'Gate In',
       remarks,
       createdBy: currentUser.id,
@@ -123,149 +123,146 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Module Title & Actions */}
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header Grid */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <Truck className="w-6 h-6 text-blue-400" /> Inward Gate Entry & Dock Control
+            <Truck className="w-6 h-6 text-emerald-400" /> Inward Gate Entry & Dock Control
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Register incoming transport, allocate unloading docks, and verify received cartons at {activeWarehouse.name}.
+            Register incoming transport, allocate unloading docks, and verify received cartons at <strong className="text-slate-200">{activeWarehouse.name}</strong>.
           </p>
         </div>
 
-        <button
-          onClick={onCloseCreateModal} // toggles modal if already closed, passed from parent
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02]"
-        >
-          <Plus className="w-4 h-4" /> Create Gate Pass
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={onCloseCreateModal}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ New Gate Pass</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+      {/* Search & Filter Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+        <div className="flex-1 max-w-md relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search Gate Pass #, Vehicle #, Driver Name, Invoice..."
+            placeholder="Search gate pass, vehicle, driver, client..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-800 text-slate-200 pl-9 pr-3 py-1.5 rounded-lg text-xs border border-slate-700/80 focus:outline-none focus:border-blue-500"
+            className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-500 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-blue-500"
           />
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto">
-          <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          {['ALL', 'Gate In', 'Dock Allocated', 'Unloading', 'Verified', 'Completed'].map(st => (
+          {[
+            { label: 'All', value: 'ALL' },
+            { label: 'Gate In', value: 'Gate In' },
+            { label: 'Allocated', value: 'Dock Allocated' },
+            { label: 'Unloading', value: 'Unloading' },
+            { label: 'Completed', value: 'Completed' },
+          ].map(tab => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                statusFilter === st
-                  ? 'bg-blue-600 text-white font-bold'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              key={tab.value}
+              onClick={() => setStatusFilter(tab.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                statusFilter === tab.value
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
               }`}
             >
-              {st}
+              {tab.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Gate Entries Table */}
+      {/* Data Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-800/80 text-slate-400 uppercase tracking-wider font-bold text-[10px] border-b border-slate-700/80">
-              <tr>
-                <th className="px-4 py-3">Gate Pass #</th>
-                <th className="px-4 py-3">Vehicle Details</th>
-                <th className="px-4 py-3">Driver Info</th>
-                <th className="px-4 py-3">Client & Courier</th>
-                <th className="px-4 py-3">Invoice / Boxes</th>
-                <th className="px-4 py-3">Dock Assigned</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px] font-extrabold uppercase tracking-wider">
+                <th className="py-3.5 px-4">Entry Ref</th>
+                <th className="py-3.5 px-4">Vehicle & Staff</th>
+                <th className="py-3.5 px-4">Client Detail</th>
+                <th className="py-3.5 px-4">Volume</th>
+                <th className="py-3.5 px-4">Station</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-slate-800 text-xs">
               {filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                    No inward gate entries match the filter.
+                  <td colSpan={7} className="py-12 text-center text-slate-500 font-mono text-xs">
+                    No inward gate entries match the selected filters.
                   </td>
                 </tr>
               ) : (
                 filteredEntries.map(entry => {
                   const client = clients.find(c => c.id === entry.clientId);
                   const courier = couriers.find(cr => cr.id === entry.courierId);
-                  const vt = vehicleTypes.find(v => v.id === entry.vehicleTypeId);
+
+                  const getStatusBadge = (status: string) => {
+                    if (status === 'Unloading') {
+                      return <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">Unloading</span>;
+                    }
+                    if (status === 'Dock Allocated') {
+                      return <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Dock Allocated</span>;
+                    }
+                    if (status === 'Completed' || status === 'Verified') {
+                      return <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Completed</span>;
+                    }
+                    return <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">{status}</span>;
+                  };
 
                   return (
-                    <tr key={entry.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-4 py-3.5 font-bold text-white">
-                        <div>{entry.gatePassNumber}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">
+                    <tr key={entry.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-mono font-bold text-white text-xs">{entry.gatePassNumber}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                           {new Date(entry.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3.5">
-                        <div className="font-extrabold text-white text-xs">{entry.vehicleNumber}</div>
-                        <div className="text-[10px] text-slate-400">{vt ? vt.typeName : 'Commercial Vehicle'}</div>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white">{entry.vehicleNumber}</div>
+                        <div className="text-[11px] text-slate-400">{entry.driverName}</div>
                       </td>
 
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-200">{entry.driverName}</div>
-                        <div className="text-[10px] text-slate-400">{entry.driverMobile}</div>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white">{client ? client.name : 'Bella Vita Organic'}</div>
+                        <div className="text-[11px] text-slate-400">{courier ? courier.name : 'Delhivery Surface'}</div>
                       </td>
 
-                      <td className="px-4 py-3.5">
-                        <div className="font-medium text-slate-200">{client ? client.name : 'Nykaa'}</div>
-                        <div className="text-[10px] text-slate-400">{courier ? courier.name : 'Delhivery'}</div>
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        <div className="font-bold text-blue-400">{entry.expectedBoxCount} Cartons</div>
-                        <div className="text-[10px] text-slate-400">
-                          {entry.invoiceChallanNumber || 'No Inv'} • ₹{entry.invoiceValue.toLocaleString()}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white">{entry.expectedBoxCount} Cartons</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Val: ₹{entry.invoiceValue.toLocaleString()}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3.5 font-bold text-amber-400">
-                        {entry.dockNumber ? (
-                          <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                            {entry.dockNumber}
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 italic">Unassigned</span>
-                        )}
+                      <td className="py-3.5 px-4">
+                        <div className="font-mono font-bold text-xs text-white">
+                          {entry.dockNumber || <span className="text-slate-500 italic font-normal">DOCK-TBD</span>}
+                        </div>
                       </td>
 
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                            entry.status === 'Completed'
-                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                              : entry.status === 'Unloading'
-                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse'
-                              : entry.status === 'Dock Allocated'
-                              ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                              : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                          }`}
-                        >
-                          {entry.status}
-                        </span>
+                      <td className="py-3.5 px-4">
+                        {getStatusBadge(entry.status)}
                       </td>
 
-                      <td className="px-4 py-3.5 text-right space-x-2">
-                        {/* Status workflow triggers */}
+                      <td className="py-3.5 px-4 text-right space-x-2">
                         {entry.status === 'Gate In' && (
                           <button
                             onClick={() => setDockingEntry(entry)}
-                            className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]"
+                            className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 text-xs font-bold hover:bg-blue-600/30 cursor-pointer"
                           >
                             Assign Dock
                           </button>
@@ -274,7 +271,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                         {entry.status === 'Dock Allocated' && (
                           <button
                             onClick={() => onUpdateGateStatus(entry.id, 'Unloading')}
-                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px]"
+                            className="px-2.5 py-1 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 text-xs font-bold hover:bg-amber-600/30 cursor-pointer"
                           >
                             Start Unloading
                           </button>
@@ -282,20 +279,20 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
 
                         {entry.status === 'Unloading' && (
                           <button
-                            onClick={() => onUpdateGateStatus(entry.id, 'Verified')}
-                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]"
+                            onClick={() => onUpdateGateStatus(entry.id, 'Completed')}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600/30 cursor-pointer"
                           >
-                            Verify & Complete
+                            Complete
                           </button>
                         )}
 
-                        {/* Download PDF Pass */}
+                        {/* Download Gate Pass PDF */}
                         <button
                           onClick={() => generateGatePassPDF(entry, activeWarehouse, client, courier)}
-                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 inline-flex items-center justify-center transition-colors cursor-pointer"
                           title="Download Gate Pass PDF"
                         >
-                          <Download className="w-4 h-4" />
+                          <Download className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>

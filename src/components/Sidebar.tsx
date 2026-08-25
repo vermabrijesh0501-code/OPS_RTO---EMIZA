@@ -4,13 +4,10 @@ import {
   Truck,
   RotateCcw,
   Boxes,
-  Database,
-  BarChart3,
-  Cloud,
   Layers,
-  History,
-  Shield,
+  BarChart3,
   Scan,
+  Database,
 } from 'lucide-react';
 
 export type ActiveTab =
@@ -29,6 +26,7 @@ interface SidebarProps {
   openBatchCount: number;
   pendingGateEntriesCount: number;
   auditCount?: number;
+  activeWarehouseCode?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   openBatchCount,
   pendingGateEntriesCount,
-  auditCount = 0,
+  auditCount = 15,
 }) => {
   const navItems = [
     {
@@ -44,108 +42,116 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Dashboard',
       icon: LayoutDashboard,
       badge: null,
+      badgeColor: '',
     },
     {
       id: 'inward' as ActiveTab,
       label: 'Inward Gate Entry',
       icon: Truck,
-      badge: pendingGateEntriesCount > 0 ? pendingGateEntriesCount : null,
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      badge: pendingGateEntriesCount > 0 ? String(pendingGateEntriesCount) : null,
+      badgeColor: 'bg-[#D97706]/20 text-[#F59E0B] border border-[#D97706]/40',
     },
     {
       id: 'returns_rto' as ActiveTab,
       label: 'RTO / B2C Returns',
       icon: RotateCcw,
       badge: openBatchCount > 0 ? `${openBatchCount} Open` : null,
-      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      badgeColor: 'bg-[#1D4ED8]/25 text-[#60A5FA] border border-[#1D4ED8]/40',
     },
     {
       id: 'returns_b2b' as ActiveTab,
       label: 'B2B Returns',
       icon: Boxes,
       badge: null,
+      badgeColor: '',
     },
     {
       id: 'audit' as ActiveTab,
       label: 'Audit / Cycle Count',
       icon: Scan,
-      badge: '15 Guns',
-      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      badge: auditCount && auditCount > 0 ? `${auditCount} Guns` : null,
+      badgeColor: 'bg-[#7C3AED]/20 text-[#C084FC] border border-[#7C3AED]/40',
     },
     {
       id: 'masters' as ActiveTab,
-      label: 'Master Data (13)',
+      label: 'Master Data',
       icon: Layers,
       badge: null,
+      badgeColor: '',
     },
     {
       id: 'reports' as ActiveTab,
       label: 'Reports & Analytics',
       icon: BarChart3,
       badge: null,
+      badgeColor: '',
     },
     {
       id: 'supabase_hub' as ActiveTab,
       label: 'Supabase & Netlify',
-      icon: Cloud,
+      icon: Database,
       badge: 'Deploy',
-      badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      badgeColor: 'bg-[#059669]/20 text-[#34D399] border border-[#059669]/40',
     },
   ];
 
-
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 hidden md:flex min-h-[calc(100vh-53px)]">
-      <div className="p-3 space-y-1">
-        <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          Warehouse Operations
+    <aside
+      id="left-sidebar-navigation"
+      className="w-64 bg-[#0B141E] border-r border-[#1E2C3D] flex flex-col justify-between py-5 px-3 select-none shrink-0 h-[calc(100vh-61px)]"
+    >
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="px-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8FA0B5]">
+            WAREHOUSE OPERATIONS
+          </span>
         </div>
 
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all group ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon
-                  className={`w-4 h-4 transition-colors ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'
-                  }`}
-                />
-                <span>{item.label}</span>
-              </div>
+        {/* Navigation Items List */}
+        <nav className="space-y-1.5">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
 
-              {item.badge && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    isActive ? 'bg-white/20 text-white border-white/30' : item.badgeColor || 'bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={item.id}
+                id={`sidebar-tab-${item.id}`}
+                onClick={() => onSelectTab(item.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-[12px] text-xs font-semibold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#1D70F5] text-white shadow-sm shadow-[#1D70F5]/30 font-bold'
+                    : 'text-[#8FA0B5] hover:text-white hover:bg-[#121E2B]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    className={`w-4 h-4 shrink-0 ${
+                      isActive ? 'text-white' : 'text-[#8FA0B5]'
+                    }`}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </div>
 
-      {/* Footer Info Box */}
-      <div className="p-3 m-3 bg-slate-800/60 border border-slate-700/60 rounded-xl">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-1">
-          <Shield className="w-4 h-4 text-emerald-400" /> Multi-Role RBAC Active
-        </div>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
-          6 Roles supported: Super Admin, Admin, Manager, Supervisor, Operator & Read-Only.
-        </p>
+                {item.badge && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : item.badgeColor
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </aside>
   );
 };
+
+

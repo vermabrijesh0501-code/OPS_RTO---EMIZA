@@ -57,22 +57,31 @@ export const AuditModule: React.FC<AuditModuleProps> = ({
   // Active Mode: WITH_BATCH vs WITHOUT_BATCH
   const [scanMode, setScanMode] = useState<AuditScanMode>('WITH_BATCH');
 
-  // Active Device
+  // Active Device with safe fallback
   const currentDevice =
-    auditorDevices.find(d => d.id === activeAuditorId) || auditorDevices[0];
+    auditorDevices.find(d => d.id === activeAuditorId) ||
+    auditorDevices[0] || {
+      id: activeAuditorId || 'GUN-01',
+      name: 'Scanner Gun 01',
+      assignedPerson: 'Floor Operator',
+      zone: 'Floor',
+      status: 'Active' as const,
+      batteryPercent: 100,
+      lastActiveAt: 'Just now',
+    };
 
-  // Scan Form Fields
+  // Scan Form Fields (Clean defaults for real-time operations)
   const [selectedClientId, setSelectedClientId] = useState<string>(
     clients.find(c => c.id === 'cli-bellavita')?.id || clients[0]?.id || ''
   );
   const [skuInput, setSkuInput] = useState('');
   const [eanInput, setEanInput] = useState('');
   const [productNameInput, setProductNameInput] = useState('');
-  const [locationInput, setLocationInput] = useState('A-01-02-B');
+  const [locationInput, setLocationInput] = useState('');
   const [quantityInput, setQuantityInput] = useState<number>(1);
-  const [batchNumberInput, setBatchNumberInput] = useState('BV-BAT-2026-A1');
-  const [mfgDateInput, setMfgDateInput] = useState('2026-01-15');
-  const [expDateInput, setExpDateInput] = useState('2028-01-14');
+  const [batchNumberInput, setBatchNumberInput] = useState('');
+  const [mfgDateInput, setMfgDateInput] = useState('');
+  const [expDateInput, setExpDateInput] = useState('');
   const [qcStatusInput, setQcStatusInput] = useState<'Good' | 'Damage' | 'Expired' | 'QC Check Required'>('Good');
   const [notesInput, setNotesInput] = useState('');
 
@@ -344,15 +353,21 @@ export const AuditModule: React.FC<AuditModuleProps> = ({
                 Active Scanning Gun / ID
               </div>
               <select
-                value={activeAuditorId}
+                value={activeAuditorId || currentDevice.id}
                 onChange={e => onSelectAuditorId(e.target.value)}
                 className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer mt-0.5"
               >
-                {auditorDevices.map(d => (
-                  <option key={d.id} value={d.id} className="bg-slate-900 text-white">
-                    {d.id} • {d.assignedPerson} ({d.name})
+                {auditorDevices.length === 0 ? (
+                  <option value={currentDevice.id} className="bg-slate-900 text-white">
+                    {currentDevice.id} • {currentDevice.assignedPerson} ({currentDevice.name})
                   </option>
-                ))}
+                ) : (
+                  auditorDevices.map(d => (
+                    <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                      {d.id} • {d.assignedPerson} ({d.name})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </div>

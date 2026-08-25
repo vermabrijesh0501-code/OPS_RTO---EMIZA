@@ -37,26 +37,48 @@ import {
 } from '../mockData';
 
 const STORAGE_KEYS = {
-  COMPANIES: 'emiza_companies_v2',
-  WAREHOUSES: 'emiza_warehouses_v2',
-  CLIENTS: 'emiza_clients_v2',
-  COURIERS: 'emiza_couriers_v2',
-  SKUS: 'emiza_skus_v2',
-  DRIVERS: 'emiza_drivers_v2',
-  VEHICLE_TYPES: 'emiza_vehicle_types_v2',
-  RETURN_REASONS: 'emiza_return_reasons_v2',
-  USERS: 'emiza_users_v2',
-  CURRENT_USER: 'emiza_current_user_v2',
-  CURRENT_WH: 'emiza_current_wh_v2',
-  GATE_ENTRIES: 'emiza_gate_entries_v2',
-  RETURN_BATCHES: 'emiza_return_batches_v2',
-  SCANNED_ITEMS: 'emiza_scanned_items_v2',
-  AUDITOR_DEVICES: 'emiza_auditor_devices_v2',
-  AUDIT_RECORDS: 'emiza_audit_records_v2',
-  ACTIVE_AUDITOR_ID: 'emiza_active_auditor_id_v2',
-  LOGS: 'emiza_logs_v2',
-  SUPABASE_CONFIG: 'emiza_supabase_config_v2',
+  COMPANIES: 'emiza_companies_v3',
+  WAREHOUSES: 'emiza_warehouses_v3',
+  CLIENTS: 'emiza_clients_v3',
+  COURIERS: 'emiza_couriers_v3',
+  SKUS: 'emiza_skus_v3',
+  DRIVERS: 'emiza_drivers_v3',
+  VEHICLE_TYPES: 'emiza_vehicle_types_v3',
+  RETURN_REASONS: 'emiza_return_reasons_v3',
+  USERS: 'emiza_users_v3',
+  CURRENT_USER: 'emiza_current_user_v3',
+  CURRENT_WH: 'emiza_current_wh_v3',
+  GATE_ENTRIES: 'emiza_gate_entries_v3',
+  RETURN_BATCHES: 'emiza_return_batches_v3',
+  SCANNED_ITEMS: 'emiza_scanned_items_v3',
+  AUDITOR_DEVICES: 'emiza_auditor_devices_v3',
+  AUDIT_RECORDS: 'emiza_audit_records_v3',
+  ACTIVE_AUDITOR_ID: 'emiza_active_auditor_id_v3',
+  LOGS: 'emiza_logs_v3',
+  SUPABASE_CONFIG: 'emiza_supabase_config_v3',
+  AUTH_SESSION: 'emiza_auth_session_v3',
 };
+
+// Auto-purge any stale mock/test scan keys
+(() => {
+  try {
+    const staleKeys = [
+      'emiza_gate_entries', 'emiza_gate_entries_v1', 'emiza_gate_entries_v2',
+      'emiza_return_batches', 'emiza_return_batches_v1', 'emiza_return_batches_v2',
+      'emiza_scanned_items', 'emiza_scanned_items_v1', 'emiza_scanned_items_v2',
+      'emiza_audit_records', 'emiza_audit_records_v1', 'emiza_audit_records_v2',
+      'emiza_auditor_devices', 'emiza_auditor_devices_v1', 'emiza_auditor_devices_v2',
+      'emiza_logs', 'emiza_logs_v1', 'emiza_logs_v2',
+    ];
+    staleKeys.forEach(k => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch {
+    // Ignore in non-browser context
+  }
+})();
 
 function loadItem<T>(key: string, fallback: T): T {
   try {
@@ -155,6 +177,37 @@ export const StorageService = {
 
   getSupabaseConfig: (): SupabaseConfig => loadItem(STORAGE_KEYS.SUPABASE_CONFIG, initialSupabaseConfig),
   saveSupabaseConfig: (config: SupabaseConfig) => saveItem(STORAGE_KEYS.SUPABASE_CONFIG, config),
+
+  // Authentication Session
+  getAuthSession: (): { isLoggedIn: boolean; userId?: string } =>
+    loadItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: true, userId: 'usr-super' }),
+  saveAuthSession: (session: { isLoggedIn: boolean; userId?: string }) =>
+    saveItem(STORAGE_KEYS.AUTH_SESSION, session),
+  clearAuthSession: () =>
+    saveItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false }),
+
+  // User Credential & Password Management
+  updateUserPassword: (email: string, newPassword: string): boolean => {
+    const users = StorageService.getUsers();
+    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (userIndex === -1) return false;
+    users[userIndex].password = newPassword;
+    StorageService.saveUsers(users);
+    return true;
+  },
+
+  registerTeamUser: (userData: Omit<User, 'id'> & { id?: string }): User => {
+    const users = StorageService.getUsers();
+    const newUser: User = {
+      ...userData,
+      id: userData.id || `usr-${Date.now()}`,
+      status: 'Active',
+      lastLoginAt: new Date().toISOString(),
+    };
+    const updated = [...users, newUser];
+    StorageService.saveUsers(updated);
+    return newUser;
+  },
 
   resetToDefault: () => {
     localStorage.clear();
