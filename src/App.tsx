@@ -23,6 +23,7 @@ import { ReportsModule } from './components/ReportsModule';
 import { SupabaseNetlifyHub } from './components/SupabaseNetlifyHub';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
+import { hasModulePermission, getAccessibleModules } from './utils/rbac';
 
 export default function App() {
   // Authentication State
@@ -63,6 +64,7 @@ export default function App() {
   const [isNewGateEntryModalOpen, setIsNewGateEntryModalOpen] = useState(false);
   const [isNewBatchModalOpen, setIsNewBatchModalOpen] = useState(false);
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Keyboard shortcut Ctrl+K for Universal Search
   useEffect(() => {
@@ -752,10 +754,23 @@ export default function App() {
     g => g.warehouseId === activeWarehouse.id && g.status !== 'Completed'
   ).length;
 
+  // Auto-switch tab if current user loses permission for activeTab
+  useEffect(() => {
+    if (!currentUser) return;
+    const accessible = getAccessibleModules(currentUser);
+    if (!accessible.includes(activeTab)) {
+      setActiveTab(accessible[0] || 'dashboard');
+    }
+  }, [currentUser, activeTab]);
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setUsers(StorageService.getUsers());
     setIsAuthenticated(true);
+    const accessible = getAccessibleModules(user);
+    if (!accessible.includes(activeTab)) {
+      setActiveTab(accessible[0] || 'dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -774,7 +789,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B141E] text-[#FFFFFF] font-sans selection:bg-[#635BFF] selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[#0B141E] text-[#FFFFFF] font-sans selection:bg-[#635BFF] selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
       {/* Header Bar */}
       <Header
         currentUser={currentUser}
@@ -786,6 +801,8 @@ export default function App() {
         onOpenSupabaseHub={() => setActiveTab('supabase_hub')}
         supabaseStatus={supabaseConfig.connectedStatus}
         onLogout={handleLogout}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
+        isMobileMenuOpen={isMobileMenuOpen}
       />
 
       {/* Main Container Layout */}
@@ -798,6 +815,9 @@ export default function App() {
           pendingGateEntriesCount={pendingGateEntriesCount}
           auditCount={auditRecords.length}
           activeWarehouseCode={activeWarehouse?.code || 'WH-MAIN-01'}
+          currentUser={currentUser}
+          isMobileOpen={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
 
         {/* Main Content View Container */}

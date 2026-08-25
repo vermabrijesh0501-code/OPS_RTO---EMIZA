@@ -273,6 +273,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedClientId, setSelectedClientId] = useState<string>('ALL');
   const [hoveredSliceKey, setHoveredSliceKey] = useState<string | null>(null);
 
+  // Accordion state for mobile registers
+  const [isInwardAccordionOpen, setIsInwardAccordionOpen] = useState(true);
+  const [isAuditorAccordionOpen, setIsAuditorAccordionOpen] = useState(true);
+
   // Compute stats per client based on filtered batches
   const clientReturnMap = clients.map((client, idx) => {
     const clientBatches = filteredBatches.filter(b => b.clientId === client.id);
@@ -518,47 +522,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [onOpenNewBatchModal, onOpenNewGateEntryModal, onNavigateTab]);
 
   return (
-    <div className="w-full max-w-[1680px] p-5 sm:p-6 space-y-5 mx-auto">
+    <div className="w-full max-w-[1680px] p-3.5 sm:p-6 space-y-4 sm:space-y-5 mx-auto">
       {/* 1. Top Header with Title, Live Facility Badge & 3 Main Action Buttons */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">
               Warehouse Operations Dashboard
             </h1>
-            <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-blue-950/80 text-blue-400 border border-blue-500/30">
+            <span className="px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-medium bg-blue-950/80 text-blue-400 border border-blue-500/30">
               EMIZA Central Fulfillment Facility
             </span>
           </div>
         </div>
 
-        {/* 3 Top Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        {/* 3 Top Action Buttons (Stacked full-width on mobile, flex row on desktop) */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full lg:w-auto shrink-0">
           <button
             id="btn-top-start-return-batch"
             onClick={onOpenNewBatchModal}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/30 cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/30 cursor-pointer min-h-[42px] sm:min-h-0"
           >
-            <QrCode className="w-4 h-4" />
+            <QrCode className="w-4 h-4 shrink-0" />
             <span>Start Return Batch</span>
           </button>
 
           <button
             id="btn-top-inward-gate-entry"
             onClick={onOpenNewGateEntryModal}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl bg-slate-900/90 hover:bg-slate-850 active:bg-slate-800 border border-slate-800 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm min-h-[42px] sm:min-h-0"
           >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <Truck className="w-4 h-4 text-slate-300" />
+            <Plus className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Truck className="w-4 h-4 text-slate-300 shrink-0" />
             <span>Inward Gate Entry</span>
           </button>
 
           <button
             id="btn-top-audit-guns"
             onClick={() => onNavigateTab('audit')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/60 border border-purple-500/40 text-purple-300 hover:text-purple-200 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/60 active:bg-purple-900/80 border border-purple-500/40 text-purple-300 hover:text-purple-200 text-xs font-semibold transition-all cursor-pointer shadow-sm min-h-[42px] sm:min-h-0"
           >
-            <Scan className="w-4 h-4 text-purple-400" />
+            <Scan className="w-4 h-4 text-purple-400 shrink-0" />
             <span>Audit Guns {devicesActiveOnDate.length > 0 ? `(${devicesActiveOnDate.length})` : ''}</span>
           </button>
         </div>
@@ -711,26 +715,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Top Summary KPI Cards (All 4 Boxes in ONE Single Line Matching Filtered Date) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3. Top Summary KPI Cards (Compact 2x2 Grid on Mobile, 4-Cols on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Card 1: Total B2C Returns */}
         <div
           onClick={() => onNavigateTab('returns_rto')}
-          className="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] group"
+          className="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-3.5 sm:p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Total B2C Returns</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-              <RotateCcw className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">B2C Returns</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors shrink-0">
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white mt-3">
+          <div className="text-xl sm:text-3xl font-bold text-white mt-2 sm:mt-3">
             {consolidatedTotalReturns}{' '}
-            <span className="text-sm font-normal text-slate-400">Units</span>
+            <span className="text-xs sm:text-sm font-normal text-slate-400">Units</span>
           </div>
-          <div className="text-xs font-medium text-emerald-400 mt-2 flex items-center gap-1.5">
+          <div className="text-[10px] sm:text-xs font-medium text-emerald-400 mt-1.5 sm:mt-2 flex flex-wrap items-center gap-1">
             <span>{consolidatedGoodCount} Good ({consolidatedGoodPercent}%)</span>
-            <span className="text-slate-600">•</span>
+            <span className="hidden sm:inline text-slate-600">•</span>
             <span className="text-rose-400">{consolidatedDefectCount} Defects</span>
           </div>
         </div>
@@ -738,59 +742,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Card 2: Gate Inward */}
         <div
           onClick={() => onNavigateTab('inward')}
-          className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] group"
+          className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Gate Inward</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
-              <Truck className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">Gate Inward</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors shrink-0">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white mt-3">
+          <div className="text-xl sm:text-3xl font-bold text-white mt-2 sm:mt-3">
             {totalVehicles}{' '}
-            <span className="text-sm font-normal text-slate-400">Vehicles</span>
+            <span className="text-xs sm:text-sm font-normal text-slate-400">Vehicles</span>
           </div>
-          <div className="text-xs font-medium text-emerald-400 mt-2">
-            {totalReceivedBoxes} Total Boxes Unloaded
+          <div className="text-[10px] sm:text-xs font-medium text-emerald-400 mt-1.5 sm:mt-2 truncate">
+            {totalReceivedBoxes} Boxes Unloaded
           </div>
         </div>
 
         {/* Card 3: Cycle Count & Audit */}
         <div
           onClick={() => onNavigateTab('audit')}
-          className="bg-slate-900 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] group"
+          className="bg-slate-900 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-3.5 sm:p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Cycle Count & Audit</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors">
-              <Scan className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">Cycle Count</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors shrink-0">
+              <Scan className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white mt-3">
+          <div className="text-xl sm:text-3xl font-bold text-white mt-2 sm:mt-3">
             {filteredAuditRecords.reduce((a, b) => a + b.quantity, 0)}{' '}
-            <span className="text-sm font-normal text-slate-400">Scans</span>
+            <span className="text-xs sm:text-sm font-normal text-slate-400">Scans</span>
           </div>
-          <div className="text-xs font-medium text-purple-400 mt-2">
-            {filteredAuditRecords.length} Bin Entries Recorded
+          <div className="text-[10px] sm:text-xs font-medium text-purple-400 mt-1.5 sm:mt-2 truncate">
+            {filteredAuditRecords.length} Bins Audited
           </div>
         </div>
 
         {/* Card 4: Auditor Scanner Guns */}
         <div
           onClick={() => onNavigateTab('audit')}
-          className="bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] group"
+          className="bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-xl cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Auditor Scanner Guns</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-colors">
-              <Smartphone className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">Scanner Guns</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-colors shrink-0">
+              <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white mt-3">
+          <div className="text-xl sm:text-3xl font-bold text-white mt-2 sm:mt-3">
             {devicesActiveOnDate.length}{' '}
-            <span className="text-sm font-normal text-slate-400">Guns</span>
+            <span className="text-xs sm:text-sm font-normal text-slate-400">Guns</span>
           </div>
-          <div className="text-xs font-medium text-amber-400 mt-2">
+          <div className="text-[10px] sm:text-xs font-medium text-amber-400 mt-1.5 sm:mt-2 truncate">
             {devicesActiveOnDate.filter(d => d.status === 'Active').length} Active on Floor
           </div>
         </div>
@@ -799,27 +803,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ========================================================================= */}
       {/* 4. B2C RETURN - STREAMLINED UNIFIED SECTION (DROPDOWN + LIVE COND + CHART) */}
       {/* ========================================================================= */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-        {/* Header with Clean Account Dropdown Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-3 sm:space-y-4">
+        {/* Header with Clean Account Dropdown Selector (Stacked on mobile) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400">
+            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 shrink-0">
               <RotateCcw className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white tracking-tight">
-                B2C Returns Live Operations & Conditions
+              <h2 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                B2C Returns Live Operations
               </h2>
             </div>
           </div>
 
-          {/* Account Dropdown Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-400 whitespace-nowrap">Select Account:</span>
+          {/* Account Dropdown Filter (Full width on mobile) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <select
               value={selectedClientId}
               onChange={e => setSelectedClientId(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-white font-medium text-xs rounded-xl px-3 py-2 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-inner"
+              className="w-full sm:w-auto bg-slate-800 border border-slate-700 text-white font-medium text-xs rounded-xl px-3 py-2.5 sm:py-2 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-inner min-h-[40px] sm:min-h-0"
             >
               <option value="ALL">All Accounts (Whole Count — {consolidatedTotalReturns} Units)</option>
               {clients.map(c => {
@@ -834,7 +837,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {selectedClientId !== 'ALL' && (
               <button
                 onClick={() => setSelectedClientId('ALL')}
-                className="px-2.5 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-xl border border-slate-700 transition-all"
+                className="px-2.5 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-xl border border-slate-700 transition-all shrink-0 min-h-[40px] sm:min-h-0 flex items-center justify-center cursor-pointer"
                 title="Reset to Whole Count"
               >
                 Reset
@@ -843,16 +846,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Top Live Return Conditions Bar (Compact & Sleek Single Strip) */}
-        <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-semibold uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-blue-400" />
-              Return Conditions ({activeSelectedData.name}):
+        {/* Top Live Return Conditions Bar (Compact & Sleek Grid on Mobile) */}
+        <div className="bg-slate-950/90 border border-slate-800 p-2.5 sm:p-3 rounded-xl space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+            <span className="font-semibold uppercase text-slate-300 tracking-wider flex items-center gap-1.5 text-[11px] sm:text-xs">
+              <Tag className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              Conditions ({activeSelectedData.name}):
             </span>
-            <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] sm:text-xs font-medium">
               <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
-                {activeSelectedData.goodCount} Good ({activeSelectedData.goodPercent}% Restockable)
+                {activeSelectedData.goodCount} Good ({activeSelectedData.goodPercent}%)
               </span>
               <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md">
                 {activeSelectedData.defectCount} Defective
@@ -874,7 +877,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   key={cond.key}
                   onMouseEnter={() => setHoveredSliceKey(cond.key)}
                   onMouseLeave={() => setHoveredSliceKey(null)}
-                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                  className={`px-2 sm:px-2.5 py-1.5 rounded-lg border text-xs font-medium flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
                     cond.bgClass
                   } ${isHovered ? 'ring-2 ring-white scale-[1.03] shadow-md' : 'hover:bg-slate-800/60'}`}
                 >
@@ -883,13 +886,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       className="w-2 h-2 rounded-full shrink-0 shadow-sm"
                       style={{ backgroundColor: cond.color }}
                     />
-                    <span className="truncate text-[11px] font-semibold uppercase">{cond.label}</span>
+                    <span className="truncate text-[10px] sm:text-[11px] font-semibold uppercase">{cond.label}</span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 font-mono">
-                    <span className="text-white font-semibold bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-700/80 text-[11px]">
+                    <span className="text-white font-semibold bg-slate-900/90 px-1 sm:px-1.5 py-0.5 rounded border border-slate-700/80 text-[10px] sm:text-[11px]">
                       {count}
                     </span>
-                    <span className="opacity-75 text-[10px]">({pct}%)</span>
+                    <span className="opacity-75 text-[9px] sm:text-[10px]">({pct}%)</span>
                   </div>
                 </div>
               );
@@ -898,29 +901,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Dynamic Morphing Single Chart & Compact Legend */}
-        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5">
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3 mb-4">
             <div>
               <h3 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <PieChartIcon className="w-3.5 h-3.5 text-blue-400" />
-                {isAllAccounts
-                  ? 'Whole Return Distribution (All Accounts Share)'
-                  : `${activeSelectedData.fullName} — 7 Conditions Breakdown Chart`}
+                <PieChartIcon className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="truncate">
+                  {isAllAccounts
+                    ? 'Whole Return Distribution'
+                    : `${activeSelectedData.fullName} — 7 Conditions`}
+                </span>
               </h3>
             </div>
 
-            <div className="text-right">
-              <span className="text-xs font-medium text-emerald-400">
+            <div className="text-left sm:text-right">
+              <span className="text-[11px] sm:text-xs font-medium text-emerald-400">
                 {activeSelectedData.goodCount} Good ({activeSelectedData.goodPercent}%) • {activeSelectedData.defectCount} Defective
               </span>
             </div>
           </div>
 
           {/* Chart + Legend Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-center">
             {/* Donut Chart (6 Cols) */}
             <div className="md:col-span-6 flex flex-col items-center justify-center">
-              <div className="relative w-60 h-60 shrink-0 flex items-center justify-center">
+              <div className="relative w-52 h-52 sm:w-60 sm:h-60 shrink-0 flex items-center justify-center">
                 <svg viewBox="0 0 200 200" className="w-full h-full transform -rotate-90">
                   {activeSelectedData.totalReturns === 0 ? (
                     <circle
@@ -979,7 +984,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       ? activeChartSlices.find(s => s.key === hoveredSliceKey)?.shortLabel
                       : activeSelectedData.name}
                   </span>
-                  <span className="text-2xl font-bold text-white my-0.5">
+                  <span className="text-xl sm:text-2xl font-bold text-white my-0.5">
                     {hoveredSliceKey
                       ? activeChartSlices.find(s => s.key === hoveredSliceKey)?.count
                       : activeSelectedData.totalReturns}
@@ -1010,25 +1015,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         setSelectedClientId(slice.key);
                       }
                     }}
-                    className={`p-2.5 rounded-xl border transition-all flex items-center justify-between text-xs cursor-pointer ${
+                    className={`p-2 sm:p-2.5 rounded-xl border transition-all flex items-center justify-between text-xs cursor-pointer ${
                       isHovered
                         ? 'bg-slate-800 border-slate-600 scale-[1.01] shadow-md'
                         : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-800/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 truncate">
                       <div
                         className="w-3 h-3 rounded-md shrink-0 shadow-sm"
                         style={{ backgroundColor: slice.color }}
                       />
-                      <span className="font-medium text-slate-200">{slice.label}</span>
+                      <span className="font-medium text-slate-200 truncate text-[11px] sm:text-xs">{slice.label}</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-medium text-slate-400 text-[11px]">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                      <span className="font-mono font-medium text-slate-400 text-[10px] sm:text-[11px]">
                         {slice.percent}%
                       </span>
-                      <span className="font-semibold text-white text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700 min-w-[38px] text-center">
+                      <span className="font-semibold text-white text-[11px] sm:text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700 min-w-[34px] sm:min-w-[38px] text-center">
                         {slice.count}
                       </span>
                     </div>
@@ -1043,95 +1048,111 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ========================================================================= */}
       {/* 5. INWARD VEHICLES SUMMARY & AUDITOR OPERATOR COUNTS (FILTERED BY DATE) */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Inward Vehicles by Account */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+        {/* Inward Vehicles by Account with Collapsible Accordion Header */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-3">
           <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-            <div className="flex items-center gap-2">
-              <Truck className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-white">Inward Vehicles & Boxes by Account</h3>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsInwardAccordionOpen(prev => !prev)}
+              className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+            >
+              <Truck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <h3 className="text-xs sm:text-sm font-semibold text-white">Inward Vehicles & Boxes</h3>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isInwardAccordionOpen ? 'rotate-180' : ''}`} />
+            </button>
             <button
               onClick={() => onNavigateTab('inward')}
-              className="text-xs font-medium text-emerald-400 hover:text-emerald-300 cursor-pointer"
+              className="text-[11px] sm:text-xs font-medium text-emerald-400 hover:text-emerald-300 cursor-pointer shrink-0"
             >
               Full Register →
             </button>
           </div>
 
-          <div className="space-y-2">
-            {clients.map(c => {
-              const entries = filteredGateEntries.filter(g => g.clientId === c.id);
-              const vCount = entries.length;
-              const boxCount = entries.reduce((acc, g) => acc + (g.receivedBoxCount || 0), 0);
+          {isInwardAccordionOpen && (
+            <div className="space-y-2 animate-in fade-in duration-200">
+              {clients.map(c => {
+                const entries = filteredGateEntries.filter(g => g.clientId === c.id);
+                const vCount = entries.length;
+                const boxCount = entries.reduce((acc, g) => acc + (g.receivedBoxCount || 0), 0);
 
-              return (
-                <div
-                  key={c.id}
-                  className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/60 flex items-center justify-between text-xs"
-                >
-                  <div className="font-medium text-white flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${vCount > 0 ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-                    {c.name}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-slate-800 font-mono text-emerald-300 font-medium border border-slate-700">
-                      {vCount} {vCount === 1 ? 'Vehicle' : 'Vehicles'}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded bg-slate-900 font-mono text-white font-semibold border border-slate-700">
-                      {boxCount} Boxes
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Operator & Auditor Gun Scan Counts */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-semibold text-white">Operator & Gun Scan Counts</h3>
-            </div>
-            <button
-              onClick={() => onNavigateTab('audit')}
-              className="text-xs font-medium text-purple-400 hover:text-purple-300 cursor-pointer"
-            >
-              Open Audit Console →
-            </button>
-          </div>
-
-          {devicesActiveOnDate.length === 0 ? (
-            <div className="p-4 text-center text-xs text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800/60">
-              No scans recorded for {formatDisplayDate(selectedDate)}. Guns will appear here in real time as operators scan on this date.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 max-h-[190px] overflow-y-auto pr-1">
-              {devicesActiveOnDate.slice(0, 8).map(dev => {
-                const count = operatorAuditCounts[dev.assignedPerson] || operatorAuditCounts[dev.id] || 0;
                 return (
                   <div
-                    key={dev.id}
-                    onClick={() => onNavigateTab('audit')}
-                    className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/60 hover:border-purple-500/50 cursor-pointer transition-all flex items-center justify-between text-xs"
+                    key={c.id}
+                    className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/60 flex items-center justify-between text-xs"
                   >
-                    <div>
-                      <div className="font-mono font-medium text-indigo-400 text-[11px]">{dev.id}</div>
-                      <div className="text-white font-medium truncate max-w-[100px] text-[11px]">
-                        {dev.assignedPerson}
-                      </div>
+                    <div className="font-medium text-white flex items-center gap-2 truncate">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${vCount > 0 ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                      <span className="truncate">{c.name}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="font-semibold text-white text-xs bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
-                        {count}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                      <span className="px-2 py-0.5 rounded bg-slate-800 font-mono text-emerald-300 font-medium border border-slate-700 text-[11px]">
+                        {vCount} {vCount === 1 ? 'Veh.' : 'Veh.'}
                       </span>
-                      <div className="text-[9px] text-slate-400">Scans</div>
+                      <span className="px-2 sm:px-2.5 py-0.5 rounded bg-slate-900 font-mono text-white font-semibold border border-slate-700 text-[11px]">
+                        {boxCount} Bxs
+                      </span>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+
+        {/* Operator & Auditor Gun Scan Counts with Collapsible Accordion Header */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <button
+              type="button"
+              onClick={() => setIsAuditorAccordionOpen(prev => !prev)}
+              className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+            >
+              <Users className="w-4 h-4 text-purple-400 shrink-0" />
+              <h3 className="text-xs sm:text-sm font-semibold text-white">Operator & Gun Scans</h3>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isAuditorAccordionOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <button
+              onClick={() => onNavigateTab('audit')}
+              className="text-[11px] sm:text-xs font-medium text-purple-400 hover:text-purple-300 cursor-pointer shrink-0"
+            >
+              Audit Console →
+            </button>
+          </div>
+
+          {isAuditorAccordionOpen && (
+            <div className="animate-in fade-in duration-200">
+              {devicesActiveOnDate.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800/60">
+                  No scans recorded for {formatDisplayDate(selectedDate)}. Guns will appear here in real time as operators scan on this date.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                  {devicesActiveOnDate.slice(0, 8).map(dev => {
+                    const count = operatorAuditCounts[dev.assignedPerson] || operatorAuditCounts[dev.id] || 0;
+                    return (
+                      <div
+                        key={dev.id}
+                        onClick={() => onNavigateTab('audit')}
+                        className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/60 hover:border-purple-500/50 cursor-pointer transition-all flex items-center justify-between text-xs"
+                      >
+                        <div className="truncate">
+                          <div className="font-mono font-medium text-indigo-400 text-[11px]">{dev.id}</div>
+                          <div className="text-white font-medium truncate max-w-[120px] text-[11px]">
+                            {dev.assignedPerson}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-semibold text-white text-xs bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
+                            {count}
+                          </span>
+                          <div className="text-[9px] text-slate-400">Scans</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

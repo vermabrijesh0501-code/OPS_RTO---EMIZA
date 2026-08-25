@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -15,11 +15,17 @@ import {
   Sparkles,
   UserPlus,
   LogIn,
-  Send,
   Building2,
+  Phone,
+  Layers,
+  CheckSquare,
+  Square,
+  SlidersHorizontal,
+  Briefcase,
 } from 'lucide-react';
-import { User, UserRole } from '../types';
+import { User, UserRole, Department, ModuleId, ModulePermission } from '../types';
 import { StorageService } from '../services/storage';
+import { ROLE_DEFAULT_PERMISSIONS, getRoleBadgeConfig } from '../utils/rbac';
 
 interface LoginPageProps {
   onLoginSuccess: (user: User) => void;
@@ -41,16 +47,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Register Team Credential State
+  // Register Team User & Authority State
+  const [regEmpId, setRegEmpId] = useState('');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regRole, setRegRole] = useState<UserRole>('Supervisor');
+  const [regDepartment, setRegDepartment] = useState<Department>('Operations Management');
+  const [regWarehouseIds, setRegWarehouseIds] = useState<string[]>(['wh-main']);
+  const [regClientIds, setRegClientIds] = useState<string[]>([
+    'cli-bellavita',
+    'cli-nykaa',
+    'cli-mama',
+    'cli-boat',
+    'cli-sugar',
+  ]);
+  const [regPermissions, setRegPermissions] = useState<Record<ModuleId, ModulePermission>>(() =>
+    JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMISSIONS['Supervisor']))
+  );
+  const [showPermissionMatrix, setShowPermissionMatrix] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
 
-  // Forgot Password / Mail Verification State
+  // Forgot Password State
   const [forgotStep, setForgotStep] = useState<ForgotStep>('enter_email');
   const [forgotEmail, setForgotEmail] = useState('');
   const [generatedCode, setGeneratedCode] = useState('482910');
@@ -60,7 +81,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [simulatedMailNotice, setSimulatedMailNotice] = useState<string | null>(null);
-  const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Update default permissions whenever the selected role changes in registration
+  const handleRoleChange = (newRole: UserRole) => {
+    setRegRole(newRole);
+    if (ROLE_DEFAULT_PERMISSIONS[newRole]) {
+      setRegPermissions(JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMISSIONS[newRole])));
+    }
+    // Auto-suggest department
+    if (newRole === 'Security Officer') setRegDepartment('Gate Security');
+    else if (newRole === 'RTO Operator') setRegDepartment('RTO & Returns');
+    else if (newRole === 'GRN Operator') setRegDepartment('GRN & Inward');
+    else if (newRole === 'Auditor') setRegDepartment('Inventory & Audit');
+    else if (newRole === 'Warehouse Manager' || newRole === 'Supervisor')
+      setRegDepartment('Operations Management');
+    else if (newRole === 'Super Admin' || newRole === 'Admin')
+      setRegDepartment('Central Admin');
+  };
+
+  // Toggle single action permission
+  const togglePermissionAction = (moduleId: ModuleId, action: keyof ModulePermission) => {
+    setRegPermissions(prev => {
+      const currentMod = prev[moduleId] || { view: false };
+      return {
+        ...prev,
+        [moduleId]: {
+          ...currentMod,
+          [action]: !currentMod[action],
+        },
+      };
+    });
+  };
 
   // Handle Standard Sign In
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -72,21 +123,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
       const allUsers = StorageService.getUsers();
       const input = loginEmail.trim().toLowerCase();
 
-      // Find user by email or by simple name match
+      // Find user by email, empId, or username
       const matchedUser = allUsers.find(
-        u => u.email.toLowerCase() === input || u.name.toLowerCase() === input || u.name.toLowerCase().split(' ')[0] === input
+        u =>
+          u.email.toLowerCase() === input ||
+          (u.empId && u.empId.toLowerCase() === input) ||
+          u.name.toLowerCase() === input ||
+          u.name.toLowerCase().split(' ')[0] === input
       );
 
       if (!matchedUser) {
-        setLoginError('No team account found with this email/username. Please check credentials or create a new team credential below.');
+        setLoginError(
+          'No team account found with this email/ID. Please verify credentials or use Quick Login below.'
+        );
         setIsSubmitting(false);
         return;
       }
 
-      // Password check (if user has set a password, verify it; otherwise fallback to password123 or match)
+      // Password check
       const expectedPassword = matchedUser.password || 'password123';
-      if (loginPassword && loginPassword !== expectedPassword && loginPassword !== 'password123' && loginPassword !== 'emiza123' && loginPassword !== 'admin123') {
-        setLoginError('Incorrect password. Default demo password is "password123" or use "Forgot Password".');
+      if (
+        loginPassword &&
+        loginPassword !== expectedPassword &&
+        loginPassword !== 'password123' &&
+        loginPassword !== 'emiza123' &&
+        loginPassword !== 'admin123'
+      ) {
+        setLoginError(
+          'Incorrect password. Default demo password is "password123" or use "Forgot Password".'
+        );
         setIsSubmitting(false);
         return;
       }
@@ -104,7 +169,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
         userRole: updatedUser.role,
         action: 'User Logged In',
         module: 'Auth',
-        details: `${updatedUser.name} signed in successfully to Bhiwandi WH`,
+        details: `${updatedUser.name} (${updatedUser.role}) signed in successfully`,
       });
 
       setIsSubmitting(false);
@@ -112,7 +177,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
     }, 400);
   };
 
-  // Quick 1-Click Demo Login
+  // Quick 1-Click Persona Login
   const handleQuickLogin = (user: User) => {
     setLoginEmail(user.email);
     setLoginPassword('password123');
@@ -130,12 +195,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
       userRole: updatedUser.role,
       action: 'User Logged In',
       module: 'Auth',
-      details: `${updatedUser.name} signed in via Quick Team Login`,
+      details: `${updatedUser.name} logged in via Quick Persona as ${updatedUser.role}`,
     });
     onLoginSuccess(updatedUser);
   };
 
-  // Handle Create Team Member Credential
+  // Handle Create User & Authority Assignment
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setRegError(null);
@@ -152,23 +217,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
     }
 
     const allUsers = StorageService.getUsers();
-    const existing = allUsers.find(u => u.email.toLowerCase() === regEmail.trim().toLowerCase());
+    const existing = allUsers.find(
+      u => u.email.toLowerCase() === regEmail.trim().toLowerCase()
+    );
     if (existing) {
-      setRegError('A team member with this email already exists. Please sign in or use a different email.');
+      setRegError('A user with this email already exists. Please sign in or use a different email.');
       return;
     }
 
-    // Register user
     const newUser: User = {
       id: `usr-${Date.now()}`,
+      empId: regEmpId.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
       name: regName.trim(),
       email: regEmail.trim().toLowerCase(),
+      phone: regPhone.trim(),
       password: regPassword,
       role: regRole,
-      assignedWarehouseIds: ['wh-main'],
-      assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
+      department: regDepartment,
+      companyId: 'comp-1',
+      assignedWarehouseIds: regWarehouseIds,
+      assignedClientIds: regClientIds,
+      permissions: regPermissions,
       status: 'Active',
       lastLoginAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
 
     StorageService.registerTeamUser(newUser);
@@ -178,18 +250,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
       userId: newUser.id,
       userName: newUser.name,
       userRole: newUser.role,
-      action: 'Created Team Credentials',
+      action: 'Created User & Authority',
       module: 'Auth',
-      details: `New team member ${newUser.name} (${newUser.role}) created and authenticated`,
+      details: `New team member ${newUser.name} created with role "${newUser.role}" in ${newUser.department}`,
     });
 
-    setRegSuccess(`Team credential created for ${newUser.name}! Logging in...`);
+    setRegSuccess(`Account and authority created for ${newUser.name}! Entering platform...`);
     setTimeout(() => {
       onLoginSuccess(newUser);
     }, 700);
   };
 
-  // Handle Forgot Password - Step 1: Send Mail Verification
+  // Handle Forgot Password - Step 1
   const handleSendMailCode = (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError(null);
@@ -197,7 +269,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
 
     const email = forgotEmail.trim().toLowerCase();
     if (!email) {
-      setForgotError('Please enter your team email address.');
+      setForgotError('Please enter your registered email address.');
       return;
     }
 
@@ -205,37 +277,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
     const matched = allUsers.find(u => u.email.toLowerCase() === email);
 
     if (!matched) {
-      setForgotError(`No registered team account found for "${email}". Please verify email.`);
+      setForgotError(`No registered account found for "${email}". Please verify email.`);
       return;
     }
 
-    // Generate random 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
     setGeneratedCode(code);
-
     setSimulatedMailNotice(
-      `[SIMULATED SECURE EMAIL DISPATCH]: Verification email sent to ${email}. Code: ${code}`
+      `[SECURE EMAIL DISPATCH]: Password reset code for ${email} is: ${code}`
     );
     setForgotSuccess(`Verification code dispatched to ${email}!`);
     setForgotStep('enter_code');
   };
 
-  // Handle Step 2: Verify Code
+  // Handle Forgot Password - Step 2
   const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError(null);
     setForgotSuccess(null);
 
     if (enteredCode.trim() !== generatedCode && enteredCode.trim() !== '123456') {
-      setForgotError('Invalid verification code. Please check code or click "Resend Code".');
+      setForgotError('Invalid verification code. Please check code or retry.');
       return;
     }
 
-    setForgotSuccess('Code successfully verified! Now set your new password.');
+    setForgotSuccess('Code successfully verified! Set your new password.');
     setForgotStep('reset_password');
   };
 
-  // Handle Step 3: Reset Password
+  // Handle Forgot Password - Step 3
   const handleResetPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError(null);
@@ -254,143 +324,153 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
     const email = forgotEmail.trim().toLowerCase();
     const updatedUsers = allUsers.map(u => {
       if (u.email.toLowerCase() === email) {
-        return {
-          ...u,
-          password: newPassword,
-        };
+        return { ...u, password: newPassword };
       }
       return u;
     });
 
     StorageService.saveUsers(updatedUsers);
-
     const targetUser = updatedUsers.find(u => u.email.toLowerCase() === email);
     if (targetUser) {
       StorageService.saveCurrentUser(targetUser);
       StorageService.saveAuthSession({ isLoggedIn: true, userId: targetUser.id });
-      StorageService.addActivityLog({
-        userId: targetUser.id,
-        userName: targetUser.name,
-        userRole: targetUser.role,
-        action: 'Reset Account Password',
-        module: 'Auth',
-        details: `Password reset verified and completed for ${targetUser.email}`,
-      });
-      alert('Password updated successfully! Logging you in now...');
       onLoginSuccess(targetUser);
     }
   };
 
   const currentTeamUsers = users && users.length > 0 ? users : StorageService.getUsers();
 
+  const moduleNames: { id: ModuleId; label: string; desc: string }[] = [
+    { id: 'dashboard', label: 'Dashboard', desc: 'Live operations overview & metrics' },
+    { id: 'inward', label: 'Inward Gate Entry', desc: 'Gate entry, docks, unloading & vehicle register' },
+    { id: 'returns_rto', label: 'RTO / B2C Returns', desc: 'RTO batches, scanning gun & 7 return conditions' },
+    { id: 'returns_b2b', label: 'B2B Returns', desc: 'B2B bulk shipment return batches' },
+    { id: 'audit', label: 'Audit / Cycle Count', desc: 'Barcode scanner guns, audit reconciliation' },
+    { id: 'masters', label: 'Master Data & RBAC', desc: 'Users, roles, clients, couriers, SKUs & docks' },
+    { id: 'reports', label: 'Reports & Analytics', desc: 'Excel/PDF downloads & operational logs' },
+    { id: 'supabase_hub', label: 'Database & Sync', desc: 'Supabase schema DDL & deployment settings' },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#0B141E] text-[#FFFFFF] font-sans flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden selection:bg-[#635BFF] selection:text-white">
-      {/* Ambient Deep Navy / Purple Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#635BFF]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-72 h-72 bg-[#00BDD6]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden selection:bg-blue-600 selection:text-white">
+      {/* Dynamic Warehouse Background Overlay */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(37,99,235,0.15),rgba(255,255,255,0))] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
 
       {/* Main Authentication Card */}
-      <div className="w-full max-w-lg bg-[#121E2B] border border-[#1E2C3D] rounded-[12px] shadow-2xl p-6 sm:p-8 relative z-10">
+      <div className="w-full max-w-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 relative z-10">
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[12px] bg-[#635BFF] text-white font-black text-2xl shadow-lg shadow-[#635BFF]/25 mb-3">
-            E
+          <div className="inline-flex items-center justify-center gap-3 mb-2">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-2xl shadow-lg shadow-blue-500/25 flex items-center justify-center">
+              E
+            </div>
+            <div className="text-left">
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none">
+                EMIZA-WOP
+              </h1>
+              <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-widest mt-1">
+                Warehouse Operations Platform
+              </p>
+            </div>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#FFFFFF] tracking-tight">
-            EMIZA Warehouse Operations
-          </h1>
-          <div className="flex items-center justify-center gap-2 mt-1.5">
-            <span className="px-2 py-0.5 rounded-[6px] text-[11px] font-bold bg-[#635BFF]/15 text-[#635BFF] border border-[#635BFF]/30">
-              Bhiwandi WH
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              ● Multi-Warehouse Ready
             </span>
-            <span className="text-xs text-[#8FA0B5]">Team Access Portal</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/30">
+              Role-Based Authority (RBAC)
+            </span>
           </div>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex rounded-[10px] bg-[#0B141E] p-1 border border-[#1E2C3D] mb-6">
+        {/* Mode Switcher Navigation */}
+        <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 mb-6">
           <button
             id="tab-login"
+            type="button"
             onClick={() => {
               setMode('login');
               setLoginError(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-[8px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               mode === 'login'
-                ? 'bg-[#635BFF] text-white shadow-sm'
-                : 'text-[#8FA0B5] hover:text-[#FFFFFF]'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <LogIn className="w-3.5 h-3.5" /> Sign In
           </button>
           <button
             id="tab-register"
+            type="button"
             onClick={() => {
               setMode('register');
               setRegError(null);
               setRegSuccess(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-[8px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               mode === 'register'
-                ? 'bg-[#635BFF] text-white shadow-sm'
-                : 'text-[#8FA0B5] hover:text-[#FFFFFF]'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <UserPlus className="w-3.5 h-3.5" /> Create Team Login
+            <UserPlus className="w-3.5 h-3.5" /> Assign Authority & Create User
           </button>
           <button
             id="tab-forgot"
+            type="button"
             onClick={() => {
               setMode('forgot_password');
               setForgotStep('enter_email');
               setForgotError(null);
               setForgotSuccess(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-[8px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               mode === 'forgot_password'
-                ? 'bg-[#635BFF] text-white shadow-sm'
-                : 'text-[#8FA0B5] hover:text-[#FFFFFF]'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <KeyRound className="w-3.5 h-3.5" /> Forgot Password
+            <KeyRound className="w-3.5 h-3.5" /> Reset Pass
           </button>
         </div>
 
-        {/* ------------------------------------------------------------- */}
+        {/* ============================================================= */}
         {/* MODE 1: SIGN IN */}
-        {/* ------------------------------------------------------------- */}
+        {/* ============================================================= */}
         {mode === 'login' && (
           <div className="space-y-4">
             {loginError && (
-              <div className="p-3 rounded-[10px] bg-[#E05252]/10 border border-[#E05252]/30 text-[#E05252] text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                 <span>{loginError}</span>
               </div>
             )}
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#8FA0B5] mb-1.5">
-                  Team Email or Username <span className="text-[#E05252]">*</span>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Email, Employee ID or Username <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-[#8FA0B5] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     id="input-login-email"
                     type="text"
                     required
-                    placeholder="e.g. verma.brijesh0501@gmail.com or brijesh"
+                    placeholder="e.g. verma.brijesh0501@gmail.com, EMP-1001 or rajesh.security@emiza.com"
                     value={loginEmail}
                     onChange={e => setLoginEmail(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] pl-10 pr-3.5 py-2.5 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF] transition-colors"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-[#8FA0B5]">
-                    Password <span className="text-[#E05252]">*</span>
+                  <label className="text-xs font-bold text-slate-300">
+                    Password <span className="text-rose-400">*</span>
                   </label>
                   <button
                     type="button"
@@ -398,13 +478,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
                       setMode('forgot_password');
                       setForgotEmail(loginEmail);
                     }}
-                    className="text-[11px] font-semibold text-[#635BFF] hover:text-[#5E48D9] transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                   >
                     Forgot Password?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-[#8FA0B5] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     id="input-login-password"
                     type={showLoginPassword ? 'text' : 'password'}
@@ -412,12 +492,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
                     placeholder="Enter password (default: password123)"
                     value={loginPassword}
                     onChange={e => setLoginPassword(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] pl-10 pr-10 py-2.5 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF] transition-colors"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8FA0B5] hover:text-[#FFFFFF] cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -425,379 +505,488 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, users }) =
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <label className="flex items-center gap-2 cursor-pointer text-[#8FA0B5] select-none">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-400 select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={e => setRememberMe(e.target.checked)}
-                    className="rounded-[4px] bg-[#0B141E] border-[#1E2C3D] text-[#635BFF] focus:ring-0 cursor-pointer"
+                    className="rounded bg-slate-950 border-slate-700 text-blue-600 focus:ring-0 cursor-pointer"
                   />
-                  <span>Remember my team login</span>
+                  <span>Remember my login</span>
                 </label>
-                <span className="text-[11px] text-[#6C7D93]">Facility: Bhiwandi WH</span>
+                <span className="text-[11px] text-slate-500 font-mono">Facility: Bhiwandi WH (Active)</span>
               </div>
 
               <button
                 id="btn-login-submit"
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 rounded-[10px] bg-[#635BFF] hover:bg-[#5E48D9] active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-[#635BFF]/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Credentials...
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Authenticating & Checking Permissions...
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4" /> Sign In to Bhiwandi WH
+                    <LogIn className="w-4 h-4" /> Sign In to EMIZA-WOP
                   </>
                 )}
               </button>
             </form>
 
-            {/* Quick Demo Team Logins */}
-            <div className="mt-6 pt-5 border-t border-[#1E2C3D] space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] text-[#8FA0B5] font-bold uppercase tracking-wider">
-                <span className="flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FFC107]" /> Quick Team Login (1-Click)
+            {/* Quick 1-Click Role-Based Authority Logins */}
+            <div className="mt-6 pt-5 border-t border-slate-800 space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                <span className="flex items-center gap-1.5 text-blue-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 1-Click Role Authority Logins
                 </span>
-                <span className="text-[#6C7D93]">Demo Profiles</span>
+                <span className="text-slate-500 text-[10px]">Test Different Personas</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {currentTeamUsers.slice(0, 4).map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickLogin(u)}
-                    className="p-2.5 rounded-[10px] bg-[#182738] hover:bg-[#1E3147] border border-[#1E2C3D] hover:border-[#635BFF]/50 text-left transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#635BFF]/20 text-[#635BFF] border border-[#635BFF]/30 flex items-center justify-center font-bold text-[10px]">
-                        {u.name.charAt(0)}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {currentTeamUsers.map(u => {
+                  const badge = getRoleBadgeConfig(u.role);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => handleQuickLogin(u)}
+                      className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500 text-left transition-all group cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}>
+                          {u.role.replace(' Operator', '').replace(' Officer', '')}
+                        </span>
+                        {u.empId && <span className="text-[9px] font-mono text-slate-500">{u.empId}</span>}
                       </div>
-                      <div className="truncate">
-                        <div className="text-xs font-bold text-[#FFFFFF] group-hover:text-[#635BFF] truncate">
-                          {u.name.split(' ')[0]}
-                        </div>
-                        <div className="text-[10px] text-[#8FA0B5] truncate">{u.role}</div>
+                      <div className="text-xs font-bold text-white group-hover:text-blue-300 truncate">
+                        {u.name}
                       </div>
-                    </div>
-                  </button>
-                ))}
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {u.department || 'Operations'}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
         )}
 
-        {/* ------------------------------------------------------------- */}
-        {/* MODE 2: CREATE TEAM CREDENTIAL */}
-        {/* ------------------------------------------------------------- */}
+        {/* ============================================================= */}
+        {/* MODE 2: ASSIGN AUTHORITY & CREATE USER */}
+        {/* ============================================================= */}
         {mode === 'register' && (
           <div className="space-y-4">
-            <div className="text-xs text-[#8FA0B5]">
-              Create a new user login credential for your warehouse team members with assigned role permissions.
+            <div className="text-xs text-slate-300">
+              Create a new user profile, define their <strong className="text-blue-400">Department, Role</strong>, and configure individual <strong className="text-blue-400">Module Permissions</strong>.
             </div>
 
             {regError && (
-              <div className="p-3 rounded-[10px] bg-[#E05252]/10 border border-[#E05252]/30 text-[#E05252] text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                 <span>{regError}</span>
               </div>
             )}
 
             {regSuccess && (
-              <div className="p-3 rounded-[10px] bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                 <span>{regSuccess}</span>
               </div>
             )}
 
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                  Full Name <span className="text-[#E05252]">*</span>
-                </label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 text-[#8FA0B5] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
+              {/* Name & Employee ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Full Name <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="input-reg-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Sharma"
+                      value={regName}
+                      onChange={e => setRegName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Employee ID
+                  </label>
                   <input
-                    id="input-reg-name"
+                    id="input-reg-empid"
                     type="text"
-                    required
-                    placeholder="e.g. Brijesh Verma or Rahul"
-                    value={regName}
-                    onChange={e => setRegName(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] pl-10 pr-3.5 py-2 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF]"
+                    placeholder="e.g. EMP-1010"
+                    value={regEmpId}
+                    onChange={e => setRegEmpId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                  Team Email Address <span className="text-[#E05252]">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#8FA0B5] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="input-reg-email"
-                    type="email"
-                    required
-                    placeholder="e.g. brijesh@emiza.com or verma@..."
-                    value={regEmail}
-                    onChange={e => setRegEmail(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] pl-10 pr-3.5 py-2 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              {/* Email & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                    Role <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Email Address <span className="text-rose-400">*</span>
                   </label>
-                  <select
-                    id="select-reg-role"
-                    value={regRole}
-                    onChange={e => setRegRole(e.target.value as UserRole)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3 py-2 text-xs text-[#FFFFFF] focus:outline-none focus:border-[#635BFF] cursor-pointer"
-                  >
-                    <option value="Super Admin">Super Admin</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Warehouse Manager">Warehouse Manager</option>
-                    <option value="Supervisor">Supervisor</option>
-                    <option value="Operator">Operator (Scanner Gun)</option>
-                    <option value="Read Only">Read Only</option>
-                  </select>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="input-reg-email"
+                      type="email"
+                      required
+                      placeholder="e.g. ramesh@emiza.com"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                    Operating WH
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Mobile Phone
                   </label>
-                  <div className="w-full bg-[#0B141E]/60 border border-[#1E2C3D] rounded-[10px] px-3 py-2 text-xs text-[#8FA0B5] flex items-center gap-1.5">
-                    <Warehouse className="w-3.5 h-3.5 text-[#00BDD6]" />
-                    <span>Bhiwandi WH</span>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="input-reg-phone"
+                      type="tel"
+                      placeholder="+91 98765 00000"
+                      value={regPhone}
+                      onChange={e => setRegPhone(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
+                    />
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Role & Department Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                    Password <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Assigned Role <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    id="select-reg-role"
+                    value={regRole}
+                    onChange={e => handleRoleChange(e.target.value as UserRole)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer font-semibold"
+                  >
+                    <option value="Super Admin">Super Admin (All Access)</option>
+                    <option value="Admin">Admin (Full System)</option>
+                    <option value="Warehouse Manager">Warehouse Manager (Operations & Reports)</option>
+                    <option value="Supervisor">Supervisor (Operations & Approvals)</option>
+                    <option value="Security Officer">Security Officer (Gate & Inward Only)</option>
+                    <option value="RTO Operator">RTO Operator (Returns & Scanning Only)</option>
+                    <option value="GRN Operator">GRN Operator (Inward & GRN Only)</option>
+                    <option value="Auditor">Auditor (Cycle Count & Guns Only)</option>
+                    <option value="Operator">Operator (Floor Scanning)</option>
+                    <option value="Read Only">Read Only (View Only)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Department
+                  </label>
+                  <select
+                    id="select-reg-department"
+                    value={regDepartment}
+                    onChange={e => setRegDepartment(e.target.value as Department)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="Central Admin">Central Admin</option>
+                    <option value="Operations Management">Operations Management</option>
+                    <option value="Gate Security">Gate Security</option>
+                    <option value="RTO & Returns">RTO & Returns</option>
+                    <option value="GRN & Inward">GRN & Inward</option>
+                    <option value="Inventory & Audit">Inventory & Audit</option>
+                    <option value="Quality & Inspection">Quality & Inspection</option>
+                    <option value="IT & Systems">IT & Systems</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Password & Confirm */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Password <span className="text-rose-400">*</span>
                   </label>
                   <input
                     id="input-reg-pass"
                     type="password"
                     required
-                    placeholder="Min 4 chars"
+                    placeholder="Min 4 characters"
                     value={regPassword}
                     onChange={e => setRegPassword(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3 py-2 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF]"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1">
-                    Confirm Password <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Confirm Password <span className="text-rose-400">*</span>
                   </label>
                   <input
                     id="input-reg-confirm-pass"
                     type="password"
                     required
-                    placeholder="Confirm"
+                    placeholder="Re-type password"
                     value={regConfirmPassword}
                     onChange={e => setRegConfirmPassword(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3 py-2 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF]"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
+              </div>
+
+              {/* Custom Permission Matrix Checkbox Accordion */}
+              <div className="border border-slate-800 rounded-xl bg-slate-950 p-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPermissionMatrix(prev => !prev)}
+                  className="w-full flex items-center justify-between text-xs font-bold text-blue-400 hover:text-blue-300 cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Customize Granular Module Permissions ({regRole})
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {showPermissionMatrix ? 'Hide Matrix ▲' : 'Edit Matrix ▼'}
+                  </span>
+                </button>
+
+                {showPermissionMatrix && (
+                  <div className="mt-3 pt-3 border-t border-slate-800 space-y-2.5">
+                    <div className="text-[11px] text-slate-400 mb-2">
+                      Check/uncheck specific functional actions for this user:
+                    </div>
+                    {moduleNames.map(mod => {
+                      const perms = regPermissions[mod.id] || { view: false };
+                      return (
+                        <div
+                          key={mod.id}
+                          className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-white">{mod.label}</div>
+                            <div className="text-[10px] text-slate-400">{mod.desc}</div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                            {/* View Checkbox */}
+                            <label className="flex items-center gap-1 cursor-pointer bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={!!perms.view}
+                                onChange={() => togglePermissionAction(mod.id, 'view')}
+                                className="rounded text-blue-600 focus:ring-0"
+                              />
+                              <span>View</span>
+                            </label>
+
+                            {/* Create Checkbox */}
+                            <label className="flex items-center gap-1 cursor-pointer bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={!!perms.create}
+                                onChange={() => togglePermissionAction(mod.id, 'create')}
+                                className="rounded text-blue-600 focus:ring-0"
+                              />
+                              <span>Create</span>
+                            </label>
+
+                            {/* Scan Checkbox */}
+                            {(mod.id === 'returns_rto' || mod.id === 'returns_b2b' || mod.id === 'audit' || mod.id === 'inward') && (
+                              <label className="flex items-center gap-1 cursor-pointer bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!perms.scan}
+                                  onChange={() => togglePermissionAction(mod.id, 'scan')}
+                                  className="rounded text-blue-600 focus:ring-0"
+                                />
+                                <span>Scan</span>
+                              </label>
+                            )}
+
+                            {/* Export Checkbox */}
+                            <label className="flex items-center gap-1 cursor-pointer bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={!!perms.export}
+                                onChange={() => togglePermissionAction(mod.id, 'export')}
+                                className="rounded text-blue-600 focus:ring-0"
+                              />
+                              <span>Export</span>
+                            </label>
+
+                            {/* Close Batch Checkbox */}
+                            {(mod.id === 'returns_rto' || mod.id === 'returns_b2b') && (
+                              <label className="flex items-center gap-1 cursor-pointer bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!perms.closeBatch}
+                                  onChange={() => togglePermissionAction(mod.id, 'closeBatch')}
+                                  className="rounded text-blue-600 focus:ring-0"
+                                />
+                                <span>Close Batch</span>
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <button
                 id="btn-register-submit"
                 type="submit"
-                className="w-full py-2.5 rounded-[10px] bg-[#635BFF] hover:bg-[#5E48D9] active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-[#635BFF]/30 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
-                <UserPlus className="w-4 h-4" /> Save Team Credential & Enter App
+                <UserPlus className="w-4 h-4" /> Save User Authority & Sign In
               </button>
             </form>
           </div>
         )}
 
-        {/* ------------------------------------------------------------- */}
-        {/* MODE 3: FORGOT PASSWORD & MAIL VERIFICATION */}
-        {/* ------------------------------------------------------------- */}
+        {/* ============================================================= */}
+        {/* MODE 3: FORGOT PASSWORD */}
+        {/* ============================================================= */}
         {mode === 'forgot_password' && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#1E2C3D] text-xs">
-              <span className="font-extrabold text-[#635BFF]">Password Reset via Mail Verification</span>
+            <div className="pb-2 border-b border-slate-800 text-xs">
+              <span className="font-extrabold text-blue-400">Password Reset via Verification Dispatch</span>
             </div>
 
             {forgotError && (
-              <div className="p-3 rounded-[10px] bg-[#E05252]/10 border border-[#E05252]/30 text-[#E05252] text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                 <span>{forgotError}</span>
               </div>
             )}
 
             {forgotSuccess && (
-              <div className="p-3 rounded-[10px] bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                 <span>{forgotSuccess}</span>
               </div>
             )}
 
             {simulatedMailNotice && (
-              <div className="p-3 rounded-[10px] bg-[#635BFF]/10 border border-[#635BFF]/30 text-[#FFFFFF] text-xs flex items-start gap-2">
-                <Send className="w-4 h-4 shrink-0 mt-0.5 text-[#635BFF]" />
-                <span>{simulatedMailNotice}</span>
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs font-mono">
+                {simulatedMailNotice}
               </div>
             )}
 
-            {/* STEP 1: Enter Email */}
+            {/* Step 1 */}
             {forgotStep === 'enter_email' && (
-              <form onSubmit={handleSendMailCode} className="space-y-4">
-                <p className="text-xs text-[#8FA0B5]">
-                  Enter your registered team email address. We will send a 6-digit verification code to reset your password.
-                </p>
-
+              <form onSubmit={handleSendMailCode} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1.5">
-                    Team Email Address <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Registered Email Address <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-[#8FA0B5] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      id="input-forgot-email"
-                      type="email"
-                      required
-                      placeholder="e.g. verma.brijesh0501@gmail.com"
-                      value={forgotEmail}
-                      onChange={e => setForgotEmail(e.target.value)}
-                      className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] pl-10 pr-3.5 py-2.5 text-xs text-[#FFFFFF] placeholder-[#6C7D93] focus:outline-none focus:border-[#635BFF]"
-                    />
-                  </div>
+                  <input
+                    id="input-forgot-email"
+                    type="email"
+                    required
+                    placeholder="e.g. verma.brijesh0501@gmail.com"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
                 </div>
-
                 <button
-                  id="btn-send-mail-code"
                   type="submit"
-                  className="w-full py-2.5 rounded-[10px] bg-[#635BFF] hover:bg-[#5E48D9] text-white font-bold text-xs shadow-md shadow-[#635BFF]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
-                  <Send className="w-4 h-4" /> Send Mail Verification Code
+                  Send Verification Code
                 </button>
               </form>
             )}
 
-            {/* STEP 2: Enter Verification Code */}
+            {/* Step 2 */}
             {forgotStep === 'enter_code' && (
-              <form onSubmit={handleVerifyCode} className="space-y-4">
-                <p className="text-xs text-[#8FA0B5]">
-                  Please enter the 6-digit verification code sent to <strong className="text-white">{forgotEmail}</strong>.
-                </p>
-
+              <form onSubmit={handleVerifyCode} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1.5">
-                    6-Digit Verification Code (OTP) <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Enter 6-Digit Code <span className="text-rose-400">*</span>
                   </label>
                   <input
-                    id="input-verification-code"
+                    id="input-verify-code"
                     type="text"
-                    maxLength={6}
                     required
-                    placeholder="Enter 6-digit code (e.g. 482910)"
+                    maxLength={6}
+                    placeholder="Enter code (or 123456)"
                     value={enteredCode}
-                    onChange={e => setEnteredCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3.5 py-2.5 text-center tracking-widest font-mono text-base font-black text-white focus:outline-none focus:border-[#635BFF]"
+                    onChange={e => setEnteredCode(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-[#8FA0B5]">
-                  <span>Didn't receive code?</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newCode = String(Math.floor(100000 + Math.random() * 900000));
-                      setGeneratedCode(newCode);
-                      setSimulatedMailNotice(`New code generated: [ ${newCode} ]`);
-                    }}
-                    className="text-[#635BFF] hover:text-[#5E48D9] font-bold cursor-pointer"
-                  >
-                    Resend Code
-                  </button>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setForgotStep('enter_email')}
-                    className="w-1/3 py-2.5 rounded-[10px] bg-[#182738] hover:bg-[#1E3147] text-[#8FA0B5] hover:text-[#FFFFFF] text-xs font-bold cursor-pointer"
-                  >
-                    Back
-                  </button>
-                  <button
-                    id="btn-verify-code"
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-[10px] bg-[#635BFF] hover:bg-[#5E48D9] text-white font-bold text-xs shadow-md shadow-[#635BFF]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Verify Code
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                >
+                  Verify Code
+                </button>
               </form>
             )}
 
-            {/* STEP 3: Reset Password */}
+            {/* Step 3 */}
             {forgotStep === 'reset_password' && (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                <p className="text-xs text-[#10B981] font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" /> Mail verified! Set your new password below.
-                </p>
-
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1.5">
-                    New Password <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    New Password <span className="text-rose-400">*</span>
                   </label>
                   <input
-                    id="input-new-password"
                     type="password"
                     required
                     placeholder="Enter new password"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3.5 py-2.5 text-xs text-[#FFFFFF] focus:outline-none focus:border-[#635BFF]"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-[#8FA0B5] mb-1.5">
-                    Confirm New Password <span className="text-[#E05252]">*</span>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Confirm New Password <span className="text-rose-400">*</span>
                   </label>
                   <input
-                    id="input-confirm-new-password"
                     type="password"
                     required
                     placeholder="Confirm new password"
                     value={confirmNewPassword}
                     onChange={e => setConfirmNewPassword(e.target.value)}
-                    className="w-full bg-[#0B141E] border border-[#1E2C3D] rounded-[10px] px-3.5 py-2.5 text-xs text-[#FFFFFF] focus:outline-none focus:border-[#635BFF]"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
                 <button
-                  id="btn-save-new-password"
                   type="submit"
-                  className="w-full py-2.5 rounded-[10px] bg-[#10B981] hover:bg-[#059669] text-white font-bold text-xs shadow-md shadow-[#10B981]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" /> Update Password & Sign In
+                  Save New Password & Sign In
                 </button>
               </form>
             )}
           </div>
         )}
-      </div>
 
-      {/* Footer Info */}
-      <div className="text-center text-xs text-[#8FA0B5] mt-6 relative z-10">
-        EMIZA Supply Chain Services • Bhiwandi WH Operations Hub
+        {/* Footer info */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+          <span>EMIZA-WOP v3.0</span>
+          <span>Supabase PostgreSQL + RBAC</span>
+        </div>
       </div>
     </div>
   );

@@ -3,20 +3,61 @@ export type UserRole =
   | 'Admin'
   | 'Warehouse Manager'
   | 'Supervisor'
+  | 'Security Officer'
+  | 'RTO Operator'
+  | 'GRN Operator'
+  | 'Auditor'
   | 'Operator'
   | 'Read Only';
 
+export type Department =
+  | 'Central Admin'
+  | 'Operations Management'
+  | 'Gate Security'
+  | 'RTO & Returns'
+  | 'GRN & Inward'
+  | 'Inventory & Audit'
+  | 'Quality & Inspection'
+  | 'IT & Systems';
+
+export interface ModulePermission {
+  view: boolean;
+  create?: boolean;
+  edit?: boolean;
+  delete?: boolean;
+  scan?: boolean;
+  export?: boolean;
+  approve?: boolean;
+  closeBatch?: boolean;
+}
+
+export type ModuleId =
+  | 'dashboard'
+  | 'inward'
+  | 'returns_rto'
+  | 'returns_b2b'
+  | 'audit'
+  | 'masters'
+  | 'reports'
+  | 'supabase_hub';
+
 export interface User {
   id: string;
+  empId?: string;
   name: string;
   email: string;
+  phone?: string;
   password?: string;
   role: UserRole;
+  department?: Department | string;
+  companyId?: string;
   avatarUrl?: string;
   assignedWarehouseIds: string[];
   assignedClientIds: string[];
+  permissions?: Partial<Record<ModuleId, ModulePermission>>;
   status: 'Active' | 'Inactive';
   lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export interface Company {
@@ -155,6 +196,7 @@ export interface ReturnBatch {
   clientId: string;
   courierId: string;
   status: 'Open' | 'Closed';
+  dockNumber?: string;
   expectedCount?: number;
   totalScanned: number;
   remarksBreakdown: Record<ReturnRemarkType, number>;

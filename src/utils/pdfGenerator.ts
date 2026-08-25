@@ -15,225 +15,358 @@ export function generateBatchPDF(
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  
-  // Header background banner
-  doc.setFillColor(15, 23, 42); // Dark Slate #0f172a
-  doc.rect(0, 0, pageWidth, 32, 'F');
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
 
-  // Title
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('EMIZA WAREHOUSE OPERATIONS', 14, 14);
+  const formatDate = (dateStr?: string | number | Date) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }) + ', ' + d.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return String(dateStr);
+    }
+  };
 
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('RETURN BATCH MANIFEST & HANDOVER SHEET', 14, 22);
+  const drawHeader = () => {
+    // Header background banner
+    doc.setFillColor(15, 23, 42); // #0f172a
+    doc.rect(0, 0, pageWidth, 28, 'F');
 
-  // Status badge on top right
-  doc.setFillColor(batch.status === 'Closed' ? 34 : 234, batch.status === 'Closed' ? 197 : 179, batch.status === 'Closed' ? 94 : 8);
-  doc.roundedRect(pageWidth - 45, 10, 32, 10, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(batch.status.toUpperCase(), pageWidth - 38, 16);
+    // Accent line
+    doc.setFillColor(99, 102, 241); // #6366f1
+    doc.rect(0, 28, pageWidth, 1.5, 'F');
 
-  let y = 40;
+    // Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EMIZA WAREHOUSE OPERATIONS', margin, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text('RTO / B2C RETURNS BATCH MANIFEST & HANDOVER SHEET', margin, 19);
+
+    // Status badge on top right
+    const isClosed = batch.status === 'Closed';
+    if (isClosed) {
+      doc.setFillColor(16, 185, 129); // #10b981
+    } else {
+      doc.setFillColor(245, 158, 11); // #f59e0b
+    }
+    doc.roundedRect(pageWidth - margin - 30, 8, 30, 9, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(batch.status.toUpperCase(), pageWidth - margin - 23, 14);
+  };
+
+  drawHeader();
+
+  let y = 35;
 
   // Metadata Grid Box
-  doc.setDrawColor(203, 213, 225);
+  doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(14, y, pageWidth - 28, 38, 2, 2, 'FD');
+  doc.roundedRect(margin, y, contentWidth, 40, 2, 2, 'FD');
 
-  doc.setFontSize(9);
-  doc.setTextColor(51, 65, 85);
+  doc.setFontSize(8.5);
 
   // Column 1
-  doc.setFont('helvetica', 'bold');
-  doc.text('Batch Number:', 18, y + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(batch.batchNumber, 50, y + 8);
+  const col1X = margin + 4;
+  const col1ValX = margin + 34;
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Batch Type:', 18, y + 16);
-  doc.setFont('helvetica', 'normal');
-  doc.text(batch.batchType, 50, y + 16);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Batch Number:', col1X, y + 7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241);
+  doc.text(batch.batchNumber, col1ValX, y + 7);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Created At:', 18, y + 24);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Client / Account:', col1X, y + 14);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(batch.createdAt).toLocaleString(), 50, y + 24);
+  doc.setTextColor(15, 23, 42);
+  doc.text(client ? `${client.name} (${client.code})` : batch.clientId, col1ValX, y + 14);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Created By:', 18, y + 32);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Courier Partner:', col1X, y + 21);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(courier ? courier.name : batch.courierId, col1ValX, y + 21);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Batch Type:', col1X, y + 28);
   doc.setFont('helvetica', 'normal');
-  doc.text(batch.createdByName || 'Warehouse Staff', 50, y + 32);
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.batchType || 'RTO/B2C Return', col1ValX, y + 28);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Created By:', col1X, y + 35);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.createdByName || 'Warehouse Staff', col1ValX, y + 35);
 
   // Column 2
-  doc.setFont('helvetica', 'bold');
-  doc.text('Warehouse:', 110, y + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(warehouse ? `${warehouse.name} (${warehouse.code})` : batch.warehouseId, 138, y + 8);
+  const col2X = margin + (contentWidth / 2) + 2;
+  const col2ValX = col2X + 34;
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Client:', 110, y + 16);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Facility / Hub:', col2X, y + 7);
   doc.setFont('helvetica', 'normal');
-  doc.text(client ? client.name : batch.clientId, 138, y + 16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(warehouse ? `${warehouse.name} (${warehouse.code})` : batch.warehouseId, col2ValX, y + 7);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Courier Partner:', 110, y + 24);
-  doc.setFont('helvetica', 'normal');
-  doc.text(courier ? courier.name : batch.courierId, 138, y + 24);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Total Scanned:', col2X, y + 14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(16, 185, 129);
+  doc.text(`${batch.totalScanned} Parcels / AWBs`, col2ValX, y + 14);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Total Scanned:', 110, y + 32);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Batch Created:', col2X, y + 21);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatDate(batch.createdAt), col2ValX, y + 21);
+
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(37, 99, 235);
-  doc.text(`${batch.totalScanned} Items`, 138, y + 32);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Batch Closed:', col2X, y + 28);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.closedAt ? formatDate(batch.closedAt) : 'Open / In-Progress', col2ValX, y + 28);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Driver / Rep:', col2X, y + 35);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.driverName ? `${batch.driverName} (${batch.driverMobile || 'N/A'})` : 'Supervisor Sign-off', col2ValX, y + 35);
 
   y += 46;
 
   // Remarks Breakdown Box
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('REMARKS BREAKDOWN SUMMARY', 14, y);
+  doc.text('QC CONDITIONS BREAKDOWN SUMMARY', margin, y);
 
-  y += 4;
+  y += 3.5;
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(241, 245, 249);
-  doc.rect(14, y, pageWidth - 28, 14, 'FD');
+  doc.roundedRect(margin, y, contentWidth, 12, 1.5, 1.5, 'FD');
 
-  const remarksList = Object.entries(batch.remarksBreakdown || {});
-  let rx = 18;
-  doc.setFontSize(8);
-  remarksList.forEach(([remark, count]) => {
-    if (rx + 25 < pageWidth - 14) {
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(71, 85, 105);
-      doc.text(`${remark}:`, rx, y + 9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(15, 23, 42);
-      doc.text(`${count}`, rx + doc.getTextWidth(`${remark}: `) + 1, y + 9);
-      rx += 32;
-    }
+  // Compute breakdown from items directly if not present
+  const breakdown: Record<string, number> = {};
+  items.forEach(i => {
+    breakdown[i.remark] = (breakdown[i.remark] || 0) + 1;
   });
 
-  y += 22;
+  const remarksEntries = Object.entries(breakdown);
+  let rx = margin + 4;
+  doc.setFontSize(7.5);
+
+  if (remarksEntries.length === 0) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('No items scanned in this batch yet.', rx, y + 7.5);
+  } else {
+    remarksEntries.forEach(([remark, count]) => {
+      if (rx + 25 < pageWidth - margin) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`${remark}:`, rx, y + 7.5);
+        doc.setFont('helvetica', 'bold');
+        if (remark === 'Good') {
+          doc.setTextColor(16, 185, 129);
+        } else if (remark === 'Damage' || remark === 'Missing Product') {
+          doc.setTextColor(225, 29, 72);
+        } else {
+          doc.setTextColor(217, 119, 6);
+        }
+        const textWidth = doc.getTextWidth(`${remark}: `);
+        doc.text(`${count}`, rx + textWidth + 0.5, y + 7.5);
+        rx += textWidth + 14;
+      }
+    });
+  }
+
+  y += 18;
 
   // Item Table Header
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text(`SCANNED TRACKING LIST (${items.length} ITEMS)`, 14, y);
+  const renderTableHeader = (currentY: number) => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`SCANNED AWBS MANIFEST (${items.length} ITEMS)`, margin, currentY);
 
-  y += 4;
-  doc.setFillColor(30, 41, 59);
-  doc.rect(14, y, pageWidth - 28, 8, 'F');
+    const tableHeaderY = currentY + 3.5;
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.rect(margin, tableHeaderY, contentWidth, 7, 'F');
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('#', 17, y + 5.5);
-  doc.text('Tracking / AWB #', 28, y + 5.5);
-  doc.text('Order #', 80, y + 5.5);
-  doc.text('Remark / Condition', 125, y + 5.5);
-  doc.text('Scanned Time', 165, y + 5.5);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('#', margin + 3, tableHeaderY + 4.8);
+    doc.text('AWB / Tracking Number', margin + 14, tableHeaderY + 4.8);
+    doc.text('QC Condition', margin + 75, tableHeaderY + 4.8);
+    doc.text('Scan Timestamp', margin + 115, tableHeaderY + 4.8);
+    doc.text('Scanned By', margin + 155, tableHeaderY + 4.8);
 
-  y += 8;
+    return tableHeaderY + 7;
+  };
 
-  // Table rows
+  y = renderTableHeader(y);
+
+  // Scanned items table rows
   items.forEach((item, index) => {
-    if (y > 240) {
+    if (y > pageHeight - 55) {
       doc.addPage();
-      y = 20;
-
-      // Repeat Table Header on new page
-      doc.setFillColor(30, 41, 59);
-      doc.rect(14, y, pageWidth - 28, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('#', 17, y + 5.5);
-      doc.text('Tracking / AWB #', 28, y + 5.5);
-      doc.text('Order #', 80, y + 5.5);
-      doc.text('Remark / Condition', 125, y + 5.5);
-      doc.text('Scanned Time', 165, y + 5.5);
-      y += 8;
+      drawHeader();
+      y = 36;
+      y = renderTableHeader(y);
     }
 
     doc.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
-    doc.rect(14, y, pageWidth - 28, 7, 'F');
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
     doc.setDrawColor(241, 245, 249);
-    doc.line(14, y + 7, pageWidth - 14, y + 7);
+    doc.line(margin, y + 6.5, margin + contentWidth, y + 6.5);
 
     doc.setTextColor(51, 65, 85);
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
 
-    doc.text(`${index + 1}`, 17, y + 4.5);
+    // Index
+    doc.text(`${index + 1}`, margin + 3, y + 4.3);
+
+    // AWB
     doc.setFont('helvetica', 'bold');
-    doc.text(item.trackingNumber, 28, y + 4.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.orderNumber || '-', 80, y + 4.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(item.trackingNumber, margin + 14, y + 4.3);
 
-    // Color code remark
+    // QC Condition
+    doc.setFont('helvetica', 'bold');
     if (item.remark === 'Good') {
       doc.setTextColor(22, 101, 52);
     } else if (item.remark === 'Damage' || item.remark === 'Missing Product') {
-      doc.setTextColor(153, 27, 27);
+      doc.setTextColor(185, 28, 28);
     } else {
-      doc.setTextColor(146, 64, 14);
+      doc.setTextColor(180, 83, 9);
     }
-    doc.text(item.remark, 125, y + 4.5);
+    doc.text(item.remark, margin + 75, y + 4.3);
 
+    // Scan Timestamp
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text(new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 165, y + 4.5);
+    doc.text(formatDate(item.scannedAt), margin + 115, y + 4.3);
 
-    y += 7;
+    // Scanned By Operator
+    doc.setTextColor(51, 65, 85);
+    doc.text(item.scannedByName || 'Staff', margin + 155, y + 4.3);
+
+    y += 6.5;
   });
 
-  // Courier Handover Signature Block at bottom
-  if (y > 220) {
+  // Handover Signature Block
+  if (y > pageHeight - 50) {
     doc.addPage();
-    y = 30;
+    drawHeader();
+    y = 38;
   } else {
-    y += 12;
+    y += 8;
   }
 
   doc.setDrawColor(148, 163, 184);
   doc.setLineWidth(0.3);
-  doc.roundedRect(14, y, pageWidth - 28, 38, 2, 2, 'S');
+  doc.roundedRect(margin, y, contentWidth, 34, 2, 2, 'S');
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('COURIER HANDOVER & ACKNOWLEDGEMENT SIGN-OFF', 18, y + 8);
+  doc.text('COURIER HANDOVER & WAREHOUSE ACKNOWLEDGEMENT SIGN-OFF', margin + 4, y + 6);
 
-  // Signature line 1
-  doc.setFontSize(8);
+  // Left Sign Box (Driver)
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Driver Name:', 18, y + 16);
-  doc.text(batch.driverName || '__________________________', 42, y + 16);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Courier Driver / Rep:', margin + 4, y + 13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.driverName || '__________________________', margin + 35, y + 13);
 
-  doc.text('Driver Mobile:', 18, y + 23);
-  doc.text(batch.driverMobile || '__________________________', 42, y + 23);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Driver Contact / Phone:', margin + 4, y + 19);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.driverMobile || '__________________________', margin + 35, y + 19);
 
-  doc.line(18, y + 32, 85, y + 32);
-  doc.text('Driver Signature & Date', 18, y + 35);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(margin + 4, y + 27, margin + 75, y + 27);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Driver Signature & Handover Stamp', margin + 4, y + 30.5);
 
-  // Signature line 2
-  doc.text('Warehouse Supervisor:', 115, y + 16);
-  doc.text(batch.supervisorSigner || batch.createdByName || '__________________________', 152, y + 16);
+  // Right Sign Box (Supervisor)
+  const signRightX = margin + (contentWidth / 2) + 4;
+  doc.setFontSize(7.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Warehouse Supervisor:', signRightX, y + 13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.supervisorSigner || batch.createdByName || 'Authorized Supervisor', signRightX + 35, y + 13);
 
-  doc.text('Handover Time:', 115, y + 23);
-  doc.text(batch.closedAt ? new Date(batch.closedAt).toLocaleString() : new Date().toLocaleString(), 152, y + 23);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Handover Date & Time:', signRightX, y + 19);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(batch.closedAt ? formatDate(batch.closedAt) : formatDate(new Date()), signRightX + 35, y + 19);
 
-  doc.line(115, y + 32, 182, y + 32);
-  doc.text('Warehouse Stamp & Signature', 115, y + 35);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(signRightX, y + 27, signRightX + 75, y + 27);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Warehouse Inward Stamp & Sign-off', signRightX, y + 30.5);
 
-  // Save PDF
-  doc.save(`${batch.batchNumber}_Manifest.pdf`);
+  // Add Page Numbers to all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `Page ${i} of ${totalPages}  |  Batch: ${batch.batchNumber}  |  Emiza WOP System  |  Generated on ${formatDate(new Date())}`,
+      pageWidth / 2,
+      pageHeight - 5,
+      { align: 'center' }
+    );
+  }
+
+  // Save PDF with clean filename
+  doc.save(`${batch.batchNumber}_ReturnManifest.pdf`);
 }
 
 export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehouse, client?: Client, courier?: Courier) {
@@ -329,4 +462,173 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.text('Date & Time: _______________________', 115, y + 22);
 
   doc.save(`${entry.gatePassNumber}_GatePass.pdf`);
+}
+
+export function generateWarehouseBatchesSummaryPDF(
+  batches: ReturnBatch[],
+  warehouse: Warehouse,
+  clients: Client[],
+  couriers: Courier[]
+) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+
+  const formatDate = (dateStr?: string | number | Date) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+        ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return String(dateStr);
+    }
+  };
+
+  const drawHeader = () => {
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 28, pageWidth, 1.5, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EMIZA WAREHOUSE OPERATIONS', margin, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text(`WAREHOUSE BATCHES AUDIT REPORT - ${warehouse.name.toUpperCase()} (${warehouse.code})`, margin, 19);
+  };
+
+  drawHeader();
+
+  let y = 36;
+
+  // Stats Box
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, y, contentWidth, 18, 2, 2, 'FD');
+
+  const totalScanned = batches.reduce((sum, b) => sum + b.totalScanned, 0);
+  const openCount = batches.filter(b => b.status === 'Open').length;
+  const closedCount = batches.filter(b => b.status === 'Closed').length;
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Total Batches:', margin + 4, y + 7);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${batches.length} (${openCount} Open, ${closedCount} Closed)`, margin + 27, y + 7);
+
+  doc.setTextColor(71, 85, 105);
+  doc.text('Total Scanned AWBs:', margin + 4, y + 13);
+  doc.setTextColor(16, 185, 129);
+  doc.text(`${totalScanned} Parcels`, margin + 37, y + 13);
+
+  doc.setTextColor(71, 85, 105);
+  doc.text('Facility Location:', margin + 95, y + 7);
+  doc.setTextColor(15, 23, 42);
+  doc.text(warehouse.city || warehouse.name, margin + 125, y + 7);
+
+  doc.setTextColor(71, 85, 105);
+  doc.text('Report Generated:', margin + 95, y + 13);
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatDate(new Date()), margin + 125, y + 13);
+
+  y += 24;
+
+  const renderTableHeader = (currentY: number) => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('BATCH SUMMARY LIST', margin, currentY);
+
+    const tblY = currentY + 3.5;
+    doc.setFillColor(30, 41, 59);
+    doc.rect(margin, tblY, contentWidth, 7, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('#', margin + 3, tblY + 4.8);
+    doc.text('Batch Number', margin + 12, tblY + 4.8);
+    doc.text('Client', margin + 48, tblY + 4.8);
+    doc.text('Courier', margin + 88, tblY + 4.8);
+    doc.text('Status', margin + 122, tblY + 4.8);
+    doc.text('Scanned', margin + 140, tblY + 4.8);
+    doc.text('Created Date', margin + 158, tblY + 4.8);
+
+    return tblY + 7;
+  };
+
+  y = renderTableHeader(y);
+
+  batches.forEach((b, index) => {
+    if (y > pageHeight - 20) {
+      doc.addPage();
+      drawHeader();
+      y = 36;
+      y = renderTableHeader(y);
+    }
+
+    const client = clients.find(c => c.id === b.clientId);
+    const courier = couriers.find(cr => cr.id === b.courierId);
+
+    doc.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
+    doc.setDrawColor(241, 245, 249);
+    doc.line(margin, y + 6.5, margin + contentWidth, y + 6.5);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    doc.text(`${index + 1}`, margin + 3, y + 4.3);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(99, 102, 241);
+    doc.text(b.batchNumber, margin + 12, y + 4.3);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text((client?.name || b.clientId).slice(0, 20), margin + 48, y + 4.3);
+    doc.text((courier?.name || b.courierId).slice(0, 18), margin + 88, y + 4.3);
+
+    doc.setFont('helvetica', 'bold');
+    if (b.status === 'Closed') {
+      doc.setTextColor(16, 185, 129);
+    } else {
+      doc.setTextColor(217, 119, 6);
+    }
+    doc.text(b.status, margin + 122, y + 4.3);
+
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${b.totalScanned}`, margin + 140, y + 4.3);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(formatDate(b.createdAt).split(',')[0], margin + 158, y + 4.3);
+
+    y += 6.5;
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `Page ${i} of ${totalPages}  |  Warehouse: ${warehouse.code}  |  Emiza WOP System  |  Generated on ${formatDate(new Date())}`,
+      pageWidth / 2,
+      pageHeight - 5,
+      { align: 'center' }
+    );
+  }
+
+  doc.save(`${warehouse.code}_Batches_Summary.pdf`);
 }

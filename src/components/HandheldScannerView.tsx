@@ -25,6 +25,9 @@ import {
   Layers,
   ChevronUp,
   ChevronDown,
+  Search,
+  Eye,
+  Printer,
 } from 'lucide-react';
 import {
   ReturnBatch,
@@ -35,6 +38,7 @@ import {
   Courier,
   User,
 } from '../types';
+import { generateBatchPDF } from '../utils/pdfGenerator';
 
 interface HandheldScannerViewProps {
   activeBatch: ReturnBatch;
@@ -71,6 +75,9 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [showRecentDrawer, setShowRecentDrawer] = useState(false);
   const [showBatchPicker, setShowBatchPicker] = useState(false);
+  const [batchPickerTab, setBatchPickerTab] = useState<'open' | 'closed'>('open');
+  const [selectedClosedBatch, setSelectedClosedBatch] = useState<ReturnBatch | null>(null);
+  const [closedSearchQuery, setClosedSearchQuery] = useState('');
   const [lastScan, setLastScan] = useState<{ success: boolean; msg: string; awb: string; time: string } | null>(null);
   const [scanAnimation, setScanAnimation] = useState<'success' | 'error' | null>(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -85,6 +92,7 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
   const activeCourier = couriers.find(cr => cr.id === activeBatch.courierId);
   const batchItems = scannedItems.filter(i => i.batchId === activeBatch.id);
   const openBatches = batches.filter(b => b.warehouseId === activeWarehouse.id && b.status === 'Open');
+  const closedBatches = batches.filter(b => b.warehouseId === activeWarehouse.id && b.status === 'Closed');
 
   // Keep focus on input for hardware laser guns / PDA wedge
   useEffect(() => {
@@ -497,26 +505,11 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
           {/* Thumb Scan Submit Button */}
           <button
             type="submit"
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
           >
             <Zap className="w-3.5 h-3.5" /> Submit Scan (Enter)
           </button>
         </form>
-
-        {/* Quick Sample Barcodes for instant device testing */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
-          <span className="text-slate-500 font-bold uppercase whitespace-nowrap">Samples:</span>
-          {['DEL-8839210', 'BD-5541908', 'SF-7729104', 'EK-9021844'].map(testAwb => (
-            <button
-              key={testAwb}
-              type="button"
-              onClick={() => processScan(testAwb)}
-              className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 font-mono font-bold text-slate-300 whitespace-nowrap active:scale-95"
-            >
-              {testAwb}
-            </button>
-          ))}
-        </div>
 
         {/* POINT 2: COMPACT CONDITIONS SELECTION */}
         <div className="space-y-1">
@@ -699,43 +692,283 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-400" /> Switch Active Batch
+                <Layers className="w-4 h-4 text-indigo-400" /> Batches ({batches.filter(b => b.warehouseId === activeWarehouse.id).length})
               </h3>
               <button onClick={() => setShowBatchPicker(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {openBatches.map(b => {
-                const client = clients.find(c => c.id === b.clientId);
-                const isSelected = b.id === activeBatch.id;
+            {/* OPEN vs CLOSED TABS */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setBatchPickerTab('open')}
+                className={`py-1.5 rounded-lg font-bold transition-all ${
+                  batchPickerTab === 'open'
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Open ({openBatches.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBatchPickerTab('closed')}
+                className={`py-1.5 rounded-lg font-bold transition-all ${
+                  batchPickerTab === 'closed'
+                    ? 'bg-amber-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Closed ({closedBatches.length})
+              </button>
+            </div>
 
-                return (
-                  <div
-                    key={b.id}
-                    onClick={() => {
-                      onSelectBatch(b.id);
-                      setShowBatchPicker(false);
-                    }}
-                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-indigo-600/30 border-indigo-500 text-white font-bold ring-1 ring-indigo-500'
-                        : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-mono">
-                      <span>{b.batchNumber}</span>
-                      <span className="text-emerald-400 font-bold">{b.totalScanned} Scanned</span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{client?.name}</div>
-                  </div>
-                );
-              })}
+            {/* BATCH LIST */}
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {batchPickerTab === 'open' ? (
+                openBatches.length === 0 ? (
+                  <div className="py-6 text-center text-slate-500 text-xs">No open batches.</div>
+                ) : (
+                  openBatches.map(b => {
+                    const client = clients.find(c => c.id === b.clientId);
+                    const isSelected = b.id === activeBatch.id;
+
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => {
+                          onSelectBatch(b.id);
+                          setShowBatchPicker(false);
+                        }}
+                        className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-indigo-600/30 border-indigo-500 text-white font-bold ring-1 ring-indigo-500'
+                            : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between font-mono">
+                          <span className="font-bold">{b.batchNumber}</span>
+                          <span className="text-emerald-400 font-bold">{b.totalScanned} Scanned</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">{client?.name}</div>
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                closedBatches.length === 0 ? (
+                  <div className="py-6 text-center text-slate-500 text-xs">No closed batches.</div>
+                ) : (
+                  closedBatches.map(b => {
+                    const client = clients.find(c => c.id === b.clientId);
+                    const courier = couriers.find(cr => cr.id === b.courierId);
+
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => {
+                          setSelectedClosedBatch(b);
+                          setClosedSearchQuery('');
+                          setShowBatchPicker(false);
+                        }}
+                        className="p-3 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-xs cursor-pointer transition-all flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-indigo-300">
+                            <Lock className="w-3 h-3 text-amber-400" />
+                            <span>{b.batchNumber}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {client?.name} • <span className="text-slate-300">{courier?.name}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            Closed: {b.closedAt ? new Date(b.closedAt).toLocaleDateString() : 'N/A'}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-emerald-400 font-bold font-mono text-xs block">
+                            {b.totalScanned} items
+                          </span>
+                          <span className="text-[10px] text-indigo-400 font-medium flex items-center gap-0.5 justify-end mt-1">
+                            <Eye className="w-2.5 h-2.5" /> View
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* CLOSED BATCH DETAIL SHEET IN DEVICE MODE */}
+      {selectedClosedBatch && (() => {
+        const closedItems = scannedItems.filter(i => i.batchId === selectedClosedBatch.id);
+        const filteredClosedItems = closedItems.filter(i =>
+          !closedSearchQuery ||
+          i.trackingNumber.toLowerCase().includes(closedSearchQuery.toLowerCase()) ||
+          i.remark.toLowerCase().includes(closedSearchQuery.toLowerCase())
+        );
+        const client = clients.find(c => c.id === selectedClosedBatch.clientId);
+        const courier = couriers.find(cr => cr.id === selectedClosedBatch.courierId);
+
+        // QC Breakdown
+        const breakdownCounts: Record<string, number> = {};
+        closedItems.forEach(i => {
+          breakdownCounts[i.remark] = (breakdownCounts[i.remark] || 0) + 1;
+        });
+
+        return (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col justify-end p-0">
+            <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl max-h-[90vh] flex flex-col w-full max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom duration-200">
+              {/* HEADER */}
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black font-mono text-white flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      {selectedClosedBatch.batchNumber}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Closed
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {client?.name} • <span className="text-indigo-300">{courier?.name}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedClosedBatch(null)}
+                  className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* CONTENT BODY */}
+              <div className="p-3 overflow-y-auto flex-1 space-y-3 text-xs">
+                {/* METRICS ROW */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl">
+                    <div className="text-[10px] text-slate-400 uppercase font-bold">Total Scanned</div>
+                    <div className="text-base font-black font-mono text-emerald-400 mt-0.5">
+                      {selectedClosedBatch.totalScanned} Parcels
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl">
+                    <div className="text-[10px] text-slate-400 uppercase font-bold">Driver / Rep</div>
+                    <div className="text-xs font-bold text-white mt-0.5 truncate">
+                      {selectedClosedBatch.driverName || 'Supervisor Verified'}
+                    </div>
+                    {selectedClosedBatch.driverMobile && (
+                      <div className="text-[10px] text-slate-400 font-mono">{selectedClosedBatch.driverMobile}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* QC CONDITIONS BREAKDOWN */}
+                {Object.keys(breakdownCounts).length > 0 && (
+                  <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase">
+                      QC Breakdown:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(breakdownCounts).map(([remark, count]) => (
+                        <span
+                          key={remark}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-200 border border-slate-700"
+                        >
+                          {remark}: <strong className="text-emerald-400 font-mono ml-0.5">{count}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SEARCH AWBs */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1">
+                      <List className="w-3.5 h-3.5 text-indigo-400" />
+                      Scanned Items ({closedItems.length}):
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search AWB in batch..."
+                      value={closedSearchQuery}
+                      onChange={e => setClosedSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-200 pl-8 pr-3 py-2 rounded-xl border border-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1 max-h-56 overflow-y-auto">
+                    {filteredClosedItems.length === 0 ? (
+                      <div className="py-6 text-center text-slate-500 text-xs">
+                        No items found matching search.
+                      </div>
+                    ) : (
+                      filteredClosedItems.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          className="bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-4 h-4 rounded-full bg-slate-800 text-slate-400 font-mono text-[9px] font-bold flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="font-mono font-bold text-white text-xs truncate">
+                              {item.trackingNumber}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${
+                              item.remark === 'Good'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : item.remark === 'Damage' || item.remark === 'Missing Product'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            }`}
+                          >
+                            {item.remark}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER */}
+              <div className="p-3 border-t border-slate-800 flex items-center gap-2">
+                <button
+                  onClick={() => generateBatchPDF(selectedClosedBatch, batchItems, activeWarehouse, client, courier)}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>PDF Manifest</span>
+                </button>
+                <button
+                  onClick={() => setSelectedClosedBatch(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
