@@ -215,12 +215,12 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 text-blue-400" /> Reports & Manifest
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-[#123B5D] dark:text-blue-400" /> Reports & Manifest
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Generate and export RTO / B2C Return Batch Manifests, Inward Gate Register, Brand KPIs, and Courier Handover Sheets.
           </p>
         </div>
@@ -228,7 +228,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportFullReport}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" /> Export Excel CSV Report
           </button>
@@ -236,7 +236,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       </div>
 
       {/* Selector Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800/80 pb-2 scrollbar-thin">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800/80 pb-2 scrollbar-thin">
         {[
           { id: 'manifest', label: 'Batch Manifests & Handover Sheets', icon: FileText, count: whBatches.length },
           { id: 'inward', label: 'Inward Gate Register', icon: Truck, count: whGateEntries.length },
@@ -252,14 +252,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               onClick={() => setReportType(tab.id as any)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-[#111D2C] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/90 dark:border-slate-800'
               }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                   {tab.count}
                 </span>
               )}
@@ -272,15 +272,15 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       {reportType === 'manifest' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
             <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
               <input
                 type="text"
                 placeholder="Search by Batch #, Client Brand, Courier, Dock #..."
                 value={manifestSearch}
                 onChange={e => setManifestSearch(e.target.value)}
-                className="bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full"
+                className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
               />
             </div>
 
@@ -289,7 +289,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               <select
                 value={selectedClientFilter}
                 onChange={e => setSelectedClientFilter(e.target.value)}
-                className="bg-slate-800 text-slate-200 border border-slate-700 rounded-xl px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+                className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
               >
                 <option value="ALL">All Clients ({clients.length})</option>
                 {clients.map(c => (
@@ -303,7 +303,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               <select
                 value={selectedCourierFilter}
                 onChange={e => setSelectedCourierFilter(e.target.value)}
-                className="bg-slate-800 text-slate-200 border border-slate-700 rounded-xl px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+                className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
               >
                 <option value="ALL">All Couriers ({couriers.length})</option>
                 {couriers.map(cr => (
@@ -314,15 +314,15 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </select>
 
               {/* Status Filter */}
-              <div className="flex items-center bg-slate-800 rounded-xl p-0.5 border border-slate-700">
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                 {(['ALL', 'Closed', 'Open'] as const).map(st => (
                   <button
                     key={st}
                     onClick={() => setSelectedStatusFilter(st)}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer ${
                       selectedStatusFilter === st
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {st}
@@ -333,10 +333,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
           </div>
 
           {/* Batches Manifest List Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+                <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="px-4 py-3">Batch Number</th>
                     <th className="px-4 py-3">Client / Brand</th>
@@ -349,10 +349,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                     <th className="px-4 py-3 text-right">Manifest Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {filteredBatches.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
                         No return batches match the selected criteria.
                       </td>
                     </tr>
@@ -364,30 +364,30 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                       const isClosed = batch.status === 'Closed';
 
                       return (
-                        <tr key={batch.id} className="hover:bg-slate-800/50 transition-colors">
+                        <tr key={batch.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="px-4 py-3">
-                            <div className="font-mono font-bold text-indigo-400">{batch.batchNumber}</div>
-                            <div className="text-[10px] text-slate-500 font-mono">
+                            <div className="font-mono font-bold text-[#123B5D] dark:text-blue-400">{batch.batchNumber}</div>
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                               {new Date(batch.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-white">
+                          <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
                             {client?.name || batch.clientId}
                           </td>
-                          <td className="px-4 py-3 text-slate-300">
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                             {courier?.name || batch.courierId}
                           </td>
                           <td className="px-4 py-3">
                             {batch.dockNumber ? (
-                              <span className="px-2 py-0.5 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px]">
+                              <span className="px-2 py-0.5 rounded font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50 text-[11px]">
                                 {batch.dockNumber}
                               </span>
                             ) : (
-                              <span className="text-slate-500">Dock 01</span>
+                              <span className="text-slate-400 dark:text-slate-500">Dock 01</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded bg-slate-800 font-mono font-black text-emerald-400 border border-slate-700 text-xs">
+                            <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 font-mono font-bold text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 text-xs">
                               {batch.totalScanned} AWBs
                             </span>
                           </td>
@@ -400,10 +400,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                                     key={rem}
                                     className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
                                       rem === 'Good'
-                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
                                         : rem === 'Damage' || rem === 'Missing Product'
-                                        ? 'bg-rose-500/20 text-rose-300'
-                                        : 'bg-amber-500/20 text-amber-300'
+                                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
+                                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
                                     }`}
                                   >
                                     {rem}: {count}
@@ -416,21 +416,21 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                 isClosed
-                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50'
+                                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50'
                               }`}
                             >
                               {batch.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-400 text-[11px]">
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px]">
                             {batch.closedAt ? (
                               <div>
-                                <div className="text-slate-200 font-medium">{new Date(batch.closedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
-                                <div className="text-[10px] text-slate-500">{new Date(batch.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div className="text-slate-800 dark:text-slate-200 font-medium">{new Date(batch.closedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(batch.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                               </div>
                             ) : (
-                              <span className="text-amber-400/80 font-mono">Open</span>
+                              <span className="text-amber-600 dark:text-amber-400/80 font-mono">Open</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
@@ -438,17 +438,17 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                               {/* View Live Manifest Modal */}
                               <button
                                 onClick={() => setPreviewBatch(batch)}
-                                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer"
                                 title="View Live Handover Manifest"
                               >
-                                <Eye className="w-3.5 h-3.5 text-blue-400" />
+                                <Eye className="w-3.5 h-3.5 text-[#123B5D] dark:text-blue-400" />
                                 <span>Preview</span>
                               </button>
 
                               {/* Download Exact PDF Manifest */}
                               <button
                                 onClick={() => handleDownloadPDF(batch)}
-                                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 text-[11px] font-bold shadow-md shadow-blue-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg bg-[#123B5D] hover:bg-[#184C77] dark:bg-blue-600 dark:hover:bg-blue-500 text-white flex items-center gap-1 text-[11px] font-bold shadow-xs transition-all cursor-pointer"
                                 title="Download PDF Manifest & Handover Sheet"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -458,7 +458,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                               {/* Export CSV */}
                               <button
                                 onClick={() => handleExportBatchCSV(batch)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                                 title="Download CSV Scanned AWB List"
                               >
                                 <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -478,10 +478,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 2. INWARD GATE REGISTER */}
       {reportType === 'inward' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Gate Pass #</th>
                   <th className="px-4 py-3">Vehicle #</th>
@@ -494,22 +494,22 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Entry Time</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {whGateEntries.map(g => (
-                  <tr key={g.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-blue-400">{g.gatePassNumber}</td>
-                    <td className="px-4 py-3 font-bold text-white">{g.vehicleNumber}</td>
-                    <td className="px-4 py-3 text-slate-300">{g.driverName}</td>
-                    <td className="px-4 py-3 text-slate-300">{clients.find(c => c.id === g.clientId)?.name}</td>
-                    <td className="px-4 py-3 text-slate-400">{couriers.find(cr => cr.id === g.courierId)?.name}</td>
-                    <td className="px-4 py-3 font-bold text-amber-400">{g.expectedBoxCount} Cartons</td>
-                    <td className="px-4 py-3 font-bold text-emerald-400">₹{g.invoiceValue?.toLocaleString() || '0'}</td>
+                  <tr key={g.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{g.gatePassNumber}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{g.vehicleNumber}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{g.driverName}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{clients.find(c => c.id === g.clientId)?.name}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{couriers.find(cr => cr.id === g.courierId)?.name}</td>
+                    <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{g.expectedBoxCount} Cartons</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">₹{g.invoiceValue?.toLocaleString() || '0'}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-700/50">
                         {g.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                       {new Date(g.entryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </td>
                   </tr>
@@ -522,10 +522,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 3. CLIENT BRAND PERFORMANCE */}
       {reportType === 'client_wise' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Client Brand</th>
                   <th className="px-4 py-3">Client Code</th>
@@ -534,14 +534,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Total Scanned AWBs</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {clientBreakdown.map((cb, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{cb.clientName}</td>
-                    <td className="px-4 py-3 font-mono text-indigo-400">{cb.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-300">{cb.vehicles} Vehicles</td>
-                    <td className="px-4 py-3 font-bold text-slate-300">{cb.batches} Batches</td>
-                    <td className="px-4 py-3 font-black text-emerald-400">{cb.totalScanned} Items</td>
+                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{cb.clientName}</td>
+                    <td className="px-4 py-3 font-mono text-indigo-600 dark:text-indigo-400">{cb.code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cb.vehicles} Vehicles</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cb.batches} Batches</td>
+                    <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{cb.totalScanned} Items</td>
                   </tr>
                 ))}
               </tbody>
@@ -552,10 +552,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 4. COURIER PERFORMANCE */}
       {reportType === 'courier_wise' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Courier Partner</th>
                   <th className="px-4 py-3">Code</th>
@@ -564,14 +564,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Total Scanned AWBs</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {courierBreakdown.map((cr, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{cr.courierName}</td>
-                    <td className="px-4 py-3 font-mono text-blue-400">{cr.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-300">{cr.vehicles} Vehicles</td>
-                    <td className="px-4 py-3 font-bold text-slate-300">{cr.batches} Batches</td>
-                    <td className="px-4 py-3 font-black text-emerald-400">{cr.totalScanned} Items</td>
+                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{cr.courierName}</td>
+                    <td className="px-4 py-3 font-mono text-[#123B5D] dark:text-blue-400">{cr.code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cr.vehicles} Vehicles</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cr.batches} Batches</td>
+                    <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{cr.totalScanned} Items</td>
                   </tr>
                 ))}
               </tbody>
@@ -582,10 +582,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 5. OPERATOR PRODUCTIVITY */}
       {reportType === 'user_productivity' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Operator Name</th>
                   <th className="px-4 py-3">Role</th>
@@ -594,14 +594,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Scanning Speed (Avg Items / Hr)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {operatorProductivity.map((usr, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{usr.userName}</td>
-                    <td className="px-4 py-3 text-slate-400">{usr.role}</td>
-                    <td className="px-4 py-3 font-black text-emerald-400">{usr.itemsScanned} Scanned</td>
-                    <td className="px-4 py-3 font-bold text-slate-300">{usr.batchesCreated} Batches</td>
-                    <td className="px-4 py-3 font-bold text-amber-400">{usr.avgSpeedPerHour} items/hr</td>
+                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{usr.userName}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{usr.role}</td>
+                    <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{usr.itemsScanned} Scanned</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{usr.batchesCreated} Batches</td>
+                    <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{usr.avgSpeedPerHour} items/hr</td>
                   </tr>
                 ))}
               </tbody>
@@ -612,14 +612,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* LIVE ON-SCREEN MANIFEST PREVIEW MODAL */}
       {previewBatch && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white text-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111D2C] text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             {/* Modal Top Control Bar */}
-            <div className="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-[#123B5D] dark:bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between border-b border-blue-900/40 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-400" />
+                <FileText className="w-5 h-5 text-blue-200 dark:text-indigo-400" />
                 <span className="font-bold text-sm">Batch Manifest & Handover Sheet Preview</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                   {previewBatch.status}
                 </span>
               </div>
@@ -627,19 +627,19 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownloadPDF(previewBatch)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" /> Download PDF
                 </button>
                 <button
                   onClick={() => handleExportBatchCSV(previewBatch)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors cursor-pointer"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> CSV
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" /> CSV
                 </button>
                 <button
                   onClick={() => setPreviewBatch(null)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -647,12 +647,12 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
             </div>
 
             {/* Exact PDF Layout Replicated on Screen */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 text-xs">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 dark:bg-[#0c141f] text-xs">
               {/* Header Banner */}
-              <div className="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between border-b-2 border-indigo-500">
+              <div className="bg-[#123B5D] dark:bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between border-b-2 border-blue-400">
                 <div>
                   <h2 className="text-base font-black tracking-wide">EMIZA WAREHOUSE OPERATIONS</h2>
-                  <p className="text-[11px] text-slate-300 font-medium">RTO / B2C RETURNS BATCH MANIFEST & HANDOVER SHEET</p>
+                  <p className="text-[11px] text-blue-100 dark:text-slate-300 font-medium">RTO / B2C RETURNS BATCH MANIFEST & HANDOVER SHEET</p>
                 </div>
                 <div className="text-right">
                   <span className="px-3 py-1 rounded-md text-xs font-bold bg-emerald-500 text-white uppercase tracking-wider">
@@ -662,51 +662,51 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </div>
 
               {/* Metadata Grid */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shadow-xs">
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Number</span>
-                  <span className="font-bold text-indigo-600 font-mono text-sm">{previewBatch.batchNumber}</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Number</span>
+                  <span className="font-bold text-[#123B5D] dark:text-blue-400 font-mono text-sm">{previewBatch.batchNumber}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Client / Account</span>
-                  <span className="font-bold text-slate-900">{previewClient?.name || previewBatch.clientId}</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Client / Account</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewClient?.name || previewBatch.clientId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Courier Partner</span>
-                  <span className="font-bold text-slate-900">{previewCourier?.name || previewBatch.courierId}</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Courier Partner</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewCourier?.name || previewBatch.courierId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Type / Dock</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Type / Dock</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">
                     {previewBatch.batchType || 'RTO/B2C'} {previewBatch.dockNumber ? `(${previewBatch.dockNumber})` : ''}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Facility / Hub</span>
-                  <span className="font-bold text-slate-900">{activeWarehouse.name} ({activeWarehouse.code})</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Facility / Hub</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{activeWarehouse.name} ({activeWarehouse.code})</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Total Scanned</span>
-                  <span className="font-black text-emerald-600 text-sm">{previewItems.length} Parcels / AWBs</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Total Scanned</span>
+                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{previewItems.length} Parcels / AWBs</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Created</span>
-                  <span className="font-medium text-slate-800">{new Date(previewBatch.createdAt).toLocaleString()}</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Created</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{new Date(previewBatch.createdAt).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Driver / Rep</span>
-                  <span className="font-bold text-slate-900">{previewBatch.driverName || 'Supervisor Handover'}</span>
+                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Driver / Rep</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewBatch.driverName || 'Supervisor Handover'}</span>
                 </div>
               </div>
 
               {/* QC Breakdown Summary */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">QC Conditions Breakdown Summary</h4>
-                <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex flex-wrap gap-4">
+                <h4 className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">QC Conditions Breakdown Summary</h4>
+                <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap gap-4 shadow-xs">
                   {Object.entries(previewBatch.remarksBreakdown || {}).map(([rem, cnt]) => (
                     <div key={rem} className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-600">{rem}:</span>
-                      <span className="font-black text-indigo-700 bg-white px-2 py-0.5 rounded border border-slate-200">{cnt}</span>
+                      <span className="font-bold text-slate-600 dark:text-slate-400">{rem}:</span>
+                      <span className="font-black text-[#123B5D] dark:text-blue-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">{cnt}</span>
                     </div>
                   ))}
                 </div>
@@ -714,12 +714,12 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
               {/* Scanned AWBs Table */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                <h4 className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">
                   Scanned AWBs Manifest ({previewItems.length} Items)
                 </h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white max-h-60 overflow-y-auto">
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-[#111D2C] max-h-60 overflow-y-auto shadow-xs">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-800 text-white uppercase font-bold text-[10px] sticky top-0">
+                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200 dark:border-slate-700">
                       <tr>
                         <th className="px-3 py-2">#</th>
                         <th className="px-3 py-2">AWB / Tracking Number</th>
@@ -728,27 +728,27 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                         <th className="px-3 py-2">Scanned By</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
                       {previewItems.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-4 text-center text-slate-400">No scanned items in this batch.</td>
+                          <td colSpan={5} className="p-4 text-center text-slate-400 dark:text-slate-500">No scanned items in this batch.</td>
                         </tr>
                       ) : (
                         previewItems.map((it, i) => (
-                          <tr key={it.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                            <td className="px-3 py-1.5 font-mono text-slate-400">{i + 1}</td>
-                            <td className="px-3 py-1.5 font-mono font-bold text-indigo-700">{it.trackingNumber}</td>
+                          <tr key={it.id} className={i % 2 === 0 ? 'bg-white dark:bg-[#111D2C]' : 'bg-slate-50/60 dark:bg-slate-800/40'}>
+                            <td className="px-3 py-1.5 font-mono text-slate-400 dark:text-slate-500">{i + 1}</td>
+                            <td className="px-3 py-1.5 font-mono font-bold text-[#123B5D] dark:text-blue-400">{it.trackingNumber}</td>
                             <td className="px-3 py-1.5">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                it.remark === 'Good' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                it.remark === 'Good' ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
                               }`}>
                                 {it.remark}
                               </span>
                             </td>
-                            <td className="px-3 py-1.5 text-slate-500 font-mono text-[11px]">
+                            <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                               {new Date(it.scannedAt).toLocaleTimeString()}
                             </td>
-                            <td className="px-3 py-1.5 text-slate-600 font-medium">
+                            <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300 font-medium">
                               {it.scannedByName || 'Operator'}
                             </td>
                           </tr>
@@ -760,27 +760,27 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </div>
 
               {/* Handover & Sign-off Signature Box */}
-              <div className="border border-slate-300 rounded-xl p-4 bg-white grid grid-cols-2 gap-8">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-[#111D2C] grid grid-cols-2 gap-8 shadow-xs">
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Courier Driver / Rep</span>
-                    <span className="font-bold text-slate-900">{previewBatch.driverName || '-'}</span>
-                    <div className="text-[10px] text-slate-500">Phone: {previewBatch.driverMobile || '-'}</div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block">Courier Driver / Rep</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{previewBatch.driverName || '-'}</span>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Phone: {previewBatch.driverMobile || '-'}</div>
                   </div>
-                  <div className="border-t border-slate-300 pt-1 text-[10px] text-slate-400 text-center italic">
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-1 text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
                     Courier Driver Signature & Handover Stamp
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Warehouse Supervisor</span>
-                    <span className="font-bold text-slate-900">{previewBatch.createdByName || 'Vikram Mehta'}</span>
-                    <div className="text-[10px] text-slate-500">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block">Warehouse Supervisor</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{previewBatch.createdByName || 'Vikram Mehta'}</span>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
                       Handover Date: {previewBatch.closedAt ? new Date(previewBatch.closedAt).toLocaleString() : 'Pending Close'}
                     </div>
                   </div>
-                  <div className="border-t border-slate-300 pt-1 text-[10px] text-slate-400 text-center italic">
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-1 text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
                     Warehouse Inward Stamp & Supervisor Sign-off
                   </div>
                 </div>

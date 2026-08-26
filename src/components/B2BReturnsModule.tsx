@@ -60,42 +60,42 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <Boxes className="w-6 h-6 text-purple-400" /> B2B Store & Distributor Returns
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Boxes className="w-6 h-6 text-purple-600 dark:text-purple-400" /> B2B Store & Distributor Returns
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Commercial bulk returns, pallet verification, debit note reconciliation, and store dispatch returns.
           </p>
         </div>
 
         <button
           onClick={onOpenNewBatchModal}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 transition-all hover:scale-[1.02]"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Create B2B Return Batch
         </button>
       </div>
 
       {/* Filter */}
-      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-        <Search className="w-4 h-4 text-slate-400" />
+      <div className="bg-white dark:bg-[#111D2C] p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 flex items-center gap-3 shadow-sm transition-colors">
+        <Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />
         <input
           type="text"
           placeholder="Search B2B Batch Number, Debit Note, Store Code..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="bg-transparent text-xs text-slate-200 focus:outline-none w-full"
+          className="bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none w-full"
         />
       </div>
 
       {/* B2B Batches Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.length === 0 ? (
-          <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 text-xs">
+          <div className="col-span-full bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl p-12 text-center text-slate-400 dark:text-slate-500 text-xs shadow-sm">
             No B2B return batches created for {activeWarehouse.code}. Click "Create B2B Return Batch" to initialize pallet batching.
           </div>
         ) : (
@@ -107,48 +107,48 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
             return (
               <div
                 key={batch.id}
-                className="bg-slate-900 border border-slate-800 hover:border-purple-500/50 p-5 rounded-2xl shadow-lg transition-all space-y-4"
+                className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 hover:border-purple-500/50 p-5 rounded-xl shadow-sm transition-all space-y-4"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-white text-sm">{batch.batchNumber}</span>
+                  <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm font-mono">{batch.batchNumber}</span>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                       batch.status === 'Open'
-                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700/50'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50'
                     }`}
                   >
                     {batch.status}
                   </span>
                 </div>
 
-                <div className="text-xs space-y-1 text-slate-300">
+                <div className="text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Client Store:</span>
-                    <strong className="text-white">{client ? client.name : 'BoAt Audio'}</strong>
+                    <span className="text-slate-500 dark:text-slate-400">Client Store:</span>
+                    <strong className="text-slate-800 dark:text-white">{client ? client.name : 'BoAt Audio'}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Carrier / Courier:</span>
-                    <strong className="text-slate-200">{courier ? courier.name : 'BlueDart'}</strong>
+                    <span className="text-slate-500 dark:text-slate-400">Carrier / Courier:</span>
+                    <strong className="text-slate-700 dark:text-slate-200">{courier ? courier.name : 'BlueDart'}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Pallets / Cartons:</span>
-                    <strong className="text-purple-400">{batch.totalScanned} / {batch.expectedCount || 30} Verified</strong>
+                    <span className="text-slate-500 dark:text-slate-400">Pallets / Cartons:</span>
+                    <strong className="text-purple-600 dark:text-purple-400">{batch.totalScanned} / {batch.expectedCount || 30} Verified</strong>
                   </div>
                 </div>
 
                 {batch.notes && (
-                  <div className="p-2.5 bg-slate-800/80 rounded-xl text-[11px] text-slate-400 italic">
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-[11px] text-slate-600 dark:text-slate-400 italic border border-slate-100 dark:border-slate-700/50">
                     "{batch.notes}"
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500">Created: {new Date(batch.createdAt).toLocaleDateString()}</span>
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Created: {new Date(batch.createdAt).toLocaleDateString()}</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleExportCSV(batch)}
-                      className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                       title="Export CSV Manifest"
                     >
                       <FileSpreadsheet className="w-4 h-4" />
@@ -156,7 +156,7 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
 
                     <button
                       onClick={() => generateBatchPDF(batch, items, activeWarehouse, client, courier)}
-                      className="p-1.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600 hover:text-white transition-all"
+                      className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all cursor-pointer"
                       title="PDF Handover Sheet"
                     >
                       <Download className="w-4 h-4" />

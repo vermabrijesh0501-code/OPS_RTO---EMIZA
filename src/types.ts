@@ -34,12 +34,67 @@ export interface ModulePermission {
 export type ModuleId =
   | 'dashboard'
   | 'inward'
+  | 'grn'
   | 'returns_rto'
   | 'returns_b2b'
+  | 'inventory'
   | 'audit'
-  | 'masters'
+  | 'clients'
+  | 'couriers'
+  | 'locations'
   | 'reports'
-  | 'supabase_hub';
+  | 'notifications'
+  | 'masters'
+  | 'user_management'
+  | 'supabase_hub'
+  | 'settings';
+
+export type OperationProcessType = 'Inward' | 'GRN' | 'RTO Return' | 'B2B Return' | 'Inventory Audit';
+export type OperationPriority = 'Critical' | 'High' | 'Medium' | 'Low';
+export type OperationStatus = 
+  | 'Arrived'
+  | 'Gate In'
+  | 'Dock Allocated'
+  | 'Under Inspection'
+  | 'GRN Pending'
+  | 'Unloading'
+  | 'Scanned'
+  | 'Verified'
+  | 'Open'
+  | 'In Progress'
+  | 'Completed'
+  | 'On Hold';
+
+export interface OperationRecord {
+  id: string;
+  referenceNo: string;
+  process: OperationProcessType;
+  clientId: string;
+  clientName: string;
+  warehouseId: string;
+  warehouseName: string;
+  status: OperationStatus;
+  priority: OperationPriority;
+  createdAt: string;
+  assignedToName: string;
+  assignedToRole?: string;
+  itemsCount?: number;
+  vehicleNumber?: string;
+  dockNumber?: string;
+  notes?: string;
+  rawType: 'gate_entry' | 'batch' | 'audit' | 'grn';
+  rawId: string;
+}
+
+export interface DashboardFilterState {
+  dateRange: 'today' | 'yesterday' | 'last_7_days' | 'last_30_days' | 'this_month' | 'all';
+  companyId: string;
+  warehouseId: string;
+  clientId: string;
+  status: string;
+  priority: string;
+  searchQuery: string;
+}
 
 export interface User {
   id: string;

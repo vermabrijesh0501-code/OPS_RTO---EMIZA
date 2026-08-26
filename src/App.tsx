@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   User,
   UserRole,
@@ -23,17 +24,79 @@ import { ReportsModule } from './components/ReportsModule';
 import { SupabaseNetlifyHub } from './components/SupabaseNetlifyHub';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
-import { hasModulePermission, getAccessibleModules } from './utils/rbac';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { PublicRoute } from './components/auth/PublicRoute';
+import { useAuth } from './context/AuthContext';
+import { getAccessibleModules } from './utils/rbac';
+
+// Tab to URL Route Path helper
+export const tabToPath = (tab: ActiveTab): string => {
+  switch (tab) {
+    case 'dashboard':
+      return '/dashboard';
+    case 'inward':
+      return '/inward';
+    case 'grn':
+      return '/grn';
+    case 'returns_rto':
+      return '/returns/rto';
+    case 'returns_b2b':
+      return '/returns/b2b';
+    case 'inventory':
+      return '/inventory';
+    case 'audit':
+      return '/audit';
+    case 'clients':
+      return '/clients';
+    case 'couriers':
+      return '/couriers';
+    case 'locations':
+      return '/locations';
+    case 'reports':
+      return '/reports';
+    case 'notifications':
+      return '/notifications';
+    case 'user_management':
+      return '/user-management';
+    case 'masters':
+      return '/masters';
+    case 'settings':
+      return '/settings';
+    case 'supabase_hub':
+      return '/supabase-hub';
+    default:
+      return '/dashboard';
+  }
+};
+
+// URL Route Path to Tab helper
+export const pathToTab = (pathname: string): ActiveTab => {
+  const normalized = pathname.toLowerCase().replace(/\/$/, '');
+  if (normalized === '/inward') return 'inward';
+  if (normalized === '/grn') return 'grn';
+  if (normalized === '/returns/rto' || normalized === '/returns-rto' || normalized === '/rto') return 'returns_rto';
+  if (normalized === '/returns/b2b' || normalized === '/returns-b2b' || normalized === '/b2b') return 'returns_b2b';
+  if (normalized === '/inventory') return 'inventory';
+  if (normalized === '/audit') return 'audit';
+  if (normalized === '/clients') return 'clients';
+  if (normalized === '/couriers') return 'couriers';
+  if (normalized === '/locations') return 'locations';
+  if (normalized === '/reports') return 'reports';
+  if (normalized === '/notifications') return 'notifications';
+  if (normalized === '/user-management' || normalized === '/users') return 'user_management';
+  if (normalized === '/masters') return 'masters';
+  if (normalized === '/settings') return 'settings';
+  if (normalized === '/supabase-hub' || normalized === '/supabase_hub') return 'supabase_hub';
+  return 'dashboard';
+};
 
 export default function App() {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    const session = StorageService.getAuthSession();
-    return session.isLoggedIn;
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { appUser, signOut, switchUserRole: authSwitchUserRole } = useAuth();
 
-  // Navigation & View State
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  // Navigation & View State derived from URL
+  const [activeTab, setActiveTabState] = useState<ActiveTab>(() => pathToTab(location.pathname));
 
   // Master State
   const [companies, setCompanies] = useState(StorageService.getCompanies());
@@ -46,8 +109,8 @@ export default function App() {
   const [returnReasons, setReturnReasons] = useState(StorageService.getReturnReasons());
   const [users, setUsers] = useState(StorageService.getUsers());
 
-  // Active Session & Operating Warehouse (Single Warehouse Mode)
-  const [currentUser, setCurrentUser] = useState<User>(StorageService.getCurrentUser());
+  // Active Session & Operating Warehouse
+  const currentUser: User = appUser || StorageService.getCurrentUser();
   const [activeWarehouseId, setActiveWarehouseId] = useState<string>(StorageService.getCurrentWarehouseId());
 
   // Operations State
@@ -66,6 +129,26 @@ export default function App() {
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Sync activeTab when URL pathname changes
+  useEffect(() => {
+    if (location.pathname !== '/login') {
+      const derived = pathToTab(location.pathname);
+      setActiveTabState(derived);
+    }
+  }, [location.pathname]);
+
+  // Navigate tab function that updates URL and state
+  const handleSelectTab = useCallback(
+    (tab: ActiveTab) => {
+      setActiveTabState(tab);
+      const targetPath = tabToPath(tab);
+      if (location.pathname !== targetPath) {
+        navigate(targetPath);
+      }
+    },
+    [navigate, location.pathname]
+  );
+
   // Keyboard shortcut Ctrl+K for Universal Search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,23 +163,9 @@ export default function App() {
 
   const activeWarehouse = warehouses.find(w => w.id === activeWarehouseId) || warehouses[0];
 
-  // Role Switcher Demo Helper
+  // Role Switcher Persona Helper
   const handleSwitchUserRole = (role: UserRole) => {
-    const matchingUser = users.find(u => u.role === role) || {
-      ...currentUser,
-      role,
-      name: `${currentUser.name.split(' ')[0]} (${role})`,
-    };
-    setCurrentUser(matchingUser);
-    StorageService.saveCurrentUser(matchingUser);
-    StorageService.addActivityLog({
-      userId: matchingUser.id,
-      userName: matchingUser.name,
-      userRole: role,
-      action: 'Switched User Role',
-      module: 'Auth',
-      details: `Active role switched to ${role} for demo testing`,
-    });
+    authSwitchUserRole(role);
     setLogs(StorageService.getActivityLogs());
   };
 
@@ -168,7 +237,7 @@ export default function App() {
     batchData: Omit<ReturnBatch, 'id' | 'batchNumber' | 'totalScanned' | 'remarksBreakdown' | 'createdAt'>
   ): ReturnBatch => {
     const today = new Date();
-    const dayStr = String(today.getDate()).padStart(2, '0'); // e.g. "22"
+    const dayStr = String(today.getDate()).padStart(2, '0');
     
     // Find client code / reference (e.g. BV, NYK, MME, BOAT, SUG)
     const client = clients.find(c => c.id === batchData.clientId);
@@ -176,7 +245,7 @@ export default function App() {
 
     // Calculate serial number for this client (0101, 0102, ...)
     const clientExistingBatches = batches.filter(b => b.clientId === batchData.clientId);
-    const serialNumber = String(101 + clientExistingBatches.length).padStart(4, '0'); // e.g. "0101"
+    const serialNumber = String(101 + clientExistingBatches.length).padStart(4, '0');
 
     const batchNumber = `${dayStr}-${clientRef}-${serialNumber}`;
 
@@ -302,24 +371,24 @@ export default function App() {
         return {
           ...item,
           trackingNumber: newTracking,
-          orderNumber: `ORD-${newTracking.slice(-6)}`,
           remark: newRemark,
         };
       }
       return item;
     });
+
     setScannedItems(updatedItems);
     StorageService.saveScannedItems(updatedItems);
 
     if (oldRemark !== newRemark) {
       const updatedBatches = batches.map(b => {
         if (b.id === targetItem.batchId) {
-          const breakdown = { ...b.remarksBreakdown };
-          breakdown[oldRemark] = Math.max(0, (breakdown[oldRemark] || 1) - 1);
-          breakdown[newRemark] = (breakdown[newRemark] || 0) + 1;
+          const newBreakdown = { ...b.remarksBreakdown };
+          newBreakdown[oldRemark] = Math.max(0, (newBreakdown[oldRemark] || 1) - 1);
+          newBreakdown[newRemark] = (newBreakdown[newRemark] || 0) + 1;
           return {
             ...b,
-            remarksBreakdown: breakdown,
+            remarksBreakdown: newBreakdown,
           };
         }
         return b;
@@ -332,34 +401,35 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Updated Scanned AWB',
+      action: 'Edited Scanned Item',
       module: 'RTO',
-      details: `Edited AWB ${oldTracking} -> ${newTracking} [${newRemark}]`,
+      details: `Updated item AWB to ${newTracking} [${newRemark}]`,
     });
     setLogs(StorageService.getActivityLogs());
   };
 
-  // Delete Scanned Return Item from Batch
+  // Delete Scanned Return Item
   const handleDeleteItem = (itemId: string) => {
-    const targetItem = scannedItems.find(i => i.id === itemId);
-    if (!targetItem) return;
+    const itemToDelete = scannedItems.find(i => i.id === itemId);
+    if (!itemToDelete) return;
 
     const updatedItems = scannedItems.filter(i => i.id !== itemId);
     setScannedItems(updatedItems);
     StorageService.saveScannedItems(updatedItems);
 
     const updatedBatches = batches.map(b => {
-      if (b.id === targetItem.batchId) {
-        const breakdown = { ...b.remarksBreakdown };
-        breakdown[targetItem.remark] = Math.max(0, (breakdown[targetItem.remark] || 1) - 1);
+      if (b.id === itemToDelete.batchId) {
+        const newBreakdown = { ...b.remarksBreakdown };
+        newBreakdown[itemToDelete.remark] = Math.max(0, (newBreakdown[itemToDelete.remark] || 1) - 1);
         return {
           ...b,
           totalScanned: Math.max(0, b.totalScanned - 1),
-          remarksBreakdown: breakdown,
+          remarksBreakdown: newBreakdown,
         };
       }
       return b;
     });
+
     setBatches(updatedBatches);
     StorageService.saveReturnBatches(updatedBatches);
 
@@ -367,101 +437,104 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Removed Scanned AWB',
+      action: 'Deleted Scanned AWB',
       module: 'RTO',
-      details: `Removed AWB ${targetItem.trackingNumber} [${targetItem.remark}] from batch`,
+      details: `Removed AWB #${itemToDelete.trackingNumber} from batch`,
     });
     setLogs(StorageService.getActivityLogs());
   };
 
-  // Close Return Batch
+  // Close Return Batch with Driver/Supervisor Acknowledgement
   const handleCloseBatch = (
     batchId: string,
-    driverName: string,
-    driverMobile: string,
-    supervisorSigner: string
+    signData: {
+      driverName: string;
+      driverMobile: string;
+      driverSignature: string;
+      supervisorSigner: string;
+      notes?: string;
+    }
   ) => {
-    const updatedBatches = batches.map(b => {
+    const updated = batches.map(b => {
       if (b.id === batchId) {
         return {
           ...b,
           status: 'Closed' as const,
           closedAt: new Date().toISOString(),
-          driverName,
-          driverMobile,
-          supervisorSigner,
-          driverSignature: 'SIGNED',
+          driverName: signData.driverName,
+          driverMobile: signData.driverMobile,
+          driverSignature: signData.driverSignature,
+          supervisorSigner: signData.supervisorSigner,
+          notes: signData.notes,
         };
       }
       return b;
     });
 
-    setBatches(updatedBatches);
-    StorageService.saveReturnBatches(updatedBatches);
+    setBatches(updated);
+    StorageService.saveReturnBatches(updated);
 
-    const closed = batches.find(b => b.id === batchId);
+    const target = batches.find(b => b.id === batchId);
     StorageService.addActivityLog({
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Closed Return Batch',
-      module: 'RTO',
-      details: `Closed batch ${closed?.batchNumber} with ${closed?.totalScanned} items and courier handover sign-off`,
+      action: 'Closed & Reconciled Return Batch',
+      module: target?.batchType === 'B2B Return' ? 'B2B' : 'RTO',
+      details: `Batch ${target?.batchNumber || batchId} closed with ${target?.totalScanned || 0} units. Driver: ${signData.driverName}`,
     });
     setLogs(StorageService.getActivityLogs());
   };
 
-  // Audit Operations Handlers
+  // Audit Guns & Physical Inventory Management
   const handleSelectAuditorId = (id: string) => {
     setActiveAuditorId(id);
     StorageService.saveActiveAuditorId(id);
   };
 
-  const handleAddAuditRecord = (record: Omit<AuditRecord, 'id' | 'scannedAt'>) => {
-    const newRec = StorageService.addAuditRecord(record);
+  const handleAddAuditRecord = (record: Omit<AuditRecord, 'id' | 'scannedAt'>): AuditRecord => {
+    const newRecord = StorageService.addAuditRecord(record);
     setAuditRecords(StorageService.getAuditRecords());
 
-    // Dynamically register or activate scanning gun in real-time
-    if (record.auditorDeviceId) {
-      const existing = auditorDevices.find(d => d.id === record.auditorDeviceId);
-      let updatedDevices: AuditorDevice[];
-      if (!existing) {
-        const newDevice: AuditorDevice = {
-          id: record.auditorDeviceId,
-          name: `Scanner Gun (${record.auditorDeviceId})`,
-          assignedPerson: record.auditorName || currentUser.name,
-          zone: record.location ? `Zone ${record.location.slice(0, 3)}` : 'Floor',
-          status: 'Active',
-          batteryPercent: 100,
-          lastActiveAt: 'Just now',
-        };
-        updatedDevices = [...auditorDevices, newDevice];
-      } else {
-        updatedDevices = auditorDevices.map(d =>
-          d.id === record.auditorDeviceId
-            ? { ...d, status: 'Active' as const, lastActiveAt: 'Just now' }
-            : d
-        );
-      }
-      setAuditorDevices(updatedDevices);
-      StorageService.saveAuditorDevices(updatedDevices);
-    }
+    setAuditorDevices(prev =>
+      prev.map(d =>
+        d.id === record.auditorDeviceId
+          ? { ...d, lastActiveAt: new Date().toISOString(), status: 'Active' }
+          : d
+      )
+    );
 
     StorageService.addActivityLog({
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Scanned Audit Item',
+      action: 'Audited Inventory SKU',
       module: 'Audit',
-      details: `Device ${record.auditorDeviceId} scanned SKU ${record.skuCode} (Qty ${record.quantity}) at Loc ${record.location}`,
+      details: `Gun ${record.auditorDeviceId} scanned ${record.quantity} units of SKU ${record.skuCode} at ${record.location}`,
     });
     setLogs(StorageService.getActivityLogs());
+
+    return newRecord;
   };
 
   const handleDeleteAuditRecord = (id: string) => {
-    const updated = auditRecords.filter(r => r.id !== id);
-    setAuditRecords(updated);
+    const current = StorageService.getAuditRecords();
+    const target = current.find(r => r.id === id);
+    const updated = current.filter(r => r.id !== id);
     StorageService.saveAuditRecords(updated);
+    setAuditRecords(updated);
+
+    if (target) {
+      StorageService.addActivityLog({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Deleted Audit Scan Record',
+        module: 'Audit',
+        details: `Deleted scan record for SKU ${target.skuCode} at ${target.location}`,
+      });
+      setLogs(StorageService.getActivityLogs());
+    }
   };
 
   const handleUpdateAuditorDevices = (devices: AuditorDevice[]) => {
@@ -469,42 +542,45 @@ export default function App() {
     StorageService.saveAuditorDevices(devices);
   };
 
-  // Master Data Operations (Add, Update, Delete, Hold)
+  // Master Data Add/Update/Delete/Toggle Handlers
   const handleAddMasterRecord = (category: string, record: any) => {
+    const id = `${category.slice(0, 3)}-${Date.now()}`;
+    const newRecord = { ...record, id, status: 'Active' };
+
     if (category === 'companies') {
-      const updated = [...companies, record];
+      const updated = [newRecord, ...companies];
       setCompanies(updated);
       StorageService.saveCompanies(updated);
     } else if (category === 'warehouses') {
-      const updated = [...warehouses, record];
+      const updated = [newRecord, ...warehouses];
       setWarehouses(updated);
       StorageService.saveWarehouses(updated);
     } else if (category === 'clients') {
-      const updated = [...clients, record];
+      const updated = [newRecord, ...clients];
       setClients(updated);
       StorageService.saveClients(updated);
     } else if (category === 'couriers') {
-      const updated = [...couriers, record];
+      const updated = [newRecord, ...couriers];
       setCouriers(updated);
       StorageService.saveCouriers(updated);
     } else if (category === 'skus') {
-      const updated = [...skus, record];
+      const updated = [newRecord, ...skus];
       setSKUs(updated);
       StorageService.saveSKUs(updated);
     } else if (category === 'users') {
-      const updated = [...users, record];
+      const updated = [newRecord, ...users];
       setUsers(updated);
       StorageService.saveUsers(updated);
     } else if (category === 'drivers') {
-      const updated = [...drivers, record];
+      const updated = [newRecord, ...drivers];
       setDrivers(updated);
       StorageService.saveDrivers(updated);
     } else if (category === 'vehicle_types') {
-      const updated = [...vehicleTypes, record];
+      const updated = [newRecord, ...vehicleTypes];
       setVehicleTypes(updated);
       StorageService.saveVehicleTypes(updated);
     } else if (category === 'return_reasons') {
-      const updated = [...returnReasons, record];
+      const updated = [newRecord, ...returnReasons];
       setReturnReasons(updated);
       StorageService.saveReturnReasons(updated);
     }
@@ -513,48 +589,48 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Added Master Record',
+      action: `Created Master Entry in ${category}`,
       module: 'Masters',
-      details: `Added new ${category} record: ${record.name || record.code || record.skuCode || record.label}`,
+      details: `Added new ${category} record: ${record.name || record.code || record.label || record.typeName || record.skuCode}`,
     });
     setLogs(StorageService.getActivityLogs());
   };
 
-  const handleUpdateMasterRecord = (category: string, id: string, updatedRecord: any) => {
+  const handleUpdateMasterRecord = (category: string, id: string, updates: any) => {
     if (category === 'companies') {
-      const updated = companies.map(c => (c.id === id ? { ...c, ...updatedRecord } : c));
+      const updated = companies.map(c => (c.id === id ? { ...c, ...updates } : c));
       setCompanies(updated);
       StorageService.saveCompanies(updated);
     } else if (category === 'warehouses') {
-      const updated = warehouses.map(w => (w.id === id ? { ...w, ...updatedRecord } : w));
+      const updated = warehouses.map(w => (w.id === id ? { ...w, ...updates } : w));
       setWarehouses(updated);
       StorageService.saveWarehouses(updated);
     } else if (category === 'clients') {
-      const updated = clients.map(c => (c.id === id ? { ...c, ...updatedRecord } : c));
+      const updated = clients.map(c => (c.id === id ? { ...c, ...updates } : c));
       setClients(updated);
       StorageService.saveClients(updated);
     } else if (category === 'couriers') {
-      const updated = couriers.map(cr => (cr.id === id ? { ...cr, ...updatedRecord } : cr));
+      const updated = couriers.map(c => (c.id === id ? { ...c, ...updates } : c));
       setCouriers(updated);
       StorageService.saveCouriers(updated);
     } else if (category === 'skus') {
-      const updated = skus.map(s => (s.id === id ? { ...s, ...updatedRecord } : s));
+      const updated = skus.map(s => (s.id === id ? { ...s, ...updates } : s));
       setSKUs(updated);
       StorageService.saveSKUs(updated);
     } else if (category === 'users') {
-      const updated = users.map(u => (u.id === id ? { ...u, ...updatedRecord } : u));
+      const updated = users.map(u => (u.id === id ? { ...u, ...updates } : u));
       setUsers(updated);
       StorageService.saveUsers(updated);
     } else if (category === 'drivers') {
-      const updated = drivers.map(d => (d.id === id ? { ...d, ...updatedRecord } : d));
+      const updated = drivers.map(d => (d.id === id ? { ...d, ...updates } : d));
       setDrivers(updated);
       StorageService.saveDrivers(updated);
     } else if (category === 'vehicle_types') {
-      const updated = vehicleTypes.map(v => (v.id === id ? { ...v, ...updatedRecord } : v));
+      const updated = vehicleTypes.map(v => (v.id === id ? { ...v, ...updates } : v));
       setVehicleTypes(updated);
       StorageService.saveVehicleTypes(updated);
     } else if (category === 'return_reasons') {
-      const updated = returnReasons.map(r => (r.id === id ? { ...r, ...updatedRecord } : r));
+      const updated = returnReasons.map(r => (r.id === id ? { ...r, ...updates } : r));
       setReturnReasons(updated);
       StorageService.saveReturnReasons(updated);
     }
@@ -563,9 +639,9 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Updated Master Record',
+      action: `Updated Master Entry in ${category}`,
       module: 'Masters',
-      details: `Updated ${category} record ID ${id}`,
+      details: `Modified record ID ${id}`,
     });
     setLogs(StorageService.getActivityLogs());
   };
@@ -584,7 +660,7 @@ export default function App() {
       setClients(updated);
       StorageService.saveClients(updated);
     } else if (category === 'couriers') {
-      const updated = couriers.filter(cr => cr.id !== id);
+      const updated = couriers.filter(c => c.id !== id);
       setCouriers(updated);
       StorageService.saveCouriers(updated);
     } else if (category === 'skus') {
@@ -613,21 +689,18 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Deleted Master Record',
+      action: `Deleted Master Entry in ${category}`,
       module: 'Masters',
-      details: `Deleted ${category} record ID ${id}`,
+      details: `Removed record ID ${id}`,
     });
     setLogs(StorageService.getActivityLogs());
   };
 
-  const handleToggleHoldMasterRecord = (category: string, id: string) => {
-    let newStatus: 'Active' | 'On Hold' = 'Active';
-
+  const handleToggleHoldMasterRecord = (category: string, id: string, newStatus: string) => {
     if (category === 'companies') {
       const updated = companies.map(c => {
         if (c.id === id) {
           const toggled = c.status === 'Active' ? 'On Hold' : 'Active';
-          newStatus = toggled as any;
           return { ...c, status: toggled as any };
         }
         return c;
@@ -638,7 +711,6 @@ export default function App() {
       const updated = warehouses.map(w => {
         if (w.id === id) {
           const toggled = w.status === 'Active' ? 'On Hold' : 'Active';
-          newStatus = toggled as any;
           return { ...w, status: toggled as any };
         }
         return w;
@@ -649,7 +721,6 @@ export default function App() {
       const updated = clients.map(c => {
         if (c.id === id) {
           const toggled = c.status === 'Active' ? 'On Hold' : 'Active';
-          newStatus = toggled as any;
           return { ...c, status: toggled as any };
         }
         return c;
@@ -657,13 +728,12 @@ export default function App() {
       setClients(updated);
       StorageService.saveClients(updated);
     } else if (category === 'couriers') {
-      const updated = couriers.map(cr => {
-        if (cr.id === id) {
-          const toggled = cr.status === 'Active' ? 'On Hold' : 'Active';
-          newStatus = toggled as any;
-          return { ...cr, status: toggled as any };
+      const updated = couriers.map(c => {
+        if (c.id === id) {
+          const toggled = c.status === 'Active' ? 'On Hold' : 'Active';
+          return { ...c, status: toggled as any };
         }
-        return cr;
+        return c;
       });
       setCouriers(updated);
       StorageService.saveCouriers(updated);
@@ -671,7 +741,6 @@ export default function App() {
       const updated = skus.map(s => {
         if (s.id === id) {
           const toggled = s.status === 'Active' ? 'On Hold' : 'Active';
-          newStatus = toggled as any;
           return { ...s, status: toggled as any };
         }
         return s;
@@ -738,11 +807,11 @@ export default function App() {
   };
 
   // Navigation shortcut helper
-  const handleUniversalSelectResult = (type: 'inward' | 'rto', id: string) => {
+  const handleUniversalSelectResult = (type: 'inward' | 'rto') => {
     if (type === 'inward') {
-      setActiveTab('inward');
+      handleSelectTab('inward');
     } else {
-      setActiveTab('returns_rto');
+      handleSelectTab('returns_rto');
     }
   };
 
@@ -759,37 +828,18 @@ export default function App() {
     if (!currentUser) return;
     const accessible = getAccessibleModules(currentUser);
     if (!accessible.includes(activeTab)) {
-      setActiveTab(accessible[0] || 'dashboard');
+      handleSelectTab(accessible[0] || 'dashboard');
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser, activeTab, handleSelectTab]);
 
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
-    setUsers(StorageService.getUsers());
-    setIsAuthenticated(true);
-    const accessible = getAccessibleModules(user);
-    if (!accessible.includes(activeTab)) {
-      setActiveTab(accessible[0] || 'dashboard');
-    }
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
   };
 
-  const handleLogout = () => {
-    StorageService.clearAuthSession();
-    setIsAuthenticated(false);
-  };
-
-  // If user is not authenticated, render the dedicated Login & Team Credential Page
-  if (!isAuthenticated) {
-    return (
-      <LoginPage
-        onLoginSuccess={handleLoginSuccess}
-        users={users}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0B141E] text-[#FFFFFF] font-sans selection:bg-[#635BFF] selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
+  // Primary Protected Warehouse Layout Wrapper
+  const renderAppLayout = (viewTab: ActiveTab) => (
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0B131E] text-slate-900 dark:text-slate-100 font-sans selection:bg-[#123B5D] selection:text-white flex flex-col w-full max-w-full overflow-x-hidden transition-colors">
       {/* Header Bar */}
       <Header
         currentUser={currentUser}
@@ -798,141 +848,166 @@ export default function App() {
         activeWarehouseId={activeWarehouseId}
         onSelectWarehouse={handleSelectWarehouse}
         onOpenUniversalSearch={() => setIsUniversalSearchOpen(true)}
-        onOpenSupabaseHub={() => setActiveTab('supabase_hub')}
+        onOpenSupabaseHub={() => handleSelectTab('supabase_hub')}
         supabaseStatus={supabaseConfig.connectedStatus}
         onLogout={handleLogout}
         onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
+        activeTab={viewTab}
+        onPrimaryAction={() => {
+          if (viewTab === 'dashboard' || viewTab === 'inward' || viewTab === 'grn') {
+            setIsNewGateEntryModalOpen(true);
+          } else if (viewTab === 'returns_rto' || viewTab === 'returns_b2b') {
+            setIsNewBatchModalOpen(true);
+          } else if (viewTab === 'inventory' || viewTab === 'audit') {
+            handleSelectTab('inventory');
+          } else {
+            setIsNewGateEntryModalOpen(true);
+          }
+        }}
       />
 
       {/* Main Container Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Dual Sidebar Navigation */}
+        {/* Fixed Left Sidebar Navigation */}
         <Sidebar
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          activeTab={viewTab}
+          onSelectTab={handleSelectTab}
           openBatchCount={openBatchCount}
           pendingGateEntriesCount={pendingGateEntriesCount}
           auditCount={auditRecords.length}
           activeWarehouseCode={activeWarehouse?.code || 'WH-MAIN-01'}
+          activeWarehouseName={activeWarehouse?.name || 'Bhiwandi Central Hub'}
           currentUser={currentUser}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onLogout={handleLogout}
+          onOpenUniversalSearch={() => setIsUniversalSearchOpen(true)}
         />
 
         {/* Main Content View Container */}
-        <main className="flex-1 overflow-y-auto bg-[#0B141E]">
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              warehouse={activeWarehouse}
-              clients={clients}
-              gateEntries={gateEntries}
-              batches={batches}
-              scannedItems={scannedItems}
-              auditorDevices={auditorDevices}
-              auditRecords={auditRecords}
-              logs={logs}
-              onNavigateTab={tab => setActiveTab(tab)}
-              onOpenNewGateEntryModal={() => setIsNewGateEntryModalOpen(true)}
-              onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
-            />
-          )}
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0B131E] min-h-[calc(100vh-61px)] transition-colors">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+            {viewTab === 'dashboard' && (
+              <DashboardView
+                warehouse={activeWarehouse}
+                allWarehouses={warehouses}
+                companies={companies}
+                clients={clients}
+                gateEntries={gateEntries}
+                batches={batches}
+                scannedItems={scannedItems}
+                auditorDevices={auditorDevices}
+                auditRecords={auditRecords}
+                logs={logs}
+                currentUser={currentUser}
+                onNavigateTab={tab => handleSelectTab(tab)}
+                onOpenNewGateEntryModal={() => setIsNewGateEntryModalOpen(true)}
+                onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
+                onSelectWarehouse={handleSelectWarehouse}
+              />
+            )}
 
-          {activeTab === 'inward' && (
-            <InwardModule
-              currentUser={currentUser}
-              activeWarehouse={activeWarehouse}
-              gateEntries={gateEntries}
-              clients={clients}
-              couriers={couriers}
-              vehicleTypes={vehicleTypes}
-              onAddGateEntry={handleAddGateEntry}
-              onUpdateGateStatus={handleUpdateGateStatus}
-              isOpenCreateModal={isNewGateEntryModalOpen}
-              onCloseCreateModal={() => setIsNewGateEntryModalOpen(!isNewGateEntryModalOpen)}
-            />
-          )}
+            {(viewTab === 'inward' || viewTab === 'grn') && (
+              <InwardModule
+                currentUser={currentUser}
+                activeWarehouse={activeWarehouse}
+                gateEntries={gateEntries}
+                clients={clients}
+                couriers={couriers}
+                vehicleTypes={vehicleTypes}
+                onAddGateEntry={handleAddGateEntry}
+                onUpdateGateStatus={handleUpdateGateStatus}
+                isOpenCreateModal={isNewGateEntryModalOpen}
+                onCloseCreateModal={() => setIsNewGateEntryModalOpen(!isNewGateEntryModalOpen)}
+              />
+            )}
 
-          {activeTab === 'returns_rto' && (
-            <ReturnsModule
-              currentUser={currentUser}
-              activeWarehouse={activeWarehouse}
-              batches={batches}
-              scannedItems={scannedItems}
-              clients={clients}
-              couriers={couriers}
-              onAddBatch={handleAddBatch}
-              onScanItem={handleScanItem}
-              onUpdateItem={handleUpdateItem}
-              onDeleteItem={handleDeleteItem}
-              onCloseBatch={handleCloseBatch}
-              isOpenCreateModal={isNewBatchModalOpen}
-              onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}
-            />
-          )}
+            {viewTab === 'returns_rto' && (
+              <ReturnsModule
+                currentUser={currentUser}
+                activeWarehouse={activeWarehouse}
+                batches={batches}
+                scannedItems={scannedItems}
+                clients={clients}
+                couriers={couriers}
+                onAddBatch={handleAddBatch}
+                onScanItem={handleScanItem}
+                onUpdateItem={handleUpdateItem}
+                onDeleteItem={handleDeleteItem}
+                onCloseBatch={handleCloseBatch}
+                isOpenCreateModal={isNewBatchModalOpen}
+                onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}
+              />
+            )}
 
-          {activeTab === 'returns_b2b' && (
-            <B2BReturnsModule
-              currentUser={currentUser}
-              activeWarehouse={activeWarehouse}
-              batches={batches}
-              scannedItems={scannedItems}
-              clients={clients}
-              couriers={couriers}
-              onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
-            />
-          )}
+            {viewTab === 'returns_b2b' && (
+              <B2BReturnsModule
+                currentUser={currentUser}
+                activeWarehouse={activeWarehouse}
+                batches={batches}
+                scannedItems={scannedItems}
+                clients={clients}
+                couriers={couriers}
+                onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
+              />
+            )}
 
-          {activeTab === 'audit' && (
-            <AuditModule
-              clients={clients}
-              skus={skus}
-              auditorDevices={auditorDevices}
-              auditRecords={auditRecords}
-              activeAuditorId={activeAuditorId}
-              onSelectAuditorId={handleSelectAuditorId}
-              onAddAuditRecord={handleAddAuditRecord}
-              onDeleteAuditRecord={handleDeleteAuditRecord}
-              onUpdateAuditorDevices={handleUpdateAuditorDevices}
-            />
-          )}
+            {(viewTab === 'audit' || viewTab === 'inventory') && (
+              <AuditModule
+                clients={clients}
+                skus={skus}
+                auditorDevices={auditorDevices}
+                auditRecords={auditRecords}
+                activeAuditorId={activeAuditorId}
+                onSelectAuditorId={handleSelectAuditorId}
+                onAddAuditRecord={handleAddAuditRecord}
+                onDeleteAuditRecord={handleDeleteAuditRecord}
+                onUpdateAuditorDevices={handleUpdateAuditorDevices}
+              />
+            )}
 
-          {activeTab === 'masters' && (
-            <MastersModule
-              companies={companies}
-              warehouses={warehouses}
-              clients={clients}
-              couriers={couriers}
-              skus={skus}
-              users={users}
-              drivers={drivers}
-              vehicleTypes={vehicleTypes}
-              returnReasons={returnReasons}
-              onAddMasterRecord={handleAddMasterRecord}
-              onUpdateMasterRecord={handleUpdateMasterRecord}
-              onDeleteMasterRecord={handleDeleteMasterRecord}
-              onToggleHoldMasterRecord={handleToggleHoldMasterRecord}
-            />
-          )}
+            {(viewTab === 'masters' ||
+              viewTab === 'clients' ||
+              viewTab === 'couriers' ||
+              viewTab === 'locations' ||
+              viewTab === 'user_management') && (
+              <MastersModule
+                companies={companies}
+                warehouses={warehouses}
+                clients={clients}
+                couriers={couriers}
+                skus={skus}
+                users={users}
+                drivers={drivers}
+                vehicleTypes={vehicleTypes}
+                returnReasons={returnReasons}
+                onAddMasterRecord={handleAddMasterRecord}
+                onUpdateMasterRecord={handleUpdateMasterRecord}
+                onDeleteMasterRecord={handleDeleteMasterRecord}
+                onToggleHoldMasterRecord={handleToggleHoldMasterRecord}
+              />
+            )}
 
-          {activeTab === 'reports' && (
-            <ReportsModule
-              activeWarehouse={activeWarehouse}
-              gateEntries={gateEntries}
-              batches={batches}
-              scannedItems={scannedItems}
-              clients={clients}
-              couriers={couriers}
-              users={users}
-            />
-          )}
+            {(viewTab === 'reports' || viewTab === 'notifications') && (
+              <ReportsModule
+                activeWarehouse={activeWarehouse}
+                gateEntries={gateEntries}
+                batches={batches}
+                scannedItems={scannedItems}
+                clients={clients}
+                couriers={couriers}
+                users={users}
+              />
+            )}
 
-          {activeTab === 'supabase_hub' && (
-            <SupabaseNetlifyHub
-              config={supabaseConfig}
-              onSaveConfig={handleSaveSupabaseConfig}
-            />
-          )}
+            {(viewTab === 'supabase_hub' || viewTab === 'settings') && (
+              <SupabaseNetlifyHub
+                config={supabaseConfig}
+                onSaveConfig={handleSaveSupabaseConfig}
+              />
+            )}
+          </div>
         </main>
       </div>
 
@@ -949,5 +1024,198 @@ export default function App() {
       />
     </div>
   );
-}
 
+  return (
+    <Routes>
+      {/* 1. Public Route: Login Page */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage users={users} />
+          </PublicRoute>
+        }
+      />
+
+      {/* 2. Protected Internal Routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Navigate to="/dashboard" replace />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('dashboard')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/inward"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('inward')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/grn"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('grn')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/returns/rto"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('returns_rto')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/returns-rto"
+        element={<Navigate to="/returns/rto" replace />}
+      />
+
+      <Route
+        path="/rto"
+        element={<Navigate to="/returns/rto" replace />}
+      />
+
+      <Route
+        path="/returns/b2b"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('returns_b2b')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/returns-b2b"
+        element={<Navigate to="/returns/b2b" replace />}
+      />
+
+      <Route
+        path="/inventory"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('inventory')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('audit')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/clients"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('clients')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/couriers"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('couriers')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/locations"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('locations')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('reports')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('notifications')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/user-management"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('user_management')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={<Navigate to="/user-management" replace />}
+      />
+
+      <Route
+        path="/masters"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('masters')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('settings')}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/supabase-hub"
+        element={
+          <ProtectedRoute>
+            {renderAppLayout('supabase_hub')}
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 3. Wildcard Catch-All -> Redirects to /dashboard */}
+      <Route
+        path="*"
+        element={<Navigate to="/dashboard" replace />}
+      />
+    </Routes>
+  );
+}

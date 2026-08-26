@@ -1,7 +1,7 @@
 import { User, UserRole, ModuleId, ModulePermission } from '../types';
 
 // Default permissions for every system role
-export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, Record<ModuleId, ModulePermission>> = {
+export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, Partial<Record<ModuleId, ModulePermission>>> = {
   'Super Admin': {
     dashboard: { view: true, create: true, edit: true, delete: true, scan: true, export: true, approve: true, closeBatch: true },
     inward: { view: true, create: true, edit: true, delete: true, scan: true, export: true, approve: true, closeBatch: true },
@@ -113,9 +113,17 @@ export const hasModulePermission = (
   if (!user) return false;
   if (user.role === 'Super Admin') return true;
 
+  // Map alias module IDs to canonical permission keys
+  let canonicalId: ModuleId = moduleId;
+  if (moduleId === 'grn') canonicalId = 'inward';
+  else if (moduleId === 'inventory') canonicalId = 'audit';
+  else if (moduleId === 'clients' || moduleId === 'couriers' || moduleId === 'locations' || moduleId === 'user_management') canonicalId = 'masters';
+  else if (moduleId === 'notifications') canonicalId = 'dashboard';
+  else if (moduleId === 'settings') canonicalId = 'supabase_hub';
+
   // Check custom user permissions if configured
-  if (user.permissions && user.permissions[moduleId]) {
-    const perm = user.permissions[moduleId];
+  if (user.permissions && user.permissions[canonicalId]) {
+    const perm = user.permissions[canonicalId];
     if (perm) {
       if (action === 'view') return !!perm.view;
       return !!perm[action];
@@ -124,8 +132,8 @@ export const hasModulePermission = (
 
   // Fallback to role default permissions
   const roleDefaults = ROLE_DEFAULT_PERMISSIONS[user.role];
-  if (roleDefaults && roleDefaults[moduleId]) {
-    const rolePerm = roleDefaults[moduleId];
+  if (roleDefaults && roleDefaults[canonicalId]) {
+    const rolePerm = roleDefaults[canonicalId];
     if (action === 'view') return !!rolePerm.view;
     return !!rolePerm[action];
   }
@@ -138,12 +146,20 @@ export const getAccessibleModules = (user: User | null | undefined): ModuleId[] 
   const allModules: ModuleId[] = [
     'dashboard',
     'inward',
+    'grn',
     'returns_rto',
     'returns_b2b',
+    'inventory',
     'audit',
-    'masters',
+    'clients',
+    'couriers',
+    'locations',
     'reports',
+    'notifications',
+    'masters',
+    'user_management',
     'supabase_hub',
+    'settings',
   ];
 
   if (!user) return ['dashboard'];

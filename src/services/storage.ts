@@ -124,7 +124,23 @@ export const StorageService = {
   getReturnReasons: (): ReturnReason[] => loadItem(STORAGE_KEYS.RETURN_REASONS, initialReturnReasons),
   saveReturnReasons: (data: ReturnReason[]) => saveItem(STORAGE_KEYS.RETURN_REASONS, data),
 
-  getUsers: (): User[] => loadItem(STORAGE_KEYS.USERS, initialUsers),
+  getUsers: (): User[] => {
+    const loaded = loadItem<User[]>(STORAGE_KEYS.USERS, initialUsers);
+    // Ensure all standard initial users are present
+    const existingEmails = new Set(loaded.map(u => u.email.toLowerCase()));
+    let hasAdditions = false;
+    const merged = [...loaded];
+    for (const initU of initialUsers) {
+      if (!existingEmails.has(initU.email.toLowerCase())) {
+        merged.push(initU);
+        hasAdditions = true;
+      }
+    }
+    if (hasAdditions) {
+      saveItem(STORAGE_KEYS.USERS, merged);
+    }
+    return merged;
+  },
   saveUsers: (data: User[]) => saveItem(STORAGE_KEYS.USERS, data),
 
   getCurrentUser: (): User => loadItem(STORAGE_KEYS.CURRENT_USER, initialUsers[0]),
@@ -175,7 +191,18 @@ export const StorageService = {
     return newLog;
   },
 
-  getSupabaseConfig: (): SupabaseConfig => loadItem(STORAGE_KEYS.SUPABASE_CONFIG, initialSupabaseConfig),
+  getSupabaseConfig: (): SupabaseConfig => {
+    const cfg = loadItem<SupabaseConfig>(STORAGE_KEYS.SUPABASE_CONFIG, initialSupabaseConfig);
+    if (cfg?.supabaseUrl?.includes('xyzcompany') || cfg?.supabaseUrl?.includes('placeholder') || cfg?.supabaseAnonKey?.includes('...')) {
+      return {
+        supabaseUrl: '',
+        supabaseAnonKey: '',
+        autoSyncEnabled: false,
+        connectedStatus: 'Disconnected',
+      };
+    }
+    return cfg;
+  },
   saveSupabaseConfig: (config: SupabaseConfig) => saveItem(STORAGE_KEYS.SUPABASE_CONFIG, config),
 
   // Authentication Session

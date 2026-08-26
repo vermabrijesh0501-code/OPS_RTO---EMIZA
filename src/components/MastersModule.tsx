@@ -312,20 +312,20 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
   const getStatusBadge = (status?: string) => {
     if (status === 'Active') {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50 flex items-center gap-1 w-fit">
           <CheckCircle2 className="w-3 h-3" /> Active
         </span>
       );
     }
     if (status === 'On Hold') {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 w-fit">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50 flex items-center gap-1 w-fit">
           <PauseCircle className="w-3 h-3" /> On Hold
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/20 text-slate-400 border border-slate-500/30 flex items-center gap-1 w-fit">
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1 w-fit">
         <AlertCircle className="w-3 h-3" /> Inactive
       </span>
     );
@@ -334,12 +334,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Title & Top Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <Layers className="w-6 h-6 text-blue-400" /> Master Data Management & RBAC Access Control
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Layers className="w-6 h-6 text-[#123B5D] dark:text-blue-400" /> Master Data Management & RBAC Access Control
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Configure Client Brands, Courier Logistics Partners, User Roles & Approved Tabs, SKUs, and Warehouse Facilities.
           </p>
         </div>
@@ -347,7 +347,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Add New {masterCategories.find(c => c.id === activeTab)?.label.split('. ')[1] || 'Record'}
           </button>
@@ -355,7 +355,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       </div>
 
       {/* Master Tabs List */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800/80 pb-2 scrollbar-thin">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800/80 pb-2 scrollbar-thin">
         {masterCategories.map(cat => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -368,13 +368,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-[#111D2C] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/90 dark:border-slate-800'
               }`}
             >
               <Icon className="w-4 h-4" />
               <span>{cat.label}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                 {cat.count}
               </span>
             </button>
@@ -383,27 +383,29 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
         <div className="flex items-center gap-2.5 flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
           <input
             type="text"
             placeholder={`Search in ${activeTab.toUpperCase()} master...`}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full"
+            className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-400 font-medium">Status:</span>
-          <div className="flex items-center bg-slate-800 rounded-xl p-0.5 border border-slate-700">
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Status:</span>
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
             {(['ALL', 'Active', 'On Hold', 'Inactive'] as const).map(st => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
-                  statusFilter === st ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`px-2.5 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {st}
@@ -415,12 +417,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* QUICK PRESETS FOR CLIENTS & BRANDS */}
       {activeTab === 'clients' && (
-        <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Quick Add Popular Brands & Accounts:
+            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Quick Add Popular Brands & Accounts:
             </span>
-            <span className="text-[11px] text-slate-500">Click any brand to instantly provision</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">Click any brand to instantly provision</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -440,9 +442,9 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               <button
                 key={b.code}
                 onClick={() => handleQuickAddBrand(b.name, b.cat, b.code)}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
-                <Plus className="w-3 h-3 text-blue-400" /> {b.name}
+                <Plus className="w-3 h-3 text-[#123B5D] dark:text-blue-400" /> {b.name}
               </button>
             ))}
           </div>
@@ -451,12 +453,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* QUICK PRESETS FOR COURIERS */}
       {activeTab === 'couriers' && (
-        <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Quick Add Popular Courier Logistics Partners:
+            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#123B5D] dark:text-blue-400" /> Quick Add Popular Courier Logistics Partners:
             </span>
-            <span className="text-[11px] text-slate-500">Click any courier to instantly provision</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">Click any courier to instantly provision</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -473,9 +475,9 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               <button
                 key={cr.code}
                 onClick={() => handleQuickAddCourier(cr.name, cr.code, cr.pattern, cr.helpline)}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
-                <Plus className="w-3 h-3 text-emerald-400" /> {cr.name}
+                <Plus className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> {cr.name}
               </button>
             ))}
           </div>
@@ -484,10 +486,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 1. CLIENTS TABLE */}
       {activeTab === 'clients' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Client Code</th>
                   <th className="px-4 py-3">Brand Name</th>
@@ -497,7 +499,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {clients
                   .filter(c => {
                     if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
@@ -508,17 +510,17 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(client => (
-                    <tr key={client.id} className="hover:bg-slate-800/50">
-                      <td className="px-4 py-3 font-mono font-bold text-indigo-400">{client.code}</td>
-                      <td className="px-4 py-3 font-bold text-white text-sm">{client.name}</td>
+                    <tr key={client.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                      <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400">{client.code}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{client.name}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 font-medium text-slate-300 border border-slate-700">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {client.category || 'General'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
+                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                         <div>{client.email || '-'}</div>
-                        <div className="text-[10px] text-slate-500">{client.phone || '-'}</div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">{client.phone || '-'}</div>
                       </td>
                       <td className="px-4 py-3">{getStatusBadge(client.status)}</td>
                       <td className="px-4 py-3 text-right">
@@ -526,7 +528,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           <button
                             onClick={() => onToggleHoldMasterRecord('clients', client.id)}
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              client.status === 'Active' ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                              client.status === 'Active' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
                             }`}
                             title={client.status === 'Active' ? 'Put on Hold' : 'Activate Client'}
                           >
@@ -534,14 +536,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           </button>
                           <button
                             onClick={() => handleOpenEdit('clients', client)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             title="Edit Client"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('clients', client.id, client.name)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
                             title="Delete Client"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -558,20 +560,20 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 2. COURIERS TABLE */}
       {activeTab === 'couriers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Courier Code</th>
                   <th className="px-4 py-3">Logistics Partner Name</th>
-                  <th className="px-4 py-3">AWB Tracking Format</th>
-                  <th className="px-4 py-3">Helpline Contact</th>
+                  <th className="px-4 py-3">AWB Barcode Pattern</th>
+                  <th className="px-4 py-3">Helpline & Support</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {couriers
                   .filter(cr => {
                     if (statusFilter !== 'ALL' && cr.status !== statusFilter) return false;
@@ -582,36 +584,33 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(courier => (
-                    <tr key={courier.id} className="hover:bg-slate-800/50">
-                      <td className="px-4 py-3 font-mono font-bold text-blue-400">{courier.code}</td>
-                      <td className="px-4 py-3 font-bold text-white text-sm">{courier.name}</td>
-                      <td className="px-4 py-3 font-mono text-[11px] text-slate-400">
+                    <tr key={courier.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                      <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{courier.code}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{courier.name}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                         {courier.trackingFormatPattern || 'Standard 10-14 Digits'}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">{courier.contactNumber || '1800-XXX-XXXX'}</td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{courier.contactNumber || '1800-100-2000'}</td>
                       <td className="px-4 py-3">{getStatusBadge(courier.status)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => onToggleHoldMasterRecord('couriers', courier.id)}
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              courier.status === 'Active' ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                              courier.status === 'Active' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
                             }`}
-                            title={courier.status === 'Active' ? 'Put on Hold' : 'Activate Courier'}
                           >
                             {courier.status === 'Active' ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
                           </button>
                           <button
                             onClick={() => handleOpenEdit('couriers', courier)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                            title="Edit Courier"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('couriers', courier.id, courier.name)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors cursor-pointer"
-                            title="Delete Courier"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -625,155 +624,132 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
-      {/* 3. USERS & RBAC ACCESS CONTROL MASTER */}
+      {/* 3. USERS & RBAC ACCESS CONTROL TABLE */}
       {activeTab === 'users' && (
-        <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between text-xs">
-            <div>
-              <h3 className="font-bold text-white text-sm">Role-Based Access Control (RBAC) & Approved Modules</h3>
-              <p className="text-slate-400 text-xs mt-0.5">
-                Manage team accounts and assign specific approved tabs. When a user logs in, they will only see their approved tabs.
-              </p>
-            </div>
-            <button
-              onClick={handleOpenAdd}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" /> Create User & Configure Access
-            </button>
-          </div>
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-4 py-3">Emp ID</th>
+                  <th className="px-4 py-3">User Name & Email</th>
+                  <th className="px-4 py-3">Assigned Role</th>
+                  <th className="px-4 py-3">Department</th>
+                  <th className="px-4 py-3">Approved Modules / Tabs</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                {users
+                  .filter(u => {
+                    if (statusFilter !== 'ALL' && u.status !== statusFilter) return false;
+                    if (searchQuery) {
+                      const q = searchQuery.toLowerCase();
+                      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
+                    }
+                    return true;
+                  })
+                  .map(user => {
+                    const roleCfg = getRoleBadgeConfig(user.role);
+                    const perms = user.permissions || ROLE_DEFAULT_PERMISSIONS[user.role] || {};
+                    const visibleModulesCount = Object.values(perms).filter((p: any) => p.view).length;
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
-                  <tr>
-                    <th className="px-4 py-3">Emp ID</th>
-                    <th className="px-4 py-3">Team Member</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Department</th>
-                    <th className="px-4 py-3">Approved Navigation Tabs</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Access Controls</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
-                  {users
-                    .filter(u => {
-                      if (statusFilter !== 'ALL' && u.status !== statusFilter) return false;
-                      if (searchQuery) {
-                        const q = searchQuery.toLowerCase();
-                        return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
-                      }
-                      return true;
-                    })
-                    .map(user => {
-                      const badge = getRoleBadgeConfig(user.role);
-                      // Calculate which tabs this user can view
-                      const perms = user.permissions || ROLE_DEFAULT_PERMISSIONS[user.role] || {};
-                      const approvedTabs = ALL_SYSTEM_MODULES.filter(m => {
-                        if (user.role === 'Super Admin') return true;
-                        return !!perms[m.id]?.view;
-                      });
-
-                      return (
-                        <tr key={user.id} className="hover:bg-slate-800/50">
-                          <td className="px-4 py-3 font-mono font-bold text-indigo-400">{user.empId || 'EMP-000'}</td>
-                          <td className="px-4 py-3">
-                            <div className="font-bold text-white">{user.name}</div>
-                            <div className="text-[11px] text-slate-400">{user.email}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}>
-                              {user.role}
+                    return (
+                      <tr key={user.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                        <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{user.empId || 'EMP-1001'}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-900 dark:text-white text-sm">{user.name}</div>
+                          <div className="text-slate-400 dark:text-slate-500 text-[11px]">{user.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold border ${roleCfg.bg} ${roleCfg.text} ${roleCfg.border}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.department || 'Operations'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-[#123B5D] dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800/50 text-[11px]">
+                              {user.role === 'Super Admin' ? 'All 7 Tabs (Full)' : `${visibleModulesCount} of 7 Tabs`}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-400">{user.department || 'Operations'}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1 max-w-[280px]">
-                              {approvedTabs.map(tab => (
-                                <span key={tab.id} className="px-1.5 py-0.2 rounded bg-slate-800 font-medium text-slate-300 border border-slate-700 text-[10px]">
-                                  {tab.label.split(' ')[0]}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">{getStatusBadge(user.status)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleOpenEdit('users', user)}
-                                className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                                title="Edit User & Permissions Matrix"
-                              >
-                                <Lock className="w-3.5 h-3.5" /> Edit Access
-                              </button>
-                              <button
-                                onClick={() => handleDelete('users', user.id, user.name)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors cursor-pointer"
-                                title="Delete User"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">{getStatusBadge(user.status)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit('users', user)}
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                              title="Edit User & Permissions"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete('users', user.id, user.name)}
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* 4. SKUS TABLE */}
+      {/* 4. SKUs TABLE */}
       {activeTab === 'skus' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">SKU Code</th>
                   <th className="px-4 py-3">EAN Barcode</th>
                   <th className="px-4 py-3">Product Name</th>
                   <th className="px-4 py-3">Brand / Client</th>
-                  <th className="px-4 py-3">Price (₹)</th>
+                  <th className="px-4 py-3">Price (MRP)</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {skus
                   .filter(s => {
                     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
                     if (searchQuery) {
                       const q = searchQuery.toLowerCase();
-                      return s.skuCode.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.eanBarcode || '').includes(q);
+                      return s.skuCode.toLowerCase().includes(q) || s.eanBarcode.includes(q) || s.name.toLowerCase().includes(q);
                     }
                     return true;
                   })
                   .map(sku => {
                     const client = clients.find(c => c.id === sku.clientId);
                     return (
-                      <tr key={sku.id} className="hover:bg-slate-800/50">
-                        <td className="px-4 py-3 font-mono font-bold text-indigo-400">{sku.skuCode}</td>
-                        <td className="px-4 py-3 font-mono text-emerald-400 font-bold">{sku.eanBarcode}</td>
-                        <td className="px-4 py-3 font-semibold text-white">{sku.name}</td>
-                        <td className="px-4 py-3 text-slate-400">{client?.name || sku.clientId}</td>
-                        <td className="px-4 py-3 font-mono font-bold text-slate-200">₹{sku.unitPrice || 0}</td>
+                      <tr key={sku.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                        <td className="px-4 py-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{sku.skuCode}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{sku.eanBarcode}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{sku.name}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{client?.name || 'General'}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">₹{sku.unitPrice || 499}</td>
                         <td className="px-4 py-3">{getStatusBadge(sku.status)}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEdit('skus', sku)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete('skus', sku.id, sku.name)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -790,20 +766,20 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 5. WAREHOUSES TABLE */}
       {activeTab === 'warehouses' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Facility Code</th>
-                  <th className="px-4 py-3">Warehouse Name</th>
-                  <th className="px-4 py-3">City / Hub</th>
-                  <th className="px-4 py-3">Docks</th>
+                  <th className="px-4 py-3">Warehouse Hub Name</th>
+                  <th className="px-4 py-3">City / State</th>
+                  <th className="px-4 py-3">Total Dock Doors</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {warehouses
                   .filter(w => {
                     if (statusFilter !== 'ALL' && w.status !== statusFilter) return false;
@@ -814,23 +790,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(wh => (
-                    <tr key={wh.id} className="hover:bg-slate-800/50">
-                      <td className="px-4 py-3 font-mono font-bold text-cyan-400">{wh.code}</td>
-                      <td className="px-4 py-3 font-bold text-white">{wh.name}</td>
-                      <td className="px-4 py-3 text-slate-300">{wh.city}</td>
-                      <td className="px-4 py-3 font-bold text-amber-400">{wh.totalDocks || 10} Docks</td>
+                    <tr key={wh.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                      <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{wh.code}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{wh.name}</td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{wh.city}</td>
+                      <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{wh.totalDocks || 10} Docks</td>
                       <td className="px-4 py-3">{getStatusBadge(wh.status)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleOpenEdit('warehouses', wh)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('warehouses', wh.id, wh.name)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -846,40 +822,40 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 6. RETURN CONDITIONS TABLE */}
       {activeTab === 'return_reasons' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="px-4 py-3">Condition Code</th>
+                  <th className="px-4 py-3">Reason Code</th>
                   <th className="px-4 py-3">Condition Label</th>
                   <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Require Photo QC</th>
+                  <th className="px-4 py-3">Photo Mandatory</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
-                {returnReasons.map(rr => (
-                  <tr key={rr.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-amber-400">{rr.code}</td>
-                    <td className="px-4 py-3 font-bold text-white">{rr.label}</td>
-                    <td className="px-4 py-3 text-slate-400">{rr.category}</td>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                {returnReasons.map(r => (
+                  <tr key={r.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{r.code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{r.label}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.category}</td>
                     <td className="px-4 py-3">
-                      {rr.requirePhoto ? (
-                        <span className="text-rose-400 font-bold">Yes (Camera)</span>
-                      ) : (
-                        <span className="text-slate-500">Optional</span>
-                      )}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.requirePhoto ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                        {r.requirePhoto ? 'Yes' : 'No'}
+                      </span>
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(rr.status)}</td>
+                    <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleOpenEdit('return_reasons', rr)}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit('return_reasons', r)}
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -889,35 +865,28 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
-      {/* 7. COMPANIES / 8. DRIVERS / 9. VEHICLE TYPES TABLES */}
+      {/* 7. COMPANIES TABLE */}
       {activeTab === 'companies' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Company Code</th>
-                  <th className="px-4 py-3">Company Name</th>
-                  <th className="px-4 py-3">GSTIN / Tax ID</th>
+                  <th className="px-4 py-3">Entity Name</th>
+                  <th className="px-4 py-3">GSTIN</th>
+                  <th className="px-4 py-3">Headquarters</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
-                {companies.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-blue-400">{c.code}</td>
-                    <td className="px-4 py-3 font-bold text-white">{c.name}</td>
-                    <td className="px-4 py-3 font-mono text-slate-400">{c.gstNumber || '-'}</td>
-                    <td className="px-4 py-3">{getStatusBadge(c.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleOpenEdit('companies', c)}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    </td>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                {companies.map(comp => (
+                  <tr key={comp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{comp.code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{comp.name}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{comp.gstin || '27AAACE1234F1Z5'}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{comp.address || 'Mumbai, Maharashtra'}</td>
+                    <td className="px-4 py-3">{getStatusBadge(comp.status)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -926,35 +895,38 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
+      {/* 8. DRIVERS TABLE */}
       {activeTab === 'drivers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Driver Name</th>
-                  <th className="px-4 py-3">Mobile #</th>
-                  <th className="px-4 py-3">Driving License</th>
-                  <th className="px-4 py-3">Transporter / Fleet</th>
+                  <th className="px-4 py-3">Mobile Contact</th>
+                  <th className="px-4 py-3">License Number</th>
+                  <th className="px-4 py-3">Transporter / Courier</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {drivers.map(d => (
-                  <tr key={d.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{d.name}</td>
-                    <td className="px-4 py-3 font-mono text-slate-300">{d.mobile}</td>
-                    <td className="px-4 py-3 font-mono text-indigo-400">{d.licenseNumber}</td>
-                    <td className="px-4 py-3 text-slate-400">{d.transporterName}</td>
+                  <tr key={d.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{d.name}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{d.mobile}</td>
+                    <td className="px-4 py-3 font-mono text-slate-500 dark:text-slate-400">{d.licenseNumber}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{d.transporterName}</td>
                     <td className="px-4 py-3">{getStatusBadge(d.status)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleOpenEdit('drivers', d)}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit('drivers', d)}
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -964,31 +936,34 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
+      {/* 9. VEHICLE TYPES TABLE */}
       {activeTab === 'vehicle_types' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="px-4 py-3">Vehicle Type</th>
-                  <th className="px-4 py-3">Payload Capacity (Tons)</th>
+                  <th className="px-4 py-3">Vehicle Type Name</th>
+                  <th className="px-4 py-3">Rated Capacity (Tons)</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {vehicleTypes.map(vt => (
-                  <tr key={vt.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{vt.typeName}</td>
-                    <td className="px-4 py-3 font-bold text-emerald-400">{vt.capacityTons} Tons</td>
+                  <tr key={vt.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{vt.typeName}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">{vt.capacityTons} Tons</td>
                     <td className="px-4 py-3">{getStatusBadge(vt.status)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleOpenEdit('vehicle_types', vt)}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit('vehicle_types', vt)}
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -998,95 +973,71 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ADD MODAL (CATEGORY AWARE) */}
-      {/* ========================================================================= */}
+      {/* CREATE RECORD MODAL */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-400" /> Add New {masterCategories.find(c => c.id === activeTab)?.label.split('. ')[1]}
+        <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                Add New {masterCategories.find(c => c.id === activeTab)?.label.split('. ')[1]}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-sm cursor-pointer"
+              >
+                ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveAdd} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveAdd} className="space-y-4">
               {/* CLIENT ADD */}
               {activeTab === 'clients' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Client Code *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Client Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono focus:border-blue-500 focus:outline-none"
-                        placeholder="CLI-BRAND"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        placeholder="CLI-BV"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Brand / Client Name *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand / Company Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g. Bella Vita Organic"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="Bella Vita Organic"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Category / Vertical</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Category</label>
                       <input
                         type="text"
                         value={formData.category || ''}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g. Personal Care / D2C / Cosmetics"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="Personal Care / Beauty"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Contact Email</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Billing Email</label>
                       <input
                         type="email"
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                         placeholder="ops@brand.com"
                       />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Helpline Phone</label>
-                      <input
-                        type="text"
-                        value={formData.phone || ''}
-                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="+91 22 4000 0000"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Status</label>
-                      <select
-                        value={formData.status || 'Active'}
-                        onChange={e => setFormData({ ...formData, status: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="On Hold">On Hold</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
                     </div>
                   </div>
                 </>
@@ -1097,108 +1048,107 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Courier Code *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Courier Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono focus:border-blue-500 focus:outline-none"
-                        placeholder="DELHIVERY / BLUEDART / SFX"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        placeholder="DELHIVERY"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Logistics Partner Name *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Courier Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g. Delhivery Surface & Express"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="Delhivery Surface"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">AWB Tracking Format Pattern</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">AWB Barcode Pattern</label>
                       <input
                         type="text"
                         value={formData.trackingFormatPattern || ''}
                         onChange={e => setFormData({ ...formData, trackingFormatPattern: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono focus:border-blue-500 focus:outline-none"
-                        placeholder="14 DIGITS / SFX+10 DIGITS"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        placeholder="14 Digits (DELH...)"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Helpline Phone</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Helpline Phone</label>
                       <input
                         type="text"
                         value={formData.contactNumber || ''}
                         onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="1800-XXX-XXXX"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="1800-103-6354"
                       />
                     </div>
                   </div>
                 </>
               )}
 
-              {/* USER ADD & RBAC ACCESS CONFIG */}
+              {/* USER & RBAC ADD */}
               {activeTab === 'users' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Employee ID *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Employee ID *</label>
                       <input
                         type="text"
                         required
                         value={formData.empId || ''}
                         onChange={e => setFormData({ ...formData, empId: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono focus:border-blue-500 focus:outline-none"
-                        placeholder="EMP-1008"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g. Ramesh Sharma"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="e.g. Ramesh Kumar"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Email Address *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email / Login ID *</label>
                       <input
                         type="email"
                         required
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
-                        placeholder="ramesh.s@emiza.com"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="ramesh@emiza.com"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Initial Password</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Password</label>
                       <input
-                        type="text"
+                        type="password"
                         value={formData.password || 'password123'}
                         onChange={e => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">System Role *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">System Role *</label>
                       <select
                         value={formData.role || 'Supervisor'}
                         onChange={e => {
@@ -1206,7 +1156,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           setFormData({ ...formData, role: newRole });
                           applyRolePreset(newRole);
                         }}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
                       >
                         <option value="Super Admin">Super Admin (All Facilities & Settings)</option>
                         <option value="Admin">Admin</option>
@@ -1221,23 +1171,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Department</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Department</label>
                       <input
                         type="text"
                         value={formData.department || 'Operations Management'}
                         onChange={e => setFormData({ ...formData, department: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   {/* Approved Navigation Tabs & Permissions Matrix */}
-                  <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/60 space-y-3">
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-950/60 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                        <Lock className="w-4 h-4 text-indigo-400" /> Approved Tabs & Module Permissions
+                      <span className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                        <Lock className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> Approved Tabs & Module Permissions
                       </span>
-                      <span className="text-[11px] text-slate-400">User will only see checked tabs</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">User will only see checked tabs</span>
                     </div>
 
                     <div className="space-y-2">
@@ -1246,28 +1196,28 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                         const modPerm = userPermissions[mod.id] || { view: false };
 
                         return (
-                          <div key={mod.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 space-y-2">
+                          <div key={mod.id} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 space-y-2 shadow-xs">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={isViewAllowed}
                                   onChange={() => togglePermission(mod.id, 'view')}
-                                  className="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer"
+                                  className="w-4 h-4 rounded text-[#123B5D] dark:text-blue-600 focus:ring-0 cursor-pointer"
                                 />
                                 <div>
-                                  <div className="font-bold text-white text-xs">{mod.label}</div>
-                                  <div className="text-[10px] text-slate-400">{mod.description}</div>
+                                  <div className="font-bold text-slate-900 dark:text-white text-xs">{mod.label}</div>
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400">{mod.description}</div>
                                 </div>
                               </label>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
                                 {isViewAllowed ? 'Tab Visible' : 'Hidden'}
                               </span>
                             </div>
 
                             {/* Granular Actions */}
                             {isViewAllowed && (
-                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-800/60 text-[11px] text-slate-300">
+                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-600 dark:text-slate-300">
                                 {(['create', 'edit', 'delete', 'scan', 'export', 'closeBatch'] as const).map(act => (
                                   <label key={act} className="flex items-center gap-1 cursor-pointer">
                                     <input
@@ -1294,11 +1244,11 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Brand / Client *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand / Client *</label>
                       <select
                         value={formData.clientId || clients[0]?.id}
                         onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       >
                         {clients.map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
@@ -1306,13 +1256,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">SKU Code *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">SKU Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.skuCode || ''}
                         onChange={e => setFormData({ ...formData, skuCode: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
                         placeholder="BV-PERF-100ML"
                       />
                     </div>
@@ -1320,104 +1270,190 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">EAN Barcode *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">EAN Barcode *</label>
                       <input
                         type="text"
                         required
                         value={formData.eanBarcode || ''}
                         onChange={e => setFormData({ ...formData, eanBarcode: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono text-emerald-400"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-emerald-600 dark:text-emerald-400 font-bold"
                         placeholder="8906105610014"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">MRP Price (₹)</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">MRP Price (₹)</label>
                       <input
                         type="number"
                         value={formData.unitPrice || 499}
                         onChange={e => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Product Description / Title *</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Product Description / Title *</label>
                     <input
                       type="text"
                       required
                       value={formData.name || ''}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       placeholder="e.g. Bella Vita Luxury Man Perfume 100ml"
                     />
                   </div>
                 </>
               )}
 
-              {/* WAREHOUSE / RETURN CONDITIONS / DRIVERS / VEHICLES */}
+              {/* WAREHOUSE ADD */}
               {activeTab === 'warehouses' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Warehouse Code *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Warehouse Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
                         placeholder="WH-04"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Facility Name *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Facility Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                         placeholder="EMIZA Hyderabad Logistics Hub"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">City / Region *</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">City / Region *</label>
                       <input
                         type="text"
                         required
                         value={formData.city || ''}
                         onChange={e => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                         placeholder="Hyderabad"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Total Dock Doors</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Total Dock Doors</label>
                       <input
                         type="number"
                         value={formData.totalDocks || 10}
                         onChange={e => setFormData({ ...formData, totalDocks: Number(e.target.value) })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     </div>
                   </div>
                 </>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              {/* RETURN REASONS ADD */}
+              {activeTab === 'return_reasons' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Reason Code *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.code || ''}
+                        onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Reason Label *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.label || ''}
+                        onChange={e => setFormData({ ...formData, label: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="Customer Refused Delivery"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* DRIVER ADD */}
+              {activeTab === 'drivers' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Driver Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name || ''}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Mobile Contact *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.mobile || ''}
+                        onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* VEHICLE TYPE ADD */}
+              {activeTab === 'vehicle_types' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Vehicle Type Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.typeName || ''}
+                        onChange={e => setFormData({ ...formData, typeName: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        placeholder="Tata Ace / 14 Ft Truck"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Capacity (Tons)</label>
+                      <input
+                        type="number"
+                        value={formData.capacityTons || 5}
+                        onChange={e => setFormData({ ...formData, capacityTons: Number(e.target.value) })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/30 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold shadow-sm cursor-pointer transition-all"
                 >
                   Save Record
                 </button>
@@ -1427,255 +1463,121 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* EDIT MODAL (CATEGORY AWARE) */}
-      {/* ========================================================================= */}
+      {/* EDIT RECORD MODAL */}
       {editingRecord && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-amber-400" /> Edit {editingRecord.category.toUpperCase()} Record
+        <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                Edit {editingRecord.category.toUpperCase()} Record
               </h3>
-              <button onClick={() => setEditingRecord(null)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => setEditingRecord(null)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-sm cursor-pointer"
+              >
+                ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-              {/* CLIENT EDIT */}
-              {editingRecord.category === 'clients' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Client Code</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.code || ''}
-                        onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Brand Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name || ''}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Category / Vertical</label>
-                      <input
-                        type="text"
-                        value={formData.category || ''}
-                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Email</label>
-                      <input
-                        type="email"
-                        value={formData.email || ''}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Phone</label>
-                      <input
-                        type="text"
-                        value={formData.phone || ''}
-                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Status</label>
-                      <select
-                        value={formData.status || 'Active'}
-                        onChange={e => setFormData({ ...formData, status: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="On Hold">On Hold</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* COURIER EDIT */}
-              {editingRecord.category === 'couriers' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Courier Code</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.code || ''}
-                        onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Courier Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name || ''}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Tracking Pattern</label>
-                      <input
-                        type="text"
-                        value={formData.trackingFormatPattern || ''}
-                        onChange={e => setFormData({ ...formData, trackingFormatPattern: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Helpline Phone</label>
-                      <input
-                        type="text"
-                        value={formData.contactNumber || ''}
-                        onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Status</label>
-                    <select
-                      value={formData.status || 'Active'}
-                      onChange={e => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="On Hold">On Hold</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* USER EDIT & RBAC PERMISSIONS */}
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              {/* EDIT USER */}
               {editingRecord.category === 'users' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Emp ID</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Employee ID</label>
                       <input
                         type="text"
+                        disabled
                         value={formData.empId || ''}
-                        onChange={e => setFormData({ ...formData, empId: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
+                        className="w-full bg-slate-100 dark:bg-slate-800/50 text-slate-500 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Name</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Email</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email *</label>
                       <input
                         type="email"
                         required
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Role</label>
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">System Role *</label>
                       <select
                         value={formData.role || 'Supervisor'}
                         onChange={e => {
                           const newRole = e.target.value as UserRole;
                           setFormData({ ...formData, role: newRole });
+                          applyRolePreset(newRole);
                         }}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                       >
-                        <option value="Super Admin">Super Admin</option>
+                        <option value="Super Admin">Super Admin (All Facilities & Settings)</option>
                         <option value="Admin">Admin</option>
                         <option value="Warehouse Manager">Warehouse Manager</option>
                         <option value="Supervisor">Supervisor</option>
-                        <option value="Security Officer">Security Officer</option>
-                        <option value="RTO Operator">RTO Operator</option>
+                        <option value="Security Officer">Security Officer (Gate Inward)</option>
+                        <option value="RTO Operator">RTO Operator (Returns Scanning)</option>
                         <option value="GRN Operator">GRN Operator</option>
-                        <option value="Auditor">Auditor</option>
+                        <option value="Auditor">Auditor (Cycle Count / Scanner)</option>
                         <option value="Operator">Operator</option>
-                        <option value="Read Only">Read Only</option>
+                        <option value="Read Only">Read Only (Viewer)</option>
                       </select>
                     </div>
                   </div>
 
-                  {/* Approved Tabs Matrix */}
-                  <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/60 space-y-3">
+                  {/* Permissions Checklist in Edit */}
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-950/60 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                        <Lock className="w-4 h-4 text-amber-400" /> Edit Approved Navigation Tabs & Permissions
+                      <span className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                        <Lock className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> Module Access Rights & Granular Permissions
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => applyRolePreset(formData.role)}
-                        className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-medium cursor-pointer"
-                      >
-                        Reset to Role Defaults
-                      </button>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Manage user view & action capabilities</span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                       {ALL_SYSTEM_MODULES.map(mod => {
                         const isViewAllowed = !!userPermissions[mod.id]?.view || formData.role === 'Super Admin';
                         const modPerm = userPermissions[mod.id] || { view: false };
 
                         return (
-                          <div key={mod.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 space-y-2">
+                          <div key={mod.id} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 space-y-2 shadow-xs">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={isViewAllowed}
                                   onChange={() => togglePermission(mod.id, 'view')}
-                                  className="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer"
+                                  className="w-4 h-4 rounded text-[#123B5D] dark:text-blue-600 focus:ring-0 cursor-pointer"
                                 />
                                 <div>
-                                  <div className="font-bold text-white text-xs">{mod.label}</div>
-                                  <div className="text-[10px] text-slate-400">{mod.description}</div>
+                                  <div className="font-bold text-slate-900 dark:text-white text-xs">{mod.label}</div>
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400">{mod.description}</div>
                                 </div>
                               </label>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                                {isViewAllowed ? 'Approved' : 'Hidden'}
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                                {isViewAllowed ? 'Tab Visible' : 'Hidden'}
                               </span>
                             </div>
 
                             {/* Granular Actions */}
                             {isViewAllowed && (
-                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-800/60 text-[11px] text-slate-300">
+                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-600 dark:text-slate-300">
                                 {(['create', 'edit', 'delete', 'scan', 'export', 'closeBatch'] as const).map(act => (
                                   <label key={act} className="flex items-center gap-1 cursor-pointer">
                                     <input
@@ -1697,125 +1599,53 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 </>
               )}
 
-              {/* SKU / WAREHOUSE / OTHER EDITS */}
-              {editingRecord.category === 'skus' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">SKU Code</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.skuCode || ''}
-                        onChange={e => setFormData({ ...formData, skuCode: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">EAN Barcode</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.eanBarcode || ''}
-                        onChange={e => setFormData({ ...formData, eanBarcode: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono text-emerald-400"
-                      />
-                    </div>
-                  </div>
+              {/* EDIT OTHER MASTER RECORD (GENERIC FIELDS) */}
+              {editingRecord.category !== 'users' && (
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Product Title</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Name / Label *</label>
                     <input
                       type="text"
                       required
-                      value={formData.name || ''}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
+                      value={formData.name || formData.label || formData.typeName || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (formData.name !== undefined) setFormData({ ...formData, name: val });
+                        else if (formData.label !== undefined) setFormData({ ...formData, label: val });
+                        else setFormData({ ...formData, typeName: val });
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Price (₹)</label>
-                      <input
-                        type="number"
-                        value={formData.unitPrice || 0}
-                        onChange={e => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Status</label>
-                      <select
-                        value={formData.status || 'Active'}
-                        onChange={e => setFormData({ ...formData, status: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="On Hold">On Hold</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
+
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Status</label>
+                    <select
+                      value={formData.status || 'Active'}
+                      onChange={e => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="On Hold">On Hold</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
                   </div>
-                </>
+                </div>
               )}
 
-              {editingRecord.category === 'warehouses' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Code</label>
-                      <input
-                        type="text"
-                        value={formData.code || ''}
-                        onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={formData.name || ''}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">City</label>
-                      <input
-                        type="text"
-                        value={formData.city || ''}
-                        onChange={e => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Docks</label>
-                      <input
-                        type="number"
-                        value={formData.totalDocks || 10}
-                        onChange={e => setFormData({ ...formData, totalDocks: Number(e.target.value) })}
-                        className="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingRecord(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-lg shadow-amber-600/30 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold shadow-sm cursor-pointer transition-all"
                 >
-                  Save Changes
+                  Update Record
                 </button>
               </div>
             </form>
