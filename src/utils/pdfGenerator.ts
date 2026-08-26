@@ -111,10 +111,10 @@ export function generateBatchPDF(
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text('Batch Type:', col1X, y + 28);
+  doc.text('Batch Type / Dock:', col1X, y + 28);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(batch.batchType || 'RTO/B2C Return', col1ValX, y + 28);
+  doc.text(`${batch.batchType || 'RTO/B2C'}${batch.dockNumber ? ` (${batch.dockNumber})` : ''}`, col1ValX, y + 28);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);

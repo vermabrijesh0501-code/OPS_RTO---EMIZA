@@ -10,6 +10,15 @@ import {
   Building2,
   Truck,
   RotateCcw,
+  FileText,
+  Eye,
+  CheckCircle2,
+  Clock,
+  Printer,
+  Search,
+  X,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import {
   InwardGateEntry,
@@ -21,6 +30,7 @@ import {
   User,
 } from '../types';
 import { downloadCSV } from '../utils/csvExporter';
+import { generateBatchPDF } from '../utils/pdfGenerator';
 
 interface ReportsModuleProps {
   activeWarehouse: Warehouse;
@@ -42,17 +52,40 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
   users,
 }) => {
   const [reportType, setReportType] = useState<
-    'inward' | 'rto' | 'client_wise' | 'courier_wise' | 'user_productivity'
-  >('inward');
+    'manifest' | 'inward' | 'rto_summary' | 'client_wise' | 'courier_wise' | 'user_productivity'
+  >('manifest');
+
+  // Manifest Filters & State
+  const [manifestSearch, setManifestSearch] = useState('');
+  const [selectedClientFilter, setSelectedClientFilter] = useState('ALL');
+  const [selectedCourierFilter, setSelectedCourierFilter] = useState('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'ALL' | 'Open' | 'Closed'>('ALL');
+  const [previewBatch, setPreviewBatch] = useState<ReturnBatch | null>(null);
 
   const whGateEntries = gateEntries.filter(g => g.warehouseId === activeWarehouse.id);
   const whBatches = batches.filter(b => b.warehouseId === activeWarehouse.id);
+
+  // Filtered batches for Manifest section
+  const filteredBatches = whBatches.filter(b => {
+    if (selectedStatusFilter !== 'ALL' && b.status !== selectedStatusFilter) return false;
+    if (selectedClientFilter !== 'ALL' && b.clientId !== selectedClientFilter) return false;
+    if (selectedCourierFilter !== 'ALL' && b.courierId !== selectedCourierFilter) return false;
+    if (manifestSearch) {
+      const q = manifestSearch.toLowerCase();
+      const clientName = clients.find(c => c.id === b.clientId)?.name?.toLowerCase() || '';
+      const courierName = couriers.find(cr => cr.id === b.courierId)?.name?.toLowerCase() || '';
+      const batchNum = b.batchNumber.toLowerCase();
+      const dockNum = (b.dockNumber || '').toLowerCase();
+      return batchNum.includes(q) || clientName.includes(q) || courierName.includes(q) || dockNum.includes(q);
+    }
+    return true;
+  });
 
   // Client breakdown
   const clientBreakdown = clients.map(cli => {
     const cliGate = whGateEntries.filter(g => g.clientId === cli.id);
     const cliBatches = whBatches.filter(b => b.clientId === cli.id);
-    const totalScanned = cliBatches.reduce((acc, b) => acc + b.totalScanned, 0);
+    const totalScanned = cliBatches.reduce((acc, b) => acc + (b.totalScanned || 0), 0);
     return {
       clientName: cli.name,
       code: cli.code,
@@ -66,9 +99,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
   const courierBreakdown = couriers.map(cr => {
     const crGate = whGateEntries.filter(g => g.courierId === cr.id);
     const crBatches = whBatches.filter(b => b.courierId === cr.id);
-    const totalScanned = crBatches.reduce((acc, b) => acc + b.totalScanned, 0);
+    const totalScanned = crBatches.reduce((acc, b) => acc + (b.totalScanned || 0), 0);
     return {
       courierName: cr.name,
+      code: cr.code,
       vehicles: crGate.length,
       batches: crBatches.length,
       totalScanned,
@@ -84,12 +118,67 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       role: usr.role,
       itemsScanned: itemsScannedByUsr.length,
       batchesCreated,
-      avgSpeedPerHour: Math.round(itemsScannedByUsr.length * 1.5) || 45, // realistic rate
+      avgSpeedPerHour: Math.round(itemsScannedByUsr.length * 1.5) || 45,
     };
   });
 
+  const handleDownloadPDF = (batch: ReturnBatch) => {
+    const items = scannedItems.filter(i => i.batchId === batch.id);
+    const client = clients.find(c => c.id === batch.clientId);
+    const courier = couriers.find(cr => cr.id === batch.courierId);
+    generateBatchPDF(batch, items, activeWarehouse, client, courier);
+  };
+
+  const handleExportBatchCSV = (batch: ReturnBatch) => {
+    const items = scannedItems.filter(i => i.batchId === batch.id);
+    const client = clients.find(c => c.id === batch.clientId);
+    const courier = couriers.find(cr => cr.id === batch.courierId);
+
+    const headers = [
+      '#',
+      'Batch Number',
+      'Client / Brand',
+      'Courier Partner',
+      'Dock Number',
+      'AWB / Tracking Number',
+      'QC Condition',
+      'Scan Timestamp',
+      'Scanned By',
+    ];
+
+    const rows = items.map((item, idx) => [
+      idx + 1,
+      batch.batchNumber,
+      client?.name || batch.clientId,
+      courier?.name || batch.courierId,
+      batch.dockNumber || 'N/A',
+      item.trackingNumber,
+      item.remark,
+      new Date(item.scannedAt).toLocaleString(),
+      item.scannedByName || item.scannedBy,
+    ]);
+
+    downloadCSV(`Manifest_${batch.batchNumber}_${client?.code || 'CLI'}.csv`, headers, rows);
+  };
+
   const handleExportFullReport = () => {
-    if (reportType === 'inward') {
+    if (reportType === 'manifest' || reportType === 'rto_summary') {
+      const headers = ['Batch Number', 'Type', 'Dock #', 'Client', 'Courier', 'Status', 'Total Scanned', 'Created At', 'Created By', 'Closed At', 'Driver / Rep'];
+      const rows = whBatches.map(b => [
+        b.batchNumber,
+        b.batchType || 'RTO/B2C',
+        b.dockNumber || 'N/A',
+        clients.find(c => c.id === b.clientId)?.name || b.clientId,
+        couriers.find(cr => cr.id === b.courierId)?.name || b.courierId,
+        b.status,
+        b.totalScanned,
+        new Date(b.createdAt).toLocaleString(),
+        b.createdByName || b.createdBy,
+        b.closedAt ? new Date(b.closedAt).toLocaleString() : 'Open',
+        b.driverName || 'N/A',
+      ]);
+      downloadCSV(`EMIZA_Returns_Manifest_Summary_${activeWarehouse.code}.csv`, headers, rows);
+    } else if (reportType === 'inward') {
       const headers = ['Gate Pass #', 'Vehicle #', 'Driver Name', 'Client', 'Courier', 'Cartons', 'Invoice Value', 'Status', 'Entry Time'];
       const rows = whGateEntries.map(g => [
         g.gatePassNumber,
@@ -103,23 +192,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
         new Date(g.entryTime).toLocaleString(),
       ]);
       downloadCSV(`EMIZA_Inward_Report_${activeWarehouse.code}.csv`, headers, rows);
-    } else if (reportType === 'rto') {
-      const headers = ['Batch Number', 'Type', 'Client', 'Courier', 'Status', 'Total Scanned', 'Created At', 'Created By'];
-      const rows = whBatches.map(b => [
-        b.batchNumber,
-        b.batchType,
-        clients.find(c => c.id === b.clientId)?.name || b.clientId,
-        couriers.find(cr => cr.id === b.courierId)?.name || b.courierId,
-        b.status,
-        b.totalScanned,
-        new Date(b.createdAt).toLocaleString(),
-        b.createdByName,
-      ]);
-      downloadCSV(`EMIZA_RTO_Batch_Report_${activeWarehouse.code}.csv`, headers, rows);
     } else if (reportType === 'client_wise') {
       const headers = ['Client Brand', 'Client Code', 'Inward Vehicles', 'Return Batches', 'Total Scanned Items'];
       const rows = clientBreakdown.map(c => [c.clientName, c.code, c.vehicles, c.batches, c.totalScanned]);
       downloadCSV(`EMIZA_Client_Wise_Report_${activeWarehouse.code}.csv`, headers, rows);
+    } else if (reportType === 'courier_wise') {
+      const headers = ['Courier Partner', 'Courier Code', 'Vehicles Received', 'Return Batches Handled', 'Total Scanned Items'];
+      const rows = courierBreakdown.map(cr => [cr.courierName, cr.code, cr.vehicles, cr.batches, cr.totalScanned]);
+      downloadCSV(`EMIZA_Courier_Performance_${activeWarehouse.code}.csv`, headers, rows);
     } else {
       const headers = ['Operator Name', 'Role', 'Scanned Barcodes', 'Batches Created', 'Avg Items / Hour'];
       const rows = operatorProductivity.map(u => [u.userName, u.role, u.itemsScanned, u.batchesCreated, u.avgSpeedPerHour]);
@@ -127,35 +207,42 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
     }
   };
 
+  // Preview Batch Scanned Items & Details
+  const previewItems = previewBatch ? scannedItems.filter(i => i.batchId === previewBatch.id) : [];
+  const previewClient = previewBatch ? clients.find(c => c.id === previewBatch.clientId) : null;
+  const previewCourier = previewBatch ? couriers.find(cr => cr.id === previewBatch.courierId) : null;
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h1 className="text-xl font-black text-white flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-emerald-400" /> Operational Reports & Analytics
+            <FileText className="w-6 h-6 text-blue-400" /> Reports & Manifest
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Generate and export custom reports for Inward Gate, RTO Returns, Client KPI performance, and Operator productivity.
+            Generate and export RTO / B2C Return Batch Manifests, Inward Gate Register, Brand KPIs, and Courier Handover Sheets.
           </p>
         </div>
 
-        <button
-          onClick={handleExportFullReport}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02]"
-        >
-          <FileSpreadsheet className="w-4 h-4" /> Export Excel CSV Report
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportFullReport}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export Excel CSV Report
+          </button>
+        </div>
       </div>
 
       {/* Selector Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800/80 pb-2">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800/80 pb-2 scrollbar-thin">
         {[
-          { id: 'inward', label: 'Inward Gate Register', icon: Truck },
-          { id: 'rto', label: 'RTO & Returns Batches', icon: RotateCcw },
-          { id: 'client_wise', label: 'Client Brand Breakdown', icon: Building2 },
-          { id: 'courier_wise', label: 'Courier Performance', icon: Truck },
-          { id: 'user_productivity', label: 'Operator Productivity', icon: UserCheck },
+          { id: 'manifest', label: 'Batch Manifests & Handover Sheets', icon: FileText, count: whBatches.length },
+          { id: 'inward', label: 'Inward Gate Register', icon: Truck, count: whGateEntries.length },
+          { id: 'client_wise', label: 'Client Brand Breakdown', icon: Building2, count: clients.length },
+          { id: 'courier_wise', label: 'Courier Performance', icon: Truck, count: couriers.length },
+          { id: 'user_productivity', label: 'Operator Productivity', icon: UserCheck, count: users.length },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = reportType === tab.id;
@@ -163,34 +250,248 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
             <button
               key={tab.id}
               onClick={() => setReportType(tab.id as any)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Report Table Display */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          {reportType === 'inward' && (
+      {/* 1. BATCH MANIFESTS & HANDOVER SHEETS (PRIMARY TAB) */}
+      {reportType === 'manifest' && (
+        <div className="space-y-4">
+          {/* Filters Bar */}
+          <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3 flex-1 min-w-[240px]">
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search by Batch #, Client Brand, Courier, Dock #..."
+                value={manifestSearch}
+                onChange={e => setManifestSearch(e.target.value)}
+                className="bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Client Filter */}
+              <select
+                value={selectedClientFilter}
+                onChange={e => setSelectedClientFilter(e.target.value)}
+                className="bg-slate-800 text-slate-200 border border-slate-700 rounded-xl px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+              >
+                <option value="ALL">All Clients ({clients.length})</option>
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Courier Filter */}
+              <select
+                value={selectedCourierFilter}
+                onChange={e => setSelectedCourierFilter(e.target.value)}
+                className="bg-slate-800 text-slate-200 border border-slate-700 rounded-xl px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+              >
+                <option value="ALL">All Couriers ({couriers.length})</option>
+                {couriers.map(cr => (
+                  <option key={cr.id} value={cr.id}>
+                    {cr.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Status Filter */}
+              <div className="flex items-center bg-slate-800 rounded-xl p-0.5 border border-slate-700">
+                {(['ALL', 'Closed', 'Open'] as const).map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setSelectedStatusFilter(st)}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                      selectedStatusFilter === st
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Batches Manifest List Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+                  <tr>
+                    <th className="px-4 py-3">Batch Number</th>
+                    <th className="px-4 py-3">Client / Brand</th>
+                    <th className="px-4 py-3">Courier Partner</th>
+                    <th className="px-4 py-3">Dock No</th>
+                    <th className="px-4 py-3">Total Scanned</th>
+                    <th className="px-4 py-3">QC Summary</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Closed / Date</th>
+                    <th className="px-4 py-3 text-right">Manifest Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-300">
+                  {filteredBatches.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                        No return batches match the selected criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBatches.map(batch => {
+                      const client = clients.find(c => c.id === batch.clientId);
+                      const courier = couriers.find(cr => cr.id === batch.courierId);
+                      const breakdown = batch.remarksBreakdown || {};
+                      const isClosed = batch.status === 'Closed';
+
+                      return (
+                        <tr key={batch.id} className="hover:bg-slate-800/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-mono font-bold text-indigo-400">{batch.batchNumber}</div>
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {new Date(batch.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-white">
+                            {client?.name || batch.clientId}
+                          </td>
+                          <td className="px-4 py-3 text-slate-300">
+                            {courier?.name || batch.courierId}
+                          </td>
+                          <td className="px-4 py-3">
+                            {batch.dockNumber ? (
+                              <span className="px-2 py-0.5 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px]">
+                                {batch.dockNumber}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">Dock 01</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 rounded bg-slate-800 font-mono font-black text-emerald-400 border border-slate-700 text-xs">
+                              {batch.totalScanned} AWBs
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1 max-w-[180px]">
+                              {Object.entries(breakdown).map(([rem, count]) => {
+                                if (Number(count) <= 0) return null;
+                                return (
+                                  <span
+                                    key={rem}
+                                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                      rem === 'Good'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : rem === 'Damage' || rem === 'Missing Product'
+                                        ? 'bg-rose-500/20 text-rose-300'
+                                        : 'bg-amber-500/20 text-amber-300'
+                                    }`}
+                                  >
+                                    {rem}: {count}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                isClosed
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                              }`}
+                            >
+                              {batch.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-400 text-[11px]">
+                            {batch.closedAt ? (
+                              <div>
+                                <div className="text-slate-200 font-medium">{new Date(batch.closedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
+                                <div className="text-[10px] text-slate-500">{new Date(batch.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                              </div>
+                            ) : (
+                              <span className="text-amber-400/80 font-mono">Open</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* View Live Manifest Modal */}
+                              <button
+                                onClick={() => setPreviewBatch(batch)}
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer"
+                                title="View Live Handover Manifest"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-blue-400" />
+                                <span>Preview</span>
+                              </button>
+
+                              {/* Download Exact PDF Manifest */}
+                              <button
+                                onClick={() => handleDownloadPDF(batch)}
+                                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 text-[11px] font-bold shadow-md shadow-blue-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                                title="Download PDF Manifest & Handover Sheet"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>PDF Manifest</span>
+                              </button>
+
+                              {/* Export CSV */}
+                              <button
+                                onClick={() => handleExportBatchCSV(batch)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                title="Download CSV Scanned AWB List"
+                              >
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. INWARD GATE REGISTER */}
+      {reportType === 'inward' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Gate Pass #</th>
                   <th className="px-4 py-3">Vehicle #</th>
-                  <th className="px-4 py-3">Driver</th>
-                  <th className="px-4 py-3">Client</th>
+                  <th className="px-4 py-3">Driver Name</th>
+                  <th className="px-4 py-3">Client Brand</th>
                   <th className="px-4 py-3">Courier</th>
                   <th className="px-4 py-3">Cartons</th>
                   <th className="px-4 py-3">Value (INR)</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Entry Time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -199,22 +500,30 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                     <td className="px-4 py-3 font-mono font-bold text-blue-400">{g.gatePassNumber}</td>
                     <td className="px-4 py-3 font-bold text-white">{g.vehicleNumber}</td>
                     <td className="px-4 py-3 text-slate-300">{g.driverName}</td>
-                    <td className="px-4 py-3 text-slate-400">{clients.find(c => c.id === g.clientId)?.name}</td>
+                    <td className="px-4 py-3 text-slate-300">{clients.find(c => c.id === g.clientId)?.name}</td>
                     <td className="px-4 py-3 text-slate-400">{couriers.find(cr => cr.id === g.courierId)?.name}</td>
                     <td className="px-4 py-3 font-bold text-amber-400">{g.expectedBoxCount} Cartons</td>
-                    <td className="px-4 py-3 font-bold text-emerald-400">₹{g.invoiceValue.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-400">₹{g.invoiceValue?.toLocaleString() || '0'}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400">
                         {g.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">
+                      {new Date(g.entryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
+          </div>
+        </div>
+      )}
 
-          {reportType === 'client_wise' && (
+      {/* 3. CLIENT BRAND PERFORMANCE */}
+      {reportType === 'client_wise' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
                 <tr>
@@ -222,7 +531,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Client Code</th>
                   <th className="px-4 py-3">Inward Vehicles Received</th>
                   <th className="px-4 py-3">Return Batches Processed</th>
-                  <th className="px-4 py-3">Total Items Verified</th>
+                  <th className="px-4 py-3">Total Scanned AWBs</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -237,9 +546,44 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                 ))}
               </tbody>
             </table>
-          )}
+          </div>
+        </div>
+      )}
 
-          {reportType === 'user_productivity' && (
+      {/* 4. COURIER PERFORMANCE */}
+      {reportType === 'courier_wise' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="px-4 py-3">Courier Partner</th>
+                  <th className="px-4 py-3">Code</th>
+                  <th className="px-4 py-3">Inward Vehicles Handled</th>
+                  <th className="px-4 py-3">Return Batches Processed</th>
+                  <th className="px-4 py-3">Total Scanned AWBs</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 text-slate-300">
+                {courierBreakdown.map((cr, idx) => (
+                  <tr key={idx} className="hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-bold text-white">{cr.courierName}</td>
+                    <td className="px-4 py-3 font-mono text-blue-400">{cr.code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-300">{cr.vehicles} Vehicles</td>
+                    <td className="px-4 py-3 font-bold text-slate-300">{cr.batches} Batches</td>
+                    <td className="px-4 py-3 font-black text-emerald-400">{cr.totalScanned} Items</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 5. OPERATOR PRODUCTIVITY */}
+      {reportType === 'user_productivity' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-800 text-slate-400 uppercase font-bold text-[10px]">
                 <tr>
@@ -262,15 +606,189 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                 ))}
               </tbody>
             </table>
-          )}
-
-          {!['inward', 'client_wise', 'user_productivity'].includes(reportType) && (
-            <div className="p-10 text-center text-slate-400 text-xs">
-              Report data generated for <strong className="text-white">{reportType.toUpperCase()}</strong> at {activeWarehouse.name}.
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* LIVE ON-SCREEN MANIFEST PREVIEW MODAL */}
+      {previewBatch && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white text-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            {/* Modal Top Control Bar */}
+            <div className="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-400" />
+                <span className="font-bold text-sm">Batch Manifest & Handover Sheet Preview</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  {previewBatch.status}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownloadPDF(previewBatch)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </button>
+                <button
+                  onClick={() => handleExportBatchCSV(previewBatch)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> CSV
+                </button>
+                <button
+                  onClick={() => setPreviewBatch(null)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Exact PDF Layout Replicated on Screen */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 text-xs">
+              {/* Header Banner */}
+              <div className="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between border-b-2 border-indigo-500">
+                <div>
+                  <h2 className="text-base font-black tracking-wide">EMIZA WAREHOUSE OPERATIONS</h2>
+                  <p className="text-[11px] text-slate-300 font-medium">RTO / B2C RETURNS BATCH MANIFEST & HANDOVER SHEET</p>
+                </div>
+                <div className="text-right">
+                  <span className="px-3 py-1 rounded-md text-xs font-bold bg-emerald-500 text-white uppercase tracking-wider">
+                    {previewBatch.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Metadata Grid */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Number</span>
+                  <span className="font-bold text-indigo-600 font-mono text-sm">{previewBatch.batchNumber}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Client / Account</span>
+                  <span className="font-bold text-slate-900">{previewClient?.name || previewBatch.clientId}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Courier Partner</span>
+                  <span className="font-bold text-slate-900">{previewCourier?.name || previewBatch.courierId}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Type / Dock</span>
+                  <span className="font-bold text-slate-900">
+                    {previewBatch.batchType || 'RTO/B2C'} {previewBatch.dockNumber ? `(${previewBatch.dockNumber})` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Facility / Hub</span>
+                  <span className="font-bold text-slate-900">{activeWarehouse.name} ({activeWarehouse.code})</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Total Scanned</span>
+                  <span className="font-black text-emerald-600 text-sm">{previewItems.length} Parcels / AWBs</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Batch Created</span>
+                  <span className="font-medium text-slate-800">{new Date(previewBatch.createdAt).toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-bold uppercase">Driver / Rep</span>
+                  <span className="font-bold text-slate-900">{previewBatch.driverName || 'Supervisor Handover'}</span>
+                </div>
+              </div>
+
+              {/* QC Breakdown Summary */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">QC Conditions Breakdown Summary</h4>
+                <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex flex-wrap gap-4">
+                  {Object.entries(previewBatch.remarksBreakdown || {}).map(([rem, cnt]) => (
+                    <div key={rem} className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-600">{rem}:</span>
+                      <span className="font-black text-indigo-700 bg-white px-2 py-0.5 rounded border border-slate-200">{cnt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scanned AWBs Table */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                  Scanned AWBs Manifest ({previewItems.length} Items)
+                </h4>
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white max-h-60 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-800 text-white uppercase font-bold text-[10px] sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">AWB / Tracking Number</th>
+                        <th className="px-3 py-2">QC Condition</th>
+                        <th className="px-3 py-2">Scan Timestamp</th>
+                        <th className="px-3 py-2">Scanned By</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-800">
+                      {previewItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-slate-400">No scanned items in this batch.</td>
+                        </tr>
+                      ) : (
+                        previewItems.map((it, i) => (
+                          <tr key={it.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="px-3 py-1.5 font-mono text-slate-400">{i + 1}</td>
+                            <td className="px-3 py-1.5 font-mono font-bold text-indigo-700">{it.trackingNumber}</td>
+                            <td className="px-3 py-1.5">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                it.remark === 'Good' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {it.remark}
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5 text-slate-500 font-mono text-[11px]">
+                              {new Date(it.scannedAt).toLocaleTimeString()}
+                            </td>
+                            <td className="px-3 py-1.5 text-slate-600 font-medium">
+                              {it.scannedByName || 'Operator'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Handover & Sign-off Signature Box */}
+              <div className="border border-slate-300 rounded-xl p-4 bg-white grid grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Courier Driver / Rep</span>
+                    <span className="font-bold text-slate-900">{previewBatch.driverName || '-'}</span>
+                    <div className="text-[10px] text-slate-500">Phone: {previewBatch.driverMobile || '-'}</div>
+                  </div>
+                  <div className="border-t border-slate-300 pt-1 text-[10px] text-slate-400 text-center italic">
+                    Courier Driver Signature & Handover Stamp
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Warehouse Supervisor</span>
+                    <span className="font-bold text-slate-900">{previewBatch.createdByName || 'Vikram Mehta'}</span>
+                    <div className="text-[10px] text-slate-500">
+                      Handover Date: {previewBatch.closedAt ? new Date(previewBatch.closedAt).toLocaleString() : 'Pending Close'}
+                    </div>
+                  </div>
+                  <div className="border-t border-slate-300 pt-1 text-[10px] text-slate-400 text-center italic">
+                    Warehouse Inward Stamp & Supervisor Sign-off
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

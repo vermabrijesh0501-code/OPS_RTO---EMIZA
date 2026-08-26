@@ -95,17 +95,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'reports' as ActiveTab,
-      label: 'Reports & Analytics',
+      label: 'Reports & Manifest',
       icon: BarChart3,
       badge: null,
       badgeColor: '',
-    },
-    {
-      id: 'supabase_hub' as ActiveTab,
-      label: 'Supabase & Netlify',
-      icon: Database,
-      badge: 'Live',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
     },
   ];
 

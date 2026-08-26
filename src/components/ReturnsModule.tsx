@@ -99,7 +99,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const [newBatchClient, setNewBatchClient] = useState(clients[0]?.id || '');
   const [newBatchCourier, setNewBatchCourier] = useState(couriers[0]?.id || '');
   const [newBatchChannel, setNewBatchChannel] = useState<'D2C Return' | 'B2C Return' | 'Marketplace Return' | 'Customer RTO'>('B2C Return');
-  const [newBatchExpected, setNewBatchExpected] = useState<number>(50);
+  const [newBatchDock, setNewBatchDock] = useState<string>('Dock 01');
   const [newBatchNotes, setNewBatchNotes] = useState('');
 
   // SCANNER GUN & AWB SCAN STATE
@@ -215,8 +215,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       clientId: newBatchClient,
       courierId: newBatchCourier,
       status: 'Open',
-      expectedCount: newBatchExpected,
-      notes: `${newBatchChannel} | ${newBatchNotes}`,
+      dockNumber: newBatchDock,
+      notes: `${newBatchChannel} | Dock: ${newBatchDock}${newBatchNotes ? ` | ${newBatchNotes}` : ''}`,
       createdBy: currentUser.id,
       createdByName: currentUser.name,
     });
@@ -571,16 +571,27 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     </select>
                   </div>
 
-                  {/* Expected Count */}
+                  {/* Dock No Dropdown */}
                   <div>
-                    <label className="block text-slate-300 font-medium mb-1">Expected Shipments (Optional)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={newBatchExpected}
-                      onChange={e => setNewBatchExpected(Number(e.target.value))}
-                      className="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 font-mono focus:outline-none focus:border-indigo-500 text-xs"
-                    />
+                    <label className="block text-slate-300 font-medium mb-1">
+                      Dock No *
+                    </label>
+                    <select
+                      value={newBatchDock}
+                      onChange={e => setNewBatchDock(e.target.value)}
+                      className="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer text-xs"
+                    >
+                      <option value="Dock 01">Dock 01</option>
+                      <option value="Dock 02">Dock 02</option>
+                      <option value="Dock 03">Dock 03</option>
+                      <option value="Dock 04">Dock 04</option>
+                      <option value="Dock 05">Dock 05</option>
+                      <option value="Dock 06">Dock 06</option>
+                      <option value="Dock 07">Dock 07</option>
+                      <option value="Dock 08">Dock 08</option>
+                      <option value="Dock 09">Dock 09</option>
+                      <option value="Dock 10">Dock 10</option>
+                    </select>
                   </div>
                 </div>
 
@@ -634,6 +645,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 truncate max-w-[120px] sm:max-w-[180px]">
                         {couriers.find(cr => cr.id === activeBatch.courierId)?.name}
                       </span>
+                      {activeBatch.dockNumber && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                          {activeBatch.dockNumber}
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-400 font-mono hidden md:inline ml-1">
                         {new Date(activeBatch.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
@@ -1404,6 +1420,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                         Closed
                       </span>
+                      {selectedClosedBatch.dockNumber && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          {selectedClosedBatch.dockNumber}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                       <span className="text-white font-medium">{client?.name}</span>
