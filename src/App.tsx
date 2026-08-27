@@ -13,6 +13,7 @@ import {
 } from './types';
 import { StorageService } from './services/storage';
 import { SyncService } from './services/syncService';
+import { DBService } from './services/dbService';
 import { Header } from './components/Header';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -138,43 +139,162 @@ export default function App() {
     }
   }, [location.pathname]);
 
+  // Fetch initial cloud state from Supabase if connected
+  useEffect(() => {
+    DBService.fetchAllData().then(data => {
+      if (data.batches && data.batches.length > 0) setBatches(data.batches);
+      if (data.scannedItems && data.scannedItems.length > 0) setScannedItems(data.scannedItems);
+      if (data.gateEntries && data.gateEntries.length > 0) setGateEntries(data.gateEntries);
+      if (data.logs && data.logs.length > 0) setLogs(data.logs);
+    });
+  }, []);
+
   // Real-time Cross-Device Synchronization Subscriber
   useEffect(() => {
     const unsubscribe = SyncService.subscribe(event => {
-      switch (event.type) {
-        case 'ITEM_SCANNED':
-        case 'ITEM_UPDATED':
-        case 'ITEM_DELETED':
-          setScannedItems(StorageService.getScannedItems());
-          setBatches(StorageService.getReturnBatches());
+      const { type, payload } = event;
+
+      // If full array state is passed in payload, apply immediately
+      if (payload?.allScannedItems) {
+        setScannedItems(payload.allScannedItems);
+        StorageService.saveScannedItems(payload.allScannedItems);
+      }
+      if (payload?.allBatches) {
+        setBatches(payload.allBatches);
+        StorageService.saveReturnBatches(payload.allBatches);
+      }
+      if (payload?.allGateEntries) {
+        setGateEntries(payload.allGateEntries);
+        StorageService.saveGateEntries(payload.allGateEntries);
+      }
+      if (payload?.log) {
+        setLogs(prev => [payload.log, ...prev.filter(l => l.id !== payload.log.id)].slice(0, 100));
+      }
+
+      switch (type) {
+        case 'ITEM_SCANNED': {
+          if (payload?.item && !payload?.allScannedItems) {
+            setScannedItems(prev => {
+              const exists = prev.some(i => i.id === payload.item.id || (i.batchId === payload.item.batchId && i.trackingNumber === payload.item.trackingNumber));
+              if (exists) return prev;
+              const next = [payload.item, ...prev];
+              StorageService.saveScannedItems(next);
+              return next;
+            });
+            if (payload?.batch) {
+              setBatches(prev => {
+                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                StorageService.saveReturnBatches(next);
+                return next;
+              });
+            }
+          }
           break;
-        case 'BATCH_CREATED':
+        }
+
+        case 'ITEM_UPDATED': {
+          if (payload?.item && !payload?.allScannedItems) {
+            setScannedItems(prev => {
+              const next = prev.map(i => i.id === (payload.itemId || payload.item.id) ? { ...i, ...payload.item } : i);
+              StorageService.saveScannedItems(next);
+              return next;
+            });
+            if (payload?.batch) {
+              setBatches(prev => {
+                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                StorageService.saveReturnBatches(next);
+                return next;
+              });
+            }
+          }
+          break;
+        }
+
+        case 'ITEM_DELETED': {
+          if (payload?.itemId && !payload?.allScannedItems) {
+            setScannedItems(prev => {
+              const next = prev.filter(i => i.id !== payload.itemId);
+              StorageService.saveScannedItems(next);
+              return next;
+            });
+            if (payload?.batch) {
+              setBatches(prev => {
+                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                StorageService.saveReturnBatches(next);
+                return next;
+              });
+            }
+          }
+          break;
+        }
+
+        case 'BATCH_CREATED': {
+          if (payload?.batch && !payload?.allBatches) {
+            setBatches(prev => {
+              if (prev.some(b => b.id === payload.batch.id)) return prev;
+              const next = [payload.batch, ...prev];
+              StorageService.saveReturnBatches(next);
+              return next;
+            });
+          }
+          break;
+        }
+
         case 'BATCH_UPDATED':
-        case 'BATCH_CLOSED':
-          setBatches(StorageService.getReturnBatches());
-          setScannedItems(StorageService.getScannedItems());
+        case 'BATCH_CLOSED': {
+          if (payload?.batch && !payload?.allBatches) {
+            setBatches(prev => {
+              const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+              StorageService.saveReturnBatches(next);
+              return next;
+            });
+          }
           break;
-        case 'GATE_ENTRY_CREATED':
-        case 'GATE_ENTRY_UPDATED':
-          setGateEntries(StorageService.getGateEntries());
+        }
+
+        case 'GATE_ENTRY_CREATED': {
+          if (payload?.entry && !payload?.allGateEntries) {
+            setGateEntries(prev => {
+              if (prev.some(g => g.id === payload.entry.id)) return prev;
+              const next = [payload.entry, ...prev];
+              StorageService.saveGateEntries(next);
+              return next;
+            });
+          }
           break;
+        }
+
+        case 'GATE_ENTRY_UPDATED': {
+          if (payload?.entry && !payload?.allGateEntries) {
+            setGateEntries(prev => {
+              const next = prev.map(g => g.id === payload.entry.id ? payload.entry : g);
+              StorageService.saveGateEntries(next);
+              return next;
+            });
+          }
+          break;
+        }
+
         case 'AUDIT_RECORD_ADDED':
           setAuditRecords(StorageService.getAuditRecords());
           break;
+
         case 'USER_UPDATED':
         case 'DEVICE_SESSION_UPDATED':
         case 'DEVICE_HEARTBEAT':
           setUsers(StorageService.getUsers());
           break;
+
+        case 'SYNC_ALL':
         case 'STORAGE_SYNC':
-          setGateEntries(StorageService.getGateEntries());
-          setBatches(StorageService.getReturnBatches());
-          setScannedItems(StorageService.getScannedItems());
-          setAuditRecords(StorageService.getAuditRecords());
-          setAuditorDevices(StorageService.getAuditorDevices());
-          setUsers(StorageService.getUsers());
-          setLogs(StorageService.getActivityLogs());
+          DBService.fetchAllData().then(data => {
+            if (data.batches) setBatches(data.batches);
+            if (data.scannedItems) setScannedItems(data.scannedItems);
+            if (data.gateEntries) setGateEntries(data.gateEntries);
+            if (data.logs) setLogs(data.logs);
+          });
           break;
+
         default:
           break;
       }
@@ -238,9 +358,8 @@ export default function App() {
 
     const updated = [newEntry, ...gateEntries];
     setGateEntries(updated);
-    StorageService.saveGateEntries(updated);
 
-    StorageService.addActivityLog({
+    DBService.createGateEntry(newEntry, updated, {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
@@ -253,30 +372,32 @@ export default function App() {
 
   // Update Gate Status
   const handleUpdateGateStatus = (id: string, status: InwardGateEntry['status'], dockNumber?: string) => {
+    let updatedTarget: InwardGateEntry | undefined;
     const updated = gateEntries.map(g => {
       if (g.id === id) {
-        return {
+        updatedTarget = {
           ...g,
           status,
           dockNumber: dockNumber || g.dockNumber,
           dockAllocatedTime: dockNumber ? new Date().toISOString() : g.dockAllocatedTime,
         };
+        return updatedTarget;
       }
       return g;
     });
 
     setGateEntries(updated);
-    StorageService.saveGateEntries(updated);
 
-    const target = gateEntries.find(g => g.id === id);
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: `Updated Inward Status to ${status}`,
-      module: 'Inward',
-      details: `${target?.gatePassNumber || id} updated to ${status} ${dockNumber ? `at ${dockNumber}` : ''}`,
-    });
+    if (updatedTarget) {
+      DBService.updateGateEntry(id, updatedTarget, updated, {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: `Updated Inward Status to ${status}`,
+        module: 'Inward',
+        details: `${updatedTarget.gatePassNumber || id} updated to ${status} ${dockNumber ? `at ${dockNumber}` : ''}`,
+      });
+    }
     setLogs(StorageService.getActivityLogs());
   };
 
@@ -316,9 +437,8 @@ export default function App() {
 
     const updated = [newBatch, ...batches];
     setBatches(updated);
-    StorageService.saveReturnBatches(updated);
 
-    StorageService.addActivityLog({
+    DBService.createBatch(newBatch, updated, {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
@@ -331,7 +451,7 @@ export default function App() {
     return newBatch;
   };
 
-  // Barcode Gun Item Scan with Duplicate Check
+  // Barcode Gun Item Scan with Duplicate Check & Cross-Device Live Sync
   const handleScanItem = (
     batchId: string,
     trackingNumber: string,
@@ -353,7 +473,7 @@ export default function App() {
     if (!targetBatch) return { success: false, message: 'Batch not found.' };
 
     const newItem: ScannedReturnItem = {
-      id: `item-${Date.now()}`,
+      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       batchId,
       trackingNumber,
       orderNumber: `ORD-${trackingNumber.slice(-6)}`,
@@ -366,32 +486,39 @@ export default function App() {
 
     const updatedItems = [newItem, ...scannedItems];
     setScannedItems(updatedItems);
-    StorageService.saveScannedItems(updatedItems);
 
+    let updatedTargetBatch: ReturnBatch = targetBatch;
     const updatedBatches = batches.map(b => {
       if (b.id === batchId) {
         const newBreakdown = { ...b.remarksBreakdown };
         newBreakdown[remark] = (newBreakdown[remark] || 0) + 1;
-        return {
+        updatedTargetBatch = {
           ...b,
           totalScanned: b.totalScanned + 1,
           remarksBreakdown: newBreakdown,
         };
+        return updatedTargetBatch;
       }
       return b;
     });
 
     setBatches(updatedBatches);
-    StorageService.saveReturnBatches(updatedBatches);
 
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: 'Scanned AWB Barcode',
-      module: targetBatch.batchType === 'B2B Return' ? 'B2B' : 'RTO',
-      details: `Scanned AWB #${trackingNumber} [${remark}] in ${targetBatch.batchNumber}`,
-    });
+    // Persist to Cloud & Broadcast to all authorized devices
+    DBService.recordScanItem(
+      newItem,
+      updatedTargetBatch,
+      updatedItems,
+      updatedBatches,
+      {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Scanned AWB Barcode',
+        module: targetBatch.batchType === 'B2B Return' ? 'B2B' : 'RTO',
+        details: `Scanned AWB #${trackingNumber} [${remark}] in ${targetBatch.batchNumber}`,
+      }
+    );
     setLogs(StorageService.getActivityLogs());
 
     return {
@@ -414,45 +541,56 @@ export default function App() {
     const oldTracking = targetItem.trackingNumber;
     const newTracking = updates.trackingNumber ? updates.trackingNumber.trim().toUpperCase() : oldTracking;
 
+    let updatedItem: ScannedReturnItem = {
+      ...targetItem,
+      trackingNumber: newTracking,
+      remark: newRemark,
+    };
+
     const updatedItems = scannedItems.map(item => {
       if (item.id === itemId) {
-        return {
-          ...item,
-          trackingNumber: newTracking,
-          remark: newRemark,
-        };
+        return updatedItem;
       }
       return item;
     });
 
     setScannedItems(updatedItems);
-    StorageService.saveScannedItems(updatedItems);
+
+    let updatedTargetBatch = batches.find(b => b.id === targetItem.batchId)!;
+    let updatedBatches = batches;
 
     if (oldRemark !== newRemark) {
-      const updatedBatches = batches.map(b => {
+      updatedBatches = batches.map(b => {
         if (b.id === targetItem.batchId) {
           const newBreakdown = { ...b.remarksBreakdown };
           newBreakdown[oldRemark] = Math.max(0, (newBreakdown[oldRemark] || 1) - 1);
           newBreakdown[newRemark] = (newBreakdown[newRemark] || 0) + 1;
-          return {
+          updatedTargetBatch = {
             ...b,
             remarksBreakdown: newBreakdown,
           };
+          return updatedTargetBatch;
         }
         return b;
       });
       setBatches(updatedBatches);
-      StorageService.saveReturnBatches(updatedBatches);
     }
 
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: 'Edited Scanned Item',
-      module: 'RTO',
-      details: `Updated item AWB to ${newTracking} [${newRemark}]`,
-    });
+    DBService.updateScanItem(
+      itemId,
+      updatedItem,
+      updatedTargetBatch,
+      updatedItems,
+      updatedBatches,
+      {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Edited Scanned Item',
+        module: 'RTO',
+        details: `Updated item AWB to ${newTracking} [${newRemark}]`,
+      }
+    );
     setLogs(StorageService.getActivityLogs());
   };
 
@@ -463,32 +601,39 @@ export default function App() {
 
     const updatedItems = scannedItems.filter(i => i.id !== itemId);
     setScannedItems(updatedItems);
-    StorageService.saveScannedItems(updatedItems);
 
+    let updatedTargetBatch = batches.find(b => b.id === itemToDelete.batchId)!;
     const updatedBatches = batches.map(b => {
       if (b.id === itemToDelete.batchId) {
         const newBreakdown = { ...b.remarksBreakdown };
         newBreakdown[itemToDelete.remark] = Math.max(0, (newBreakdown[itemToDelete.remark] || 1) - 1);
-        return {
+        updatedTargetBatch = {
           ...b,
           totalScanned: Math.max(0, b.totalScanned - 1),
           remarksBreakdown: newBreakdown,
         };
+        return updatedTargetBatch;
       }
       return b;
     });
 
     setBatches(updatedBatches);
-    StorageService.saveReturnBatches(updatedBatches);
 
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: 'Deleted Scanned AWB',
-      module: 'RTO',
-      details: `Removed AWB #${itemToDelete.trackingNumber} from batch`,
-    });
+    DBService.deleteScanItem(
+      itemId,
+      itemToDelete.batchId,
+      updatedTargetBatch,
+      updatedItems,
+      updatedBatches,
+      {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Deleted Scanned AWB',
+        module: 'RTO',
+        details: `Removed AWB #${itemToDelete.trackingNumber} from batch`,
+      }
+    );
     setLogs(StorageService.getActivityLogs());
   };
 
@@ -503,9 +648,10 @@ export default function App() {
       notes?: string;
     }
   ) => {
+    let closedTargetBatch: ReturnBatch | undefined;
     const updated = batches.map(b => {
       if (b.id === batchId) {
-        return {
+        closedTargetBatch = {
           ...b,
           status: 'Closed' as const,
           closedAt: new Date().toISOString(),
@@ -515,22 +661,23 @@ export default function App() {
           supervisorSigner: signData.supervisorSigner,
           notes: signData.notes,
         };
+        return closedTargetBatch;
       }
       return b;
     });
 
     setBatches(updated);
-    StorageService.saveReturnBatches(updated);
 
-    const target = batches.find(b => b.id === batchId);
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: 'Closed & Reconciled Return Batch',
-      module: target?.batchType === 'B2B Return' ? 'B2B' : 'RTO',
-      details: `Batch ${target?.batchNumber || batchId} closed with ${target?.totalScanned || 0} units. Driver: ${signData.driverName}`,
-    });
+    if (closedTargetBatch) {
+      DBService.closeBatch(batchId, closedTargetBatch, updated, {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Closed & Reconciled Return Batch',
+        module: closedTargetBatch.batchType === 'B2B Return' ? 'B2B' : 'RTO',
+        details: `Batch ${closedTargetBatch.batchNumber || batchId} closed with ${closedTargetBatch.totalScanned || 0} units. Driver: ${signData.driverName}`,
+      });
+    }
     setLogs(StorageService.getActivityLogs());
   };
 

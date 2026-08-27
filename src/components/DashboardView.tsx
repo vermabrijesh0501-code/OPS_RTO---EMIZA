@@ -85,18 +85,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return scannedItems.filter(s => batchIds.includes(s.batchId));
   }, [scannedItems, batches, selectedClientFilter]);
 
+  // Helper to normalize condition key from any format (remark / qcCondition)
+  const getConditionKey = (item: ScannedReturnItem): 'GOOD' | 'DAMAGE' | 'OPEN BOX' | 'WRONG PROD' | 'SHORT QTY' | 'MISSING' | 'OTHERS' => {
+    const raw = ((item.remark || (item as any).qcCondition || (item as any).qc_condition || '') as string).trim().toUpperCase();
+    if (raw === 'GOOD' || raw === '1. GOOD' || raw === '1') return 'GOOD';
+    if (raw === 'DAMAGE' || raw === '2. DAMAGE' || raw === '2') return 'DAMAGE';
+    if (raw === 'OPEN BOX' || raw === 'OPENBOX' || raw === '3. OPEN BOX' || raw === '3') return 'OPEN BOX';
+    if (raw === 'WRONG PRODUCT' || raw === 'WRONG PROD' || raw === 'WRONGPROD' || raw === '4. WRONG PROD' || raw === '4') return 'WRONG PROD';
+    if (raw === 'SHORT QTY' || raw === 'SHORTQTY' || raw === '5. SHORT QTY' || raw === '5') return 'SHORT QTY';
+    if (raw === 'MISSING' || raw === 'MISSING PRODUCT' || raw === '6. MISSING' || raw === '6') return 'MISSING';
+    if (raw === 'OTHERS' || raw === 'OTHER' || raw === '7. OTHERS' || raw === '7') return 'OTHERS';
+    return 'GOOD';
+  };
+
   // Metrics Calculation
   const metrics = useMemo(() => {
     const totalScanned = activeScannedItems.length;
 
     // 7 QC Conditions Breakdown
-    const goodCount = activeScannedItems.filter(s => s.qcCondition === 'GOOD').length;
-    const damageCount = activeScannedItems.filter(s => s.qcCondition === 'DAMAGE').length;
-    const openBoxCount = activeScannedItems.filter(s => s.qcCondition === 'OPEN BOX').length;
-    const wrongProdCount = activeScannedItems.filter(s => s.qcCondition === 'WRONG PROD').length;
-    const shortQtyCount = activeScannedItems.filter(s => s.qcCondition === 'SHORT QTY').length;
-    const missingCount = activeScannedItems.filter(s => s.qcCondition === 'MISSING').length;
-    const othersCount = activeScannedItems.filter(s => s.qcCondition === 'OTHERS').length;
+    const goodCount = activeScannedItems.filter(s => getConditionKey(s) === 'GOOD').length;
+    const damageCount = activeScannedItems.filter(s => getConditionKey(s) === 'DAMAGE').length;
+    const openBoxCount = activeScannedItems.filter(s => getConditionKey(s) === 'OPEN BOX').length;
+    const wrongProdCount = activeScannedItems.filter(s => getConditionKey(s) === 'WRONG PROD').length;
+    const shortQtyCount = activeScannedItems.filter(s => getConditionKey(s) === 'SHORT QTY').length;
+    const missingCount = activeScannedItems.filter(s => getConditionKey(s) === 'MISSING').length;
+    const othersCount = activeScannedItems.filter(s => getConditionKey(s) === 'OTHERS').length;
 
     const defectiveCount = totalScanned - goodCount;
     const goodPct = totalScanned > 0 ? Math.round((goodCount / totalScanned) * 100) : 0;
