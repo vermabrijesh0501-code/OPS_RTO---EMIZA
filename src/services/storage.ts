@@ -15,6 +15,7 @@ import {
   AuditorDevice,
   AuditRecord,
   SupabaseConfig,
+  ActiveDeviceSession,
 } from '../types';
 
 import {
@@ -34,7 +35,9 @@ import {
   initialAuditorDevices,
   initialAuditRecords,
   initialSupabaseConfig,
+  initialActiveDevices,
 } from '../mockData';
+import { SyncService } from './syncService';
 
 const STORAGE_KEYS = {
   COMPANIES: 'emiza_companies_v3',
@@ -57,6 +60,7 @@ const STORAGE_KEYS = {
   LOGS: 'emiza_logs_v3',
   SUPABASE_CONFIG: 'emiza_supabase_config_v3',
   AUTH_SESSION: 'emiza_auth_session_v3',
+  ACTIVE_DEVICES: 'emiza_active_devices_v3',
 };
 
 // Auto-purge any stale mock/test scan keys
@@ -150,13 +154,80 @@ export const StorageService = {
   saveCurrentWarehouseId: (id: string) => saveItem(STORAGE_KEYS.CURRENT_WH, id),
 
   getGateEntries: (): InwardGateEntry[] => loadItem(STORAGE_KEYS.GATE_ENTRIES, initialInwardGateEntries),
-  saveGateEntries: (data: InwardGateEntry[]) => saveItem(STORAGE_KEYS.GATE_ENTRIES, data),
+  saveGateEntries: (data: InwardGateEntry[]) => {
+    saveItem(STORAGE_KEYS.GATE_ENTRIES, data);
+    SyncService.broadcast('GATE_ENTRY_UPDATED', { count: data.length });
+  },
 
   getReturnBatches: (): ReturnBatch[] => loadItem(STORAGE_KEYS.RETURN_BATCHES, initialReturnBatches),
-  saveReturnBatches: (data: ReturnBatch[]) => saveItem(STORAGE_KEYS.RETURN_BATCHES, data),
+  saveReturnBatches: (data: ReturnBatch[]) => {
+    saveItem(STORAGE_KEYS.RETURN_BATCHES, data);
+    SyncService.broadcast('BATCH_UPDATED', { count: data.length });
+  },
 
   getScannedItems: (): ScannedReturnItem[] => loadItem(STORAGE_KEYS.SCANNED_ITEMS, initialScannedItems),
-  saveScannedItems: (data: ScannedReturnItem[]) => saveItem(STORAGE_KEYS.SCANNED_ITEMS, data),
+  saveScannedItems: (data: ScannedReturnItem[]) => {
+    saveItem(STORAGE_KEYS.SCANNED_ITEMS, data);
+    SyncService.broadcast('ITEM_SCANNED', { count: data.length });
+  },
+
+  getActiveDevices: (): ActiveDeviceSession[] => loadItem(STORAGE_KEYS.ACTIVE_DEVICES, initialActiveDevices),
+  saveActiveDevices: (data: ActiveDeviceSession[]) => {
+    saveItem(STORAGE_KEYS.ACTIVE_DEVICES, data);
+    SyncService.broadcast('DEVICE_HEARTBEAT', { count: data.length });
+  },
+
+  registerDeviceSession: (session: ActiveDeviceSession): ActiveDeviceSession[] => {
+    const devices = StorageService.getActiveDevices();
+    const existingIndex = devices.findIndex(d => d.id === session.id || (d.userId === session.userId && d.deviceType === session.deviceType));
+    let updated: ActiveDeviceSession[];
+    if (existingIndex >= 0) {
+      updated = [...devices];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        ...session,
+        status: 'Online',
+        lastActiveAt: new Date().toISOString(),
+      };
+    } else {
+      updated = [session, ...devices];
+    }
+    StorageService.saveActiveDevices(updated);
+    SyncService.broadcast('DEVICE_LOGIN', session);
+    return updated;
+  },
+
+  updateDeviceHeartbeat: (sessionId: string): void => {
+    const devices = StorageService.getActiveDevices();
+    const index = devices.findIndex(d => d.id === sessionId);
+    if (index >= 0) {
+      devices[index].lastActiveAt = new Date().toISOString();
+      devices[index].status = 'Online';
+      StorageService.saveActiveDevices(devices);
+    }
+  },
+
+  removeDeviceSession: (sessionId: string): void => {
+    const devices = StorageService.getActiveDevices();
+    const updated = devices.map(d => (d.id === sessionId ? { ...d, status: 'Offline' as const, lastActiveAt: new Date().toISOString() } : d));
+    StorageService.saveActiveDevices(updated);
+    SyncService.broadcast('DEVICE_LOGOUT', { sessionId });
+  },
+
+  cleanupStaleDevices: (maxIdleMinutes: number = 30): ActiveDeviceSession[] => {
+    const devices = StorageService.getActiveDevices();
+    const now = Date.now();
+    const thresholdMs = maxIdleMinutes * 60 * 1000;
+    const updated = devices.map(d => {
+      const lastActive = new Date(d.lastActiveAt).getTime();
+      if (d.status === 'Online' && now - lastActive > thresholdMs) {
+        return { ...d, status: 'Idle' as const };
+      }
+      return d;
+    });
+    StorageService.saveActiveDevices(updated);
+    return updated;
+  },
 
   getAuditorDevices: (): AuditorDevice[] => loadItem(STORAGE_KEYS.AUDITOR_DEVICES, initialAuditorDevices),
   saveAuditorDevices: (data: AuditorDevice[]) => saveItem(STORAGE_KEYS.AUDITOR_DEVICES, data),
@@ -188,6 +259,7 @@ export const StorageService = {
     };
     const updated = [newLog, ...logs].slice(0, 100);
     saveItem(STORAGE_KEYS.LOGS, updated);
+    SyncService.broadcast('SYNC_ALL', { log: newLog });
     return newLog;
   },
 
@@ -439,10 +511,43 @@ CREATE TABLE activity_logs (
     details TEXT
 );
 
+-- 14. Active Devices & Live Sessions
+CREATE TABLE active_devices (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+    user_name TEXT NOT NULL,
+    user_role TEXT NOT NULL,
+    user_email TEXT NOT NULL,
+    warehouse_id TEXT REFERENCES warehouses(id) ON DELETE CASCADE,
+    warehouse_name TEXT,
+    client_id TEXT,
+    device_type TEXT DEFAULT 'Desktop',
+    browser_info TEXT,
+    ip_address TEXT,
+    login_time TIMESTAMPTZ DEFAULT NOW(),
+    last_active_at TIMESTAMPTZ DEFAULT NOW(),
+    status TEXT DEFAULT 'Online'
+);
+
 -- Indexes for lightning fast barcode & tracking lookups
 CREATE INDEX IF NOT EXISTS idx_scanned_items_tracking ON scanned_return_items(tracking_number);
 CREATE INDEX IF NOT EXISTS idx_scanned_items_batch ON scanned_return_items(batch_id);
 CREATE INDEX IF NOT EXISTS idx_gate_entries_wh ON inward_gate_entries(warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_batches_wh ON return_batches(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_active_devices_wh ON active_devices(warehouse_id);
+
+-- Enable Row Level Security (RLS) on all operational tables
+ALTER TABLE scanned_return_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE return_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inward_gate_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE active_devices ENABLE ROW LEVEL SECURITY;
+
+-- Permissive RLS Policies for Authenticated Operations Staff
+CREATE POLICY "Allow authenticated read/write on return batches" ON return_batches FOR ALL USING (true);
+CREATE POLICY "Allow authenticated read/write on scanned items" ON scanned_return_items FOR ALL USING (true);
+CREATE POLICY "Allow authenticated read/write on gate entries" ON inward_gate_entries FOR ALL USING (true);
+CREATE POLICY "Allow authenticated read/write on active devices" ON active_devices FOR ALL USING (true);
+CREATE POLICY "Allow authenticated read/write on users" ON users FOR ALL USING (true);
 `;
 }

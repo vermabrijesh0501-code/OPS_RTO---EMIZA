@@ -311,6 +311,23 @@ export interface AuditRecord {
   notes?: string;
 }
 
+export interface ActiveDeviceSession {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  userEmail: string;
+  warehouseId: string;
+  warehouseName: string;
+  clientId?: string;
+  deviceType: 'Desktop' | 'Mobile / Scanner' | 'Tablet';
+  browserInfo: string;
+  ipAddress?: string;
+  loginTime: string;
+  lastActiveAt: string;
+  status: 'Online' | 'Idle' | 'Offline';
+}
+
 export interface SupabaseConfig {
   supabaseUrl: string;
   supabaseAnonKey: string;

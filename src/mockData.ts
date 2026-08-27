@@ -15,6 +15,7 @@ import {
   AuditorDevice,
   AuditRecord,
   SupabaseConfig,
+  ActiveDeviceSession,
 } from './types';
 
 export const initialCompanies: Company[] = [
@@ -48,20 +49,20 @@ export const initialClients: Client[] = [
     id: 'cli-bellavita',
     companyId: 'comp-1',
     code: 'CLI-BV',
-    name: 'Bella Vita Organic & Luxury',
+    name: 'Idam _Bellavita',
     email: 'ops@bellavitaorganic.com',
     phone: '+91 93117 32425',
     category: 'Fragrance & Cosmetics',
     status: 'Active',
   },
   {
-    id: 'cli-nykaa',
+    id: 'cli-kekka',
     companyId: 'comp-1',
-    code: 'CLI-NYK',
-    name: 'Nykaa E-Retail Limited',
-    email: 'logistics@nykaa.com',
-    phone: '+91 22 6614 1000',
-    category: 'Beauty & Fashion',
+    code: 'CLI-KEK',
+    name: 'Kekka ( Gem & Pei )',
+    email: 'ops@kekkafashion.com',
+    phone: '+91 98200 44321',
+    category: 'Apparel & Footwear',
     status: 'Active',
   },
   {
@@ -75,23 +76,23 @@ export const initialClients: Client[] = [
     status: 'Active',
   },
   {
-    id: 'cli-boat',
+    id: 'cli-cai',
     companyId: 'comp-1',
-    code: 'CLI-BOAT',
-    name: 'Imagine Marketing (boAt)',
-    email: 'supplychain@boat-lifestyle.com',
-    phone: '+91 22 4970 0000',
-    category: 'Consumer Electronics',
+    code: 'CLI-CAI',
+    name: 'Cai Store',
+    email: 'logistics@caistore.in',
+    phone: '+91 22 4970 1122',
+    category: 'Footwear & Accessories',
     status: 'Active',
   },
   {
-    id: 'cli-sugar',
+    id: 'cli-eridani',
     companyId: 'comp-1',
-    code: 'CLI-SUG',
-    name: 'Vellvette Lifestyle (SUGAR)',
-    email: 'ops@sugarcosmetics.com',
-    phone: '+91 22 2800 1122',
-    category: 'Cosmetics',
+    code: 'CLI-ERI',
+    name: 'Eridani',
+    email: 'ops@eridani.com',
+    phone: '+91 22 2800 5566',
+    category: 'Luxury Fashion',
     status: 'Active',
   },
 ];
@@ -442,4 +443,22 @@ export const initialSupabaseConfig: SupabaseConfig = {
   autoSyncEnabled: false,
   connectedStatus: 'Disconnected',
 };
+
+// Initial Active Device Sessions - starts with the active primary station
+export const initialActiveDevices: ActiveDeviceSession[] = [
+  {
+    id: 'sess-super-station',
+    userId: 'usr-super',
+    userName: 'Brijesh Verma',
+    userRole: 'Super Admin',
+    userEmail: 'brijesh.verma@emizainc.com',
+    warehouseId: 'wh-main',
+    warehouseName: 'Bhiwandi WH',
+    deviceType: 'Desktop',
+    browserInfo: 'Chrome / Linux Operations Terminal',
+    loginTime: new Date().toISOString(),
+    lastActiveAt: new Date().toISOString(),
+    status: 'Online',
+  },
+];
 

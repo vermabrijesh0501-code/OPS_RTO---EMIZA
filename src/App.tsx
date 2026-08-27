@@ -12,6 +12,7 @@ import {
   SupabaseConfig,
 } from './types';
 import { StorageService } from './services/storage';
+import { SyncService } from './services/syncService';
 import { Header } from './components/Header';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -136,6 +137,53 @@ export default function App() {
       setActiveTabState(derived);
     }
   }, [location.pathname]);
+
+  // Real-time Cross-Device Synchronization Subscriber
+  useEffect(() => {
+    const unsubscribe = SyncService.subscribe(event => {
+      switch (event.type) {
+        case 'ITEM_SCANNED':
+        case 'ITEM_UPDATED':
+        case 'ITEM_DELETED':
+          setScannedItems(StorageService.getScannedItems());
+          setBatches(StorageService.getReturnBatches());
+          break;
+        case 'BATCH_CREATED':
+        case 'BATCH_UPDATED':
+        case 'BATCH_CLOSED':
+          setBatches(StorageService.getReturnBatches());
+          setScannedItems(StorageService.getScannedItems());
+          break;
+        case 'GATE_ENTRY_CREATED':
+        case 'GATE_ENTRY_UPDATED':
+          setGateEntries(StorageService.getGateEntries());
+          break;
+        case 'AUDIT_RECORD_ADDED':
+          setAuditRecords(StorageService.getAuditRecords());
+          break;
+        case 'USER_UPDATED':
+        case 'DEVICE_SESSION_UPDATED':
+        case 'DEVICE_HEARTBEAT':
+          setUsers(StorageService.getUsers());
+          break;
+        case 'STORAGE_SYNC':
+          setGateEntries(StorageService.getGateEntries());
+          setBatches(StorageService.getReturnBatches());
+          setScannedItems(StorageService.getScannedItems());
+          setAuditRecords(StorageService.getAuditRecords());
+          setAuditorDevices(StorageService.getAuditorDevices());
+          setUsers(StorageService.getUsers());
+          setLogs(StorageService.getActivityLogs());
+          break;
+        default:
+          break;
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Navigate tab function that updates URL and state
   const handleSelectTab = useCallback(
@@ -886,8 +934,8 @@ export default function App() {
         />
 
         {/* Main Content View Container */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0B131E] min-h-[calc(100vh-61px)] transition-colors">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto bg-[#070D18] min-h-[calc(100vh-53px)] transition-colors">
+          <div className="p-3 sm:p-5 lg:p-6 max-w-[1600px] mx-auto w-full">
             {viewTab === 'dashboard' && (
               <DashboardView
                 warehouse={activeWarehouse}

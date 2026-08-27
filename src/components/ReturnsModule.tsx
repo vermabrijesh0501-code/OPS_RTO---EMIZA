@@ -725,7 +725,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                 setBarcodeInput('');
                                 barcodeInputRef.current?.focus();
                               }}
-                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                             >
                               <X className="w-3 h-3" />
                             </button>

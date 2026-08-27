@@ -1,5 +1,4 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser, Session } from '@supabase/supabase-js';
-import { StorageService } from './storage';
 import { User, UserRole } from '../types';
 import { ROLE_DEFAULT_PERMISSIONS } from '../utils/rbac';
 
@@ -7,8 +6,18 @@ import { ROLE_DEFAULT_PERMISSIONS } from '../utils/rbac';
 const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
 const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
 
+const getSavedConfig = (): { supabaseUrl?: string; supabaseAnonKey?: string } | null => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const raw = window.localStorage.getItem('emiza_supabase_config_v3');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
 
-const savedConfig = StorageService.getSupabaseConfig();
+const savedConfig = getSavedConfig();
 const configUrl = (savedConfig?.supabaseUrl || '').trim();
 const configKey = (savedConfig?.supabaseAnonKey || '').trim();
 

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Session, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, mapSupabaseUserToAppUser } from '../services/supabase';
-import { User, UserRole } from '../types';
+import { User, UserRole, ActiveDeviceSession } from '../types';
 import { StorageService } from '../services/storage';
 import { ROLE_DEFAULT_PERMISSIONS } from '../utils/rbac';
+import { SyncService } from '../services/syncService';
 
 interface AuthContextType {
   session: Session | null;
@@ -46,9 +47,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const allUsers = StorageService.getUsers();
     const mapped = mapSupabaseUserToAppUser(sbUser, allUsers);
     if (mapped) {
+      if (mapped.status === 'Inactive') {
+        setAppUser(null);
+        StorageService.clearAuthSession();
+        return;
+      }
       setAppUser(mapped);
       StorageService.saveCurrentUser(mapped);
       StorageService.saveAuthSession({ isLoggedIn: true, userId: mapped.id });
+
+      // Register live device session
+      const deviceId = SyncService.getDeviceId();
+      const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+      const sessionObj: ActiveDeviceSession = {
+        id: `sess-${mapped.id}-${deviceId}`,
+        userId: mapped.id,
+        userName: mapped.name,
+        userRole: mapped.role,
+        userEmail: mapped.email,
+        warehouseId: mapped.assignedWarehouseIds?.[0] || 'wh-main',
+        warehouseName: 'Bhiwandi WH',
+        deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
+        browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
+        loginTime: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        status: 'Online',
+      };
+      StorageService.registerDeviceSession(sessionObj);
     }
   }, []);
 
@@ -81,9 +106,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const localSession = StorageService.getAuthSession();
           if (localSession.isLoggedIn && localSession.userId) {
             const users = StorageService.getUsers();
-            const found = users.find(u => u.id === localSession.userId) || users[0];
-            if (found && isMounted) {
+            const found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive') || users[0];
+            if (found && isMounted && found.status !== 'Inactive') {
               setAppUser(found);
+              const deviceId = SyncService.getDeviceId();
+              const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+              StorageService.registerDeviceSession({
+                id: `sess-${found.id}-${deviceId}`,
+                userId: found.id,
+                userName: found.name,
+                userRole: found.role,
+                userEmail: found.email,
+                warehouseId: found.assignedWarehouseIds?.[0] || 'wh-main',
+                warehouseName: 'Bhiwandi WH',
+                deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
+                browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
+                loginTime: new Date().toISOString(),
+                lastActiveAt: new Date().toISOString(),
+                status: 'Online',
+              });
             }
           }
         }
@@ -113,11 +154,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       authListener = subscription;
     }
 
+    // 3. Set up periodic Heartbeat to keep active device session fresh
+    const heartbeatTimer = setInterval(() => {
+      const currentSession = StorageService.getAuthSession();
+      if (currentSession.isLoggedIn && currentSession.userId) {
+        const deviceId = SyncService.getDeviceId();
+        StorageService.updateDeviceHeartbeat(`sess-${currentSession.userId}-${deviceId}`);
+        StorageService.cleanupStaleDevices(20);
+      }
+    }, 20000);
+
     return () => {
       isMounted = false;
       if (authListener) {
         authListener.unsubscribe();
       }
+      clearInterval(heartbeatTimer);
     };
   }, [isConfigured, syncAppUser]);
 
@@ -166,41 +218,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         matched = users.find(u => u.role === 'Super Admin') || users[0];
       }
 
-      // If still not matched, dynamically create an active team profile for this email
-      if (!matched) {
-        const generatedName = emailTrimmed.includes('@')
-          ? emailTrimmed.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-          : emailTrimmed;
-        
-        const isSuperAdminEmail = inputLower.includes('admin') || inputLower.includes('brijesh') || inputLower.includes('verma');
-        const role: UserRole = isSuperAdminEmail ? 'Super Admin' : 'Supervisor';
+      // If user is inactive, deny login
+      if (matched && matched.status === 'Inactive') {
+        setLoading(false);
+        return {
+          success: false,
+          error: 'Your account is currently Inactive. Please contact Super Admin (Brijesh Verma) to reactivate access.',
+        };
+      }
 
-        matched = StorageService.registerTeamUser({
-          empId: `EMP-${Date.now().toString().slice(-4)}`,
-          name: generatedName,
-          email: emailTrimmed,
-          phone: '+91 98201 12345',
-          password: password || 'password123',
-          role,
-          department: isSuperAdminEmail ? 'Central Admin' : 'Operations Management',
-          companyId: 'comp-1',
-          assignedWarehouseIds: ['wh-main', 'wh-gurgaon', 'wh-bangalore'],
-          assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
-          permissions: ROLE_DEFAULT_PERMISSIONS[role],
-          status: 'Active',
-        });
+      // If not matched, deny arbitrary unauthorized login unless approved
+      if (!matched) {
+        setLoading(false);
+        return {
+          success: false,
+          error: 'Invalid credentials or user not authorized. New accounts must be created by Super Admin in User Master.',
+        };
       }
 
       setAppUser(matched);
       StorageService.saveCurrentUser(matched);
       StorageService.saveAuthSession({ isLoggedIn: true, userId: matched.id });
+
+      // Register Active Device session
+      const deviceId = SyncService.getDeviceId();
+      const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+      StorageService.registerDeviceSession({
+        id: `sess-${matched.id}-${deviceId}`,
+        userId: matched.id,
+        userName: matched.name,
+        userRole: matched.role,
+        userEmail: matched.email,
+        warehouseId: matched.assignedWarehouseIds?.[0] || 'wh-main',
+        warehouseName: 'Bhiwandi WH',
+        deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
+        browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
+        loginTime: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        status: 'Online',
+      });
+
       StorageService.addActivityLog({
         userId: matched.id,
         userName: matched.name,
         userRole: matched.role,
         action: 'User Signed In',
         module: 'Auth',
-        details: `Signed in as ${matched.role} (${matched.email})`,
+        details: `Signed in as ${matched.role} (${matched.email}) on ${isMobile ? 'Handheld Gun/PDA' : 'Desktop Terminal'}`,
       });
       setLoading(false);
       return { success: true };
@@ -210,7 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign Up with Supabase Auth
+  // Sign Up with Supabase Auth (Disabled for public, managed by Super Admin)
   const signUp = async ({
     email,
     password,
@@ -233,76 +297,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userMeta = {
         name,
         full_name: name,
-        role,
+        role: role || 'Operator',
         empId: empId || `EMP-${Date.now().toString().slice(-4)}`,
         department: department || 'Operations Management',
         phone: phone || '',
-        permissions: ROLE_DEFAULT_PERMISSIONS[role],
+        permissions: ROLE_DEFAULT_PERMISSIONS[role || 'Operator'],
       };
 
-      if (isConfigured) {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: userMeta,
-            emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
-          },
-        });
-
-        if (error) {
-          setLoading(false);
-          return { success: false, error: error.message };
-        }
-
-        // Save into local User Master collection as well
-        const newUser: User = {
-          id: data.user?.id || `usr-${Date.now()}`,
-          empId: userMeta.empId,
-          name,
-          email: email.trim(),
-          phone: phone || '',
-          password,
-          role,
-          department: userMeta.department,
-          assignedWarehouseIds: ['wh-main'],
-          assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
-          permissions: userMeta.permissions,
-          status: 'Active',
-          lastLoginAt: new Date().toISOString(),
-        };
-        StorageService.registerTeamUser(newUser);
-
-        if (data.session) {
-          setSession(data.session);
-          setSupabaseUser(data.user);
-          syncAppUser(data.user);
-        }
-        setLoading(false);
-        return { success: true };
-      } else {
-        const newUser: User = {
-          id: `usr-${Date.now()}`,
-          empId: userMeta.empId,
-          name,
-          email: email.trim(),
-          phone: phone || '',
-          password,
-          role,
-          department: userMeta.department,
-          assignedWarehouseIds: ['wh-main'],
-          assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
-          permissions: userMeta.permissions,
-          status: 'Active',
-          lastLoginAt: new Date().toISOString(),
-        };
-        StorageService.registerTeamUser(newUser);
-        setAppUser(newUser);
-        StorageService.saveCurrentUser(newUser);
-        StorageService.saveAuthSession({ isLoggedIn: true, userId: newUser.id });
-        setLoading(false);
-        return { success: true };
-      }
+      const newUser: User = {
+        id: `usr-${Date.now()}`,
+        empId: userMeta.empId,
+        name,
+        email: email.trim(),
+        phone: phone || '',
+        password,
+        role: userMeta.role,
+        department: userMeta.department,
+        assignedWarehouseIds: ['wh-main'],
+        assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
+        permissions: userMeta.permissions,
+        status: 'Active',
+        lastLoginAt: new Date().toISOString(),
+      };
+      StorageService.registerTeamUser(newUser);
+      setAppUser(newUser);
+      StorageService.saveCurrentUser(newUser);
+      StorageService.saveAuthSession({ isLoggedIn: true, userId: newUser.id });
+      setLoading(false);
+      return { success: true };
     } catch (err: any) {
       setLoading(false);
       return { success: false, error: err?.message || 'An error occurred during registration.' };
@@ -313,6 +335,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async (): Promise<void> => {
     setLoading(true);
     try {
+      if (appUser) {
+        const deviceId = SyncService.getDeviceId();
+        StorageService.removeDeviceSession(`sess-${appUser.id}-${deviceId}`);
+        StorageService.addActivityLog({
+          userId: appUser.id,
+          userName: appUser.name,
+          userRole: appUser.role,
+          action: 'User Signed Out',
+          module: 'Auth',
+          details: `Signed out from ${appUser.role} session`,
+        });
+      }
       if (isConfigured) {
         await supabase.auth.signOut();
       }
