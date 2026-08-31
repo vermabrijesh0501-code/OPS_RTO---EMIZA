@@ -2,47 +2,27 @@ import { createClient, SupabaseClient, User as SupabaseAuthUser, Session } from 
 import { User, UserRole } from '../types';
 import { ROLE_DEFAULT_PERMISSIONS } from '../utils/rbac';
 
-// Load Supabase URL and Anon Key from environment variables or saved storage configuration
-const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
-const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
+const envUrl = String((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
+const envKey = String((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
 
-const getSavedConfig = (): { supabaseUrl?: string; supabaseAnonKey?: string } | null => {
-  try {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
-    const raw = window.localStorage.getItem('emiza_supabase_config_v3');
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-};
+export const SUPABASE_URL = envUrl;
+export const SUPABASE_ANON_KEY = envKey;
 
-const savedConfig = getSavedConfig();
-const configUrl = (savedConfig?.supabaseUrl || '').trim();
-const configKey = (savedConfig?.supabaseAnonKey || '').trim();
+export const isSupabaseConfigured = (): boolean => Boolean(
+  SUPABASE_URL && SUPABASE_ANON_KEY &&
+  /^https:\/\/[^/]+\.supabase\.co$/.test(SUPABASE_URL) &&
+  !SUPABASE_URL.includes('your-project') &&
+  !SUPABASE_ANON_KEY.includes('placeholder') &&
+  !SUPABASE_ANON_KEY.includes('your-supabase')
+);
 
-export const SUPABASE_URL = envUrl || configUrl || '';
-export const SUPABASE_ANON_KEY = envKey || configKey || '';
+if (!isSupabaseConfigured()) {
+  console.warn('[EMIZA-WOP] Missing/invalid Supabase environment variables. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY before deployment.');
+}
 
-export const isSupabaseConfigured = (): boolean => {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
-  if (
-    SUPABASE_URL.includes('your-project.supabase.co') ||
-    SUPABASE_URL.includes('xyzcompany') ||
-    SUPABASE_URL.includes('placeholder') ||
-    SUPABASE_ANON_KEY.includes('...') ||
-    SUPABASE_ANON_KEY.includes('placeholder') ||
-    SUPABASE_ANON_KEY.length < 30
-  ) {
-    return false;
-  }
-  return true;
-};
-
-// Create the singleton Supabase client
-// If credentials are not yet configured in .env, we initialize a safe client so the app boots smoothly
+// Never store the service-role key in the browser. The anon/publishable key is intended for client use with RLS.
 const activeUrl = isSupabaseConfigured() ? SUPABASE_URL : 'https://placeholder-emiza.supabase.co';
-const activeKey = isSupabaseConfigured() ? SUPABASE_ANON_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
+const activeKey = isSupabaseConfigured() ? SUPABASE_ANON_KEY : 'placeholder';
 
 export const supabase: SupabaseClient = createClient(activeUrl, activeKey, {
   auth: {
@@ -53,56 +33,25 @@ export const supabase: SupabaseClient = createClient(activeUrl, activeKey, {
   },
 });
 
-/**
- * Maps a Supabase Auth User + metadata to our application User model with role & permissions.
- */
-export function mapSupabaseUserToAppUser(
-  sbUser: SupabaseAuthUser | null,
-  registeredUsers: User[]
-): User | null {
+export function mapSupabaseUserToAppUser(sbUser: SupabaseAuthUser | null, registeredUsers: User[]): User | null {
   if (!sbUser) return null;
-
   const email = sbUser.email || '';
   const meta = sbUser.user_metadata || {};
-
-  // Check if a registered user with this email already exists in User Master
-  const existing = registeredUsers.find(
-    u => u.email.toLowerCase() === email.toLowerCase() || u.id === sbUser.id
-  );
-
-  const role: UserRole = (meta.role as UserRole) || existing?.role || 'Supervisor';
-  const name: string = meta.name || meta.full_name || existing?.name || email.split('@')[0] || 'EMIZA User';
+  const existing = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase() || u.id === sbUser.id);
+  const role: UserRole = (meta.role as UserRole) || existing?.role || 'Operator';
+  const name = meta.name || meta.full_name || existing?.name || email.split('@')[0] || 'EMIZA User';
   const department = meta.department || existing?.department || 'Operations Management';
   const empId = meta.empId || existing?.empId || `EMP-${sbUser.id.slice(0, 4).toUpperCase()}`;
   const assignedWarehouseIds = meta.assignedWarehouseIds || existing?.assignedWarehouseIds || ['wh-main'];
-  const assignedClientIds = meta.assignedClientIds || existing?.assignedClientIds || [
-    'cli-bellavita',
-    'cli-nykaa',
-    'cli-mama',
-    'cli-boat',
-    'cli-sugar',
-  ];
+  const assignedClientIds = meta.assignedClientIds || existing?.assignedClientIds || [];
   const permissions = meta.permissions || existing?.permissions || ROLE_DEFAULT_PERMISSIONS[role];
-
   return {
     id: sbUser.id || existing?.id || `usr-${Date.now()}`,
-    empId,
-    name,
-    email,
-    phone: meta.phone || existing?.phone || '',
-    role,
-    department,
-    assignedWarehouseIds,
-    assignedClientIds,
-    permissions,
-    status: 'Active',
-    lastLoginAt: new Date().toISOString(),
+    empId, name, email,
+    phone: meta.phone || existing?.phone || '', role, department,
+    assignedWarehouseIds, assignedClientIds, permissions,
+    status: 'Active', lastLoginAt: new Date().toISOString(),
   };
 }
 
-export interface AuthResponse {
-  success: boolean;
-  user?: User;
-  session?: Session | null;
-  error?: string;
-}
+export interface AuthResponse { success: boolean; user?: User; session?: Session | null; error?: string; }

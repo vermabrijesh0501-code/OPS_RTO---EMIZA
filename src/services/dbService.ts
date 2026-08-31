@@ -4,15 +4,10 @@ import {
   ScannedReturnItem,
   InwardGateEntry,
   ActivityLog,
-  AuditRecord,
-  ActiveDeviceSession,
   ReturnRemarkType,
-  User,
 } from '../types';
 import { StorageService } from './storage';
-import { SyncService, SyncMessage } from './syncService';
-
-// Normalizers between TypeScript camelCase and PostgreSQL snake_case
+import { SyncService } from './syncService';
 
 export function mapDbToScannedItem(row: any): ScannedReturnItem {
   return {
@@ -58,19 +53,11 @@ export function mapDbToReturnBatch(row: any): ReturnBatch {
     dockNumber: row.dock_number || row.dockNumber || 'Dock 01',
     expectedCount: row.expected_count ?? row.expectedCount ?? 0,
     totalScanned: row.total_scanned ?? row.totalScanned ?? 0,
-    remarksBreakdown: row.remarks_breakdown || row.remarksBreakdown || {
-      Good: 0,
-      Damage: 0,
-      'Open Box': 0,
-      'Wrong Product': 0,
-      'Short Qty': 0,
-      'Missing Product': 0,
-      Others: 0,
-    },
+    remarksBreakdown: row.remarks_breakdown || row.remarksBreakdown || {},
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     closedAt: row.closed_at || row.closedAt,
-    createdBy: row.created_by || row.createdBy || 'usr-super',
-    createdByName: row.created_by_name || row.createdByName || 'Super Admin',
+    createdBy: row.created_by || row.createdBy || '',
+    createdByName: row.created_by_name || row.createdByName || '',
     driverName: row.driver_name || row.driverName,
     driverMobile: row.driver_mobile || row.driverMobile,
     driverSignature: row.driver_signature || row.driverSignature,
@@ -88,12 +75,19 @@ export function mapReturnBatchToDb(batch: ReturnBatch): Record<string, any> {
     client_id: batch.clientId,
     courier_id: batch.courierId,
     status: batch.status,
+    dock_number: batch.dockNumber || null,
     expected_count: batch.expectedCount || 0,
     total_scanned: batch.totalScanned || 0,
-    remarks_breakdown: batch.remarksBreakdown,
+    remarks_breakdown: batch.remarksBreakdown || {},
     created_at: batch.createdAt,
     closed_at: batch.closedAt || null,
     created_by: batch.createdBy,
+    created_by_name: batch.createdByName || null,
+    driver_name: batch.driverName || null,
+    driver_mobile: batch.driverMobile || null,
+    driver_signature: batch.driverSignature || null,
+    supervisor_signer: batch.supervisorSigner || null,
+    notes: batch.notes || null,
   };
 }
 
@@ -120,7 +114,7 @@ export function mapDbToGateEntry(row: any): InwardGateEntry {
     dockAllocatedTime: row.dock_allocated_time || row.dockAllocatedTime,
     unloadingEndTime: row.unloading_end_time || row.unloadingEndTime,
     remarks: row.remarks || '',
-    createdBy: row.created_by || row.createdBy || 'usr-super',
+    createdBy: row.created_by || row.createdBy || '',
   };
 }
 
@@ -177,337 +171,152 @@ export function mapActivityLogToDb(log: ActivityLog): Record<string, any> {
   };
 }
 
-/**
- * DBService provides full Cloud database synchronization with local storage fallback
- * and real-time multi-device broadcasts.
- */
+type WriteResult = { error: any | null; data?: any };
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function withRetry<T extends WriteResult>(operation: () => Promise<T>, label: string, attempts = 3): Promise<T> {
+  let last: T | null = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const result = await operation();
+      if (!result.error) return result;
+      last = result;
+      if (attempt < attempts) await sleep(350 * attempt);
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      await sleep(350 * attempt);
+    }
+  }
+  throw new Error(`[${label}] ${last?.error?.message || last?.error?.details || 'Supabase write failed after retries'}`);
+}
+
+async function persistOrThrow(label: string, operation: () => Promise<WriteResult>): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured. Cloud write was blocked to prevent local-only production data.');
+  }
+  try {
+    await withRetry(operation, label);
+  } catch (error: any) {
+    const message = error?.message || `${label} failed`;
+    console.error(`[DBService] ${message}`, error);
+    SyncService.broadcast('SYNC_ERROR', { operation: label, message, timestamp: new Date().toISOString() });
+    throw error;
+  }
+}
+
+function saveCaches(
+  batches?: ReturnBatch[],
+  items?: ScannedReturnItem[],
+  gates?: InwardGateEntry[]
+) {
+  if (batches) StorageService.saveReturnBatches(batches);
+  if (items) StorageService.saveScannedItems(items);
+  if (gates) StorageService.saveGateEntries(gates);
+}
+
 export const DBService = {
-  // Fetch all initial data from Supabase if connected
   async fetchAllData(): Promise<{
-    batches?: ReturnBatch[];
-    scannedItems?: ScannedReturnItem[];
-    gateEntries?: InwardGateEntry[];
-    logs?: ActivityLog[];
+    batches: ReturnBatch[];
+    scannedItems: ScannedReturnItem[];
+    gateEntries: InwardGateEntry[];
+    logs: ActivityLog[];
   }> {
     if (!isSupabaseConfigured()) {
-      return {
-        batches: StorageService.getReturnBatches(),
-        scannedItems: StorageService.getScannedItems(),
-        gateEntries: StorageService.getGateEntries(),
-        logs: StorageService.getActivityLogs(),
-      };
+      throw new Error('Supabase is not configured. Production data cannot be loaded from a local-only source.');
     }
 
     try {
-      const [batchesRes, itemsRes, gateRes, logsRes] = await Promise.allSettled([
+      const [batchesRes, itemsRes, gateRes, logsRes] = await Promise.all([
         supabase.from('return_batches').select('*').order('created_at', { ascending: false }),
         supabase.from('scanned_return_items').select('*').order('scanned_at', { ascending: false }),
         supabase.from('inward_gate_entries').select('*').order('entry_time', { ascending: false }),
         supabase.from('activity_logs').select('*').order('timestamp', { ascending: false }).limit(100),
       ]);
 
-      const result: {
-        batches?: ReturnBatch[];
-        scannedItems?: ScannedReturnItem[];
-        gateEntries?: InwardGateEntry[];
-        logs?: ActivityLog[];
-      } = {};
+      const errors = [batchesRes.error, itemsRes.error, gateRes.error, logsRes.error].filter(Boolean);
+      if (errors.length) throw new Error(errors.map((e: any) => e.message).join(' | '));
 
-      if (batchesRes.status === 'fulfilled' && batchesRes.value.data && batchesRes.value.data.length > 0) {
-        result.batches = batchesRes.value.data.map(mapDbToReturnBatch);
-        StorageService.saveReturnBatches(result.batches);
-      } else {
-        result.batches = StorageService.getReturnBatches();
-      }
+      const batches = (batchesRes.data || []).map(mapDbToReturnBatch);
+      const scannedItems = (itemsRes.data || []).map(mapDbToScannedItem);
+      const gateEntries = (gateRes.data || []).map(mapDbToGateEntry);
+      const logs = (logsRes.data || []).map(mapDbToActivityLog);
 
-      if (itemsRes.status === 'fulfilled' && itemsRes.value.data && itemsRes.value.data.length > 0) {
-        result.scannedItems = itemsRes.value.data.map(mapDbToScannedItem);
-        StorageService.saveScannedItems(result.scannedItems);
-      } else {
-        result.scannedItems = StorageService.getScannedItems();
-      }
-
-      if (gateRes.status === 'fulfilled' && gateRes.value.data && gateRes.value.data.length > 0) {
-        result.gateEntries = gateRes.value.data.map(mapDbToGateEntry);
-        StorageService.saveGateEntries(result.gateEntries);
-      } else {
-        result.gateEntries = StorageService.getGateEntries();
-      }
-
-      if (logsRes.status === 'fulfilled' && logsRes.value.data && logsRes.value.data.length > 0) {
-        result.logs = logsRes.value.data.map(mapDbToActivityLog);
-      } else {
-        result.logs = StorageService.getActivityLogs();
-      }
-
-      return result;
-    } catch (err) {
-      console.warn('[DBService] Failed fetching remote data from Supabase, using storage cache:', err);
-      return {
-        batches: StorageService.getReturnBatches(),
-        scannedItems: StorageService.getScannedItems(),
-        gateEntries: StorageService.getGateEntries(),
-        logs: StorageService.getActivityLogs(),
-      };
+      saveCaches(batches, scannedItems, gateEntries);
+      return { batches, scannedItems, gateEntries, logs };
+    } catch (error: any) {
+      console.error('[DBService] Initial cloud sync failed:', error);
+      SyncService.broadcast('SYNC_ERROR', {
+        operation: 'initial_sync',
+        message: error?.message || 'Unable to load Supabase data',
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
     }
   },
 
-  // Insert scanned item & update batch
-  async recordScanItem(
-    item: ScannedReturnItem,
-    updatedBatch: ReturnBatch,
-    allUpdatedItems: ScannedReturnItem[],
-    allUpdatedBatches: ReturnBatch[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    // 1. Save to local storage for immediate offline/cache availability
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
+  async recordScanItem(item: ScannedReturnItem, updatedBatch: ReturnBatch, allUpdatedItems: ScannedReturnItem[], allUpdatedBatches: ReturnBatch[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    try {
+      // Upsert makes retries idempotent and prevents duplicate scans after transient failures.
+      await persistOrThrow('record scan item', () => supabase.from('scanned_return_items').upsert(mapScannedItemToDb(item), { onConflict: 'id' }));
+      await persistOrThrow('update scan batch', () => supabase.from('return_batches').upsert(mapReturnBatchToDb(updatedBatch), { onConflict: 'id' }));
+      if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+      saveCaches(allUpdatedBatches, allUpdatedItems);
+      SyncService.broadcast('ITEM_SCANNED', { item, batch: updatedBatch, allScannedItems: allUpdatedItems, allBatches: allUpdatedBatches, log: createdLog });
+    } catch (error) {
+      if (createdLog) StorageService.addActivityLog({ userId: createdLog.userId, userName: createdLog.userName, userRole: createdLog.userRole, action: 'Cloud write failed', module: createdLog.module, details: `record scan item failed for ${item.trackingNumber}` });
+      throw error;
     }
-
-    // 2. Persist to Supabase if configured
-    if (isSupabaseConfigured()) {
-      try {
-        const itemRow = mapScannedItemToDb(item);
-        const batchRow = mapReturnBatchToDb(updatedBatch);
-
-        // Async write to Supabase
-        Promise.allSettled([
-          supabase.from('scanned_return_items').insert(itemRow),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on scan:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase scan persistence error:', e);
-      }
-    }
-
-    // 3. Broadcast to all other devices & tabs with full payload
-    SyncService.broadcast('ITEM_SCANNED', {
-      item,
-      batch: updatedBatch,
-      allScannedItems: allUpdatedItems,
-      allBatches: allUpdatedBatches,
-      log: createdLog,
-    });
   },
 
-  // Update item & recalculate batch
-  async updateScanItem(
-    itemId: string,
-    updatedItem: ScannedReturnItem,
-    updatedBatch: ReturnBatch,
-    allUpdatedItems: ScannedReturnItem[],
-    allUpdatedBatches: ReturnBatch[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const itemRow = mapScannedItemToDb(updatedItem);
-        const batchRow = mapReturnBatchToDb(updatedBatch);
-
-        Promise.allSettled([
-          supabase.from('scanned_return_items').update(itemRow).eq('id', itemId),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on update:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase item update error:', e);
-      }
-    }
-
-    SyncService.broadcast('ITEM_UPDATED', {
-      itemId,
-      item: updatedItem,
-      batch: updatedBatch,
-      allScannedItems: allUpdatedItems,
-      allBatches: allUpdatedBatches,
-      log: createdLog,
-    });
+  async updateScanItem(itemId: string, updatedItem: ScannedReturnItem, updatedBatch: ReturnBatch, allUpdatedItems: ScannedReturnItem[], allUpdatedBatches: ReturnBatch[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('update scan item', () => supabase.from('scanned_return_items').upsert(mapScannedItemToDb(updatedItem), { onConflict: 'id' }));
+    await persistOrThrow('update scan batch', () => supabase.from('return_batches').upsert(mapReturnBatchToDb(updatedBatch), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(allUpdatedBatches, allUpdatedItems);
+    SyncService.broadcast('ITEM_UPDATED', { itemId, item: updatedItem, batch: updatedBatch, allScannedItems: allUpdatedItems, allBatches: allUpdatedBatches, log: createdLog });
   },
 
-  // Delete item & decrement batch
-  async deleteScanItem(
-    itemId: string,
-    batchId: string,
-    updatedBatch: ReturnBatch,
-    allUpdatedItems: ScannedReturnItem[],
-    allUpdatedBatches: ReturnBatch[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(updatedBatch);
-
-        Promise.allSettled([
-          supabase.from('scanned_return_items').delete().eq('id', itemId),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on delete:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase item delete error:', e);
-      }
-    }
-
-    SyncService.broadcast('ITEM_DELETED', {
-      itemId,
-      batchId,
-      batch: updatedBatch,
-      allScannedItems: allUpdatedItems,
-      allBatches: allUpdatedBatches,
-      log: createdLog,
-    });
+  async deleteScanItem(itemId: string, batchId: string, updatedBatch: ReturnBatch, allUpdatedItems: ScannedReturnItem[], allUpdatedBatches: ReturnBatch[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('delete scan item', () => supabase.from('scanned_return_items').delete().eq('id', itemId));
+    await persistOrThrow('update deleted-item batch', () => supabase.from('return_batches').upsert(mapReturnBatchToDb(updatedBatch), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(allUpdatedBatches, allUpdatedItems);
+    SyncService.broadcast('ITEM_DELETED', { itemId, batchId, batch: updatedBatch, allScannedItems: allUpdatedItems, allBatches: allUpdatedBatches, log: createdLog });
   },
 
-  // Create new return batch
-  async createBatch(
-    newBatch: ReturnBatch,
-    allUpdatedBatches: ReturnBatch[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveReturnBatches(allUpdatedBatches);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(newBatch);
-        Promise.allSettled([
-          supabase.from('return_batches').insert(batchRow),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on create batch:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase batch create error:', e);
-      }
-    }
-
-    SyncService.broadcast('BATCH_CREATED', {
-      batch: newBatch,
-      allBatches: allUpdatedBatches,
-      log: createdLog,
-    });
+  async createBatch(newBatch: ReturnBatch, allUpdatedBatches: ReturnBatch[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('create return batch', () => supabase.from('return_batches').upsert(mapReturnBatchToDb(newBatch), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(allUpdatedBatches);
+    SyncService.broadcast('BATCH_CREATED', { batch: newBatch, allBatches: allUpdatedBatches, log: createdLog });
   },
 
-  // Close return batch
-  async closeBatch(
-    batchId: string,
-    updatedBatch: ReturnBatch,
-    allUpdatedBatches: ReturnBatch[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveReturnBatches(allUpdatedBatches);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(updatedBatch);
-        Promise.allSettled([
-          supabase.from('return_batches').update(batchRow).eq('id', batchId),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on close batch:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase batch close error:', e);
-      }
-    }
-
-    SyncService.broadcast('BATCH_CLOSED', {
-      batchId,
-      batch: updatedBatch,
-      allBatches: allUpdatedBatches,
-      log: createdLog,
-    });
+  async closeBatch(batchId: string, updatedBatch: ReturnBatch, allUpdatedBatches: ReturnBatch[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('close return batch', () => supabase.from('return_batches').upsert(mapReturnBatchToDb(updatedBatch), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(allUpdatedBatches);
+    SyncService.broadcast('BATCH_CLOSED', { batchId, batch: updatedBatch, allBatches: allUpdatedBatches, log: createdLog });
   },
 
-  // Gate entry create
-  async createGateEntry(
-    newEntry: InwardGateEntry,
-    allUpdatedEntries: InwardGateEntry[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveGateEntries(allUpdatedEntries);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const entryRow = mapGateEntryToDb(newEntry);
-        Promise.allSettled([
-          supabase.from('inward_gate_entries').insert(entryRow),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on gate entry create:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase gate entry create error:', e);
-      }
-    }
-
-    SyncService.broadcast('GATE_ENTRY_CREATED', {
-      entry: newEntry,
-      allGateEntries: allUpdatedEntries,
-      log: createdLog,
-    });
+  async createGateEntry(newEntry: InwardGateEntry, allUpdatedEntries: InwardGateEntry[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('create gate entry', () => supabase.from('inward_gate_entries').upsert(mapGateEntryToDb(newEntry), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(undefined, undefined, allUpdatedEntries);
+    SyncService.broadcast('GATE_ENTRY_CREATED', { entry: newEntry, allGateEntries: allUpdatedEntries, log: createdLog });
   },
 
-  // Gate entry update
-  async updateGateEntry(
-    id: string,
-    updatedEntry: InwardGateEntry,
-    allUpdatedEntries: InwardGateEntry[],
-    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
-  ): Promise<void> {
-    StorageService.saveGateEntries(allUpdatedEntries);
-
-    let createdLog: ActivityLog | undefined;
-    if (logData) {
-      createdLog = StorageService.addActivityLog(logData);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const entryRow = mapGateEntryToDb(updatedEntry);
-        Promise.allSettled([
-          supabase.from('inward_gate_entries').update(entryRow).eq('id', id),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on gate entry update:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase gate entry update error:', e);
-      }
-    }
-
-    SyncService.broadcast('GATE_ENTRY_UPDATED', {
-      id,
-      entry: updatedEntry,
-      allGateEntries: allUpdatedEntries,
-      log: createdLog,
-    });
+  async updateGateEntry(id: string, updatedEntry: InwardGateEntry, allUpdatedEntries: InwardGateEntry[], logData?: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> {
+    const createdLog = logData ? StorageService.addActivityLog(logData) : undefined;
+    await persistOrThrow('update gate entry', () => supabase.from('inward_gate_entries').upsert(mapGateEntryToDb(updatedEntry), { onConflict: 'id' }));
+    if (createdLog) await persistOrThrow('write activity log', () => supabase.from('activity_logs').upsert(mapActivityLogToDb(createdLog), { onConflict: 'id' }));
+    saveCaches(undefined, undefined, allUpdatedEntries);
+    SyncService.broadcast('GATE_ENTRY_UPDATED', { id, entry: updatedEntry, allGateEntries: allUpdatedEntries, log: createdLog });
   },
 };
