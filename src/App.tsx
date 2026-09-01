@@ -33,6 +33,7 @@ import { ReportsModule } from './components/ReportsModule';
 import { SettingsModule } from './components/SettingsModule';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
+import { MobileDashboard } from './components/MobileDashboard';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
 import { useAuth } from './context/AuthContext';
@@ -137,6 +138,14 @@ export default function App() {
   const [isNewBatchModalOpen, setIsNewBatchModalOpen] = useState(false);
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Responsive Mobile Detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync activeTab when URL pathname changes
   useEffect(() => {
@@ -1047,7 +1056,7 @@ export default function App() {
 
   // Primary Protected Warehouse Layout Wrapper
   const renderAppLayout = (viewTab: ActiveTab) => (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0B131E] text-slate-900 dark:text-slate-100 font-sans selection:bg-[#123B5D] selection:text-white flex flex-col w-full max-w-full overflow-x-hidden transition-colors">
+    <div className="min-h-screen bg-primary text-primary font-sans selection:bg-[#123B5D] selection:text-white flex flex-col w-full max-w-full overflow-x-hidden theme-transition">
       {/* Header Bar */}
       <Header
         currentUser={currentUser}
@@ -1094,26 +1103,35 @@ export default function App() {
         />
 
         {/* Main Content View Container */}
-        <main className="main-content flex-1 overflow-y-auto bg-[#070D18] min-h-[calc(100vh-53px)] transition-colors">
+        <main className="main-content flex-1 overflow-y-auto bg-primary min-h-[calc(100vh-53px)] theme-transition">
           <div className="p-3 sm:p-5 lg:p-6 max-w-[1600px] mx-auto w-full">
             {viewTab === 'dashboard' && (
-              <DashboardView
-                warehouse={activeWarehouse}
-                allWarehouses={warehouses}
-                companies={companies}
-                clients={clients}
-                gateEntries={gateEntries}
-                batches={batches}
-                scannedItems={scannedItems}
-                auditorDevices={auditorDevices}
-                auditRecords={auditRecords}
-                logs={logs}
-                currentUser={currentUser}
-                onNavigateTab={tab => handleSelectTab(tab)}
-                onOpenNewGateEntryModal={() => setIsNewGateEntryModalOpen(true)}
-                onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
-                onSelectWarehouse={handleSelectWarehouse}
-              />
+              isMobile ? (
+                <MobileDashboard
+                  clients={clients}
+                  batches={batches}
+                  inwardEntries={gateEntries}
+                  currentUser={currentUser}
+                />
+              ) : (
+                <DashboardView
+                  warehouse={activeWarehouse}
+                  allWarehouses={warehouses}
+                  companies={companies}
+                  clients={clients}
+                  gateEntries={gateEntries}
+                  batches={batches}
+                  scannedItems={scannedItems}
+                  auditorDevices={auditorDevices}
+                  auditRecords={auditRecords}
+                  logs={logs}
+                  currentUser={currentUser}
+                  onNavigateTab={tab => handleSelectTab(tab)}
+                  onOpenNewGateEntryModal={() => setIsNewGateEntryModalOpen(true)}
+                  onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
+                  onSelectWarehouse={handleSelectWarehouse}
+                />
+              )
             )}
 
             {(viewTab === 'inward' || viewTab === 'grn') && (

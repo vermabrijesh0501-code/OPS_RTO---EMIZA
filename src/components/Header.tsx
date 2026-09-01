@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab = 'dashboard',
   onPrimaryAction,
 }) => {
-  const { mode: themeMode, resolvedTheme, setMode: setThemeMode } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
@@ -189,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="bg-[#08101E] border-b border-slate-800/80 sticky top-0 z-30 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 select-none w-full shadow-md text-white">
+    <header className="theme-sidebar bg-[var(--bg-surface)] border-b border-[var(--border-color)] sticky top-0 z-30 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 select-none w-full shadow-md text-[var(--text-primary)] theme-transition">
       {/* Left: Brand Logo + Warehouse Selector */}
       <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
         {onToggleMobileMenu && (
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onToggleMobileMenu}
             aria-label="Toggle Navigation Menu"
-            className="md:hidden w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition-colors shrink-0"
+            className="md:hidden w-8 h-8 rounded-lg bg-[var(--bg-elevated)] hover:opacity-90 text-[var(--text-primary)] flex items-center justify-center transition-colors shrink-0 border border-[var(--border-color)]"
           >
             {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -209,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
             E
           </div>
-          <span className="bg-slate-800 text-blue-400 font-bold text-[10px] px-1.5 py-0.5 rounded border border-slate-700 font-mono tracking-wider">
+          <span className="bg-[var(--bg-elevated)] text-[var(--accent-cyan)] font-bold text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-color)] font-mono tracking-wider">
             OPS
           </span>
         </div>
@@ -219,21 +219,21 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsWarehouseMenuOpen(!isWarehouseMenuOpen)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#0E1A2E] hover:bg-[#152540] border border-slate-700/80 text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[var(--bg-elevated)] hover:opacity-90 border border-[var(--border-color)] text-xs font-semibold text-[var(--text-primary)] transition-colors cursor-pointer"
           >
-            <WarehouseIcon className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <WarehouseIcon className="w-3.5 h-3.5 text-[var(--accent-cyan)] shrink-0" />
             <span className="hidden sm:inline truncate max-w-[160px]">
               {activeWarehouse?.name || 'Bhiwandi / Mumbai Hub'}
             </span>
             <span className="sm:hidden font-mono text-[11px]">
               {activeWarehouse?.code?.replace('WH-', '') || 'WH'}
             </span>
-            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+            <ChevronDown className="w-3 h-3 text-[var(--text-secondary)] shrink-0" />
           </button>
 
           {isWarehouseMenuOpen && (
-            <div className="absolute left-0 mt-1.5 w-64 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+            <div className="absolute left-0 mt-1.5 w-64 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
+              <div className="px-3 py-1.5 text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider border-b border-[var(--border-color)]">
                 Select Operating Warehouse
               </div>
               {warehouses.map(w => (
@@ -244,19 +244,19 @@ export const Header: React.FC<HeaderProps> = ({
                     onSelectWarehouse(w.id);
                     setIsWarehouseMenuOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800/80 transition-colors ${
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[var(--bg-elevated)] transition-colors ${
                     w.id === activeWarehouseId
-                      ? 'bg-blue-900/40 text-blue-300 font-bold'
-                      : 'text-slate-300'
+                      ? 'bg-blue-900/30 text-[var(--accent-cyan)] font-bold'
+                      : 'text-[var(--text-primary)]'
                   }`}
                 >
                   <div>
-                    <div className="font-semibold text-slate-200">{w.name}</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="font-semibold text-[var(--text-primary)]">{w.name}</div>
+                    <div className="text-[10px] text-[var(--text-secondary)]">
                       {w.city} • {w.totalDocks} Docks
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-color)]">
                     {w.code}
                   </span>
                 </button>
@@ -271,25 +271,40 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenUniversalSearch}
-          className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg bg-[#0E1A2E] hover:bg-[#13233B] border border-slate-700/80 text-xs text-slate-400 transition-all cursor-pointer shadow-inner"
+          className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg bg-[var(--bg-elevated)] hover:opacity-90 border border-[var(--border-color)] text-xs text-[var(--text-secondary)] transition-all cursor-pointer shadow-inner"
         >
           <div className="flex items-center gap-2.5 truncate">
-            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
             <span className="truncate">Universal Search: AWB, Gate Pass, Vehicle, Batch, Client...</span>
           </div>
-          <kbd className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 shrink-0 ml-2">
+          <kbd className="text-[10px] font-mono bg-[var(--bg-surface)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded border border-[var(--border-color)] shrink-0 ml-2">
             Ctrl+K
           </kbd>
         </button>
       </div>
 
-      {/* Right: Search Mobile Icon, Role Pill & User Avatar */}
+      {/* Right: Theme Toggle, Search Mobile Icon, Role Pill & User Avatar */}
       <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        {/* Dark / Light Mode Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-all active:scale-95 cursor-pointer shadow-sm"
+          title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+          aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? (
+            <Sun size={18} className="text-amber-400 hover:rotate-45 transition-transform" />
+          ) : (
+            <Moon size={18} className="text-slate-700 hover:-rotate-12 transition-transform" />
+          )}
+        </button>
+
         {/* Mobile Search Icon */}
         <button
           type="button"
           onClick={onOpenUniversalSearch}
-          className="md:hidden w-8 h-8 rounded-lg bg-[#0E1A2E] hover:bg-slate-800 text-slate-300 flex items-center justify-center border border-slate-700/80 cursor-pointer"
+          className="md:hidden w-8 h-8 rounded-lg bg-[var(--bg-elevated)] hover:opacity-90 text-[var(--text-secondary)] flex items-center justify-center border border-[var(--border-color)] cursor-pointer"
           title="Search (Ctrl+K)"
         >
           <Search className="w-3.5 h-3.5" />
@@ -301,16 +316,16 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1C1438] hover:bg-[#251B4B] border border-purple-800/60 text-purple-200 text-xs font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-950/40 hover:bg-purple-900/50 border border-purple-800/60 text-purple-300 dark:text-purple-200 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Shield className="w-3 h-3 text-purple-300 shrink-0" />
+              <Shield className="w-3 h-3 text-purple-400 shrink-0" />
               <span className="text-[11px]">Role: {currentUser.role}</span>
               <ChevronDown className="w-2.5 h-2.5 text-purple-400 shrink-0" />
             </button>
 
             {isRoleMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-52 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <div className="absolute right-0 mt-1.5 w-52 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider border-b border-[var(--border-color)]">
                   Switch Role Persona
                 </div>
                 {roles.map(r => (
@@ -321,10 +336,10 @@ export const Header: React.FC<HeaderProps> = ({
                       onSwitchUserRole(r);
                       setIsRoleMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-[var(--bg-elevated)] transition-colors ${
                       r === currentUser.role
-                        ? 'bg-purple-900/40 text-purple-300 font-bold'
-                        : 'text-slate-300'
+                        ? 'bg-purple-900/30 text-purple-300 font-bold'
+                        : 'text-[var(--text-primary)]'
                     }`}
                   >
                     <span>{r}</span>
@@ -335,8 +350,8 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1C1438]/80 border border-purple-800/40 text-purple-200 text-xs font-semibold select-none">
-            <Shield className="w-3 h-3 text-purple-300 shrink-0" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-950/40 border border-purple-800/40 text-purple-300 dark:text-purple-200 text-xs font-semibold select-none">
+            <Shield className="w-3 h-3 text-purple-400 shrink-0" />
             <span className="text-[11px]">Role: {currentUser.role}</span>
           </div>
         )}
@@ -346,18 +361,18 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="w-7 h-7 rounded-full bg-amber-800 hover:bg-amber-700 text-amber-200 font-bold text-xs flex items-center justify-center border border-amber-600/50 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center border border-amber-400/50 transition-all cursor-pointer shadow-sm"
             title={`${currentUser.name} (${currentUser.role})`}
           >
             {currentUser.name.charAt(0).toUpperCase()}
           </button>
 
           {isUserMenuOpen && (
-            <div className="absolute right-0 mt-1.5 w-60 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-2 z-50 animate-in fade-in-50 duration-100">
-              <div className="px-3 py-2 border-b border-slate-800">
-                <div className="font-bold text-slate-100 text-xs truncate">{currentUser.name}</div>
-                <div className="text-[11px] text-slate-400 truncate">{currentUser.email}</div>
-                <div className="text-[10px] text-purple-300 font-semibold mt-1">
+            <div className="absolute right-0 mt-1.5 w-60 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-2xl py-2 z-50 animate-in fade-in-50 duration-100">
+              <div className="px-3 py-2 border-b border-[var(--border-color)]">
+                <div className="font-bold text-[var(--text-primary)] text-xs truncate">{currentUser.name}</div>
+                <div className="text-[11px] text-[var(--text-secondary)] truncate">{currentUser.email}</div>
+                <div className="text-[10px] text-purple-400 font-semibold mt-1">
                   {currentUser.role} • {activeWarehouse?.code}
                 </div>
               </div>
@@ -370,7 +385,7 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsUserMenuOpen(false);
                       onLogout();
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-950/40 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-xs text-rose-500 hover:bg-rose-950/30 dark:hover:bg-rose-950/40 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out of Session</span>

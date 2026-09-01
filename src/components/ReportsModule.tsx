@@ -215,12 +215,12 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl font-extrabold text-primary flex items-center gap-2">
             <FileText className="w-6 h-6 text-[#123B5D] dark:text-blue-400" /> Reports & Manifest
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-secondary mt-1">
             Generate and export RTO / B2C Return Batch Manifests, Inward Gate Register, Brand KPIs, and Courier Handover Sheets.
           </p>
         </div>
@@ -236,7 +236,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       </div>
 
       {/* Selector Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800/80 pb-2 scrollbar-thin">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-theme pb-2 scrollbar-thin">
         {[
           { id: 'manifest', label: 'Batch Manifests & Handover Sheets', icon: FileText, count: whBatches.length },
           { id: 'inward', label: 'Inward Gate Register', icon: Truck, count: whGateEntries.length },
@@ -253,13 +253,13 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all cursor-pointer ${
                 isActive
                   ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-[#111D2C] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/90 dark:border-slate-800'
+                  : 'bg-surface text-secondary hover:text-primary border border-theme'
               }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-elevated text-secondary'}`}>
                   {tab.count}
                 </span>
               )}
@@ -272,15 +272,15 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       {reportType === 'manifest' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
+          <div className="bg-surface border border-theme p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
             <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+              <Search className="w-4 h-4 text-secondary shrink-0" />
               <input
                 type="text"
                 placeholder="Search by Batch #, Client Brand, Courier, Dock #..."
                 value={manifestSearch}
                 onChange={e => setManifestSearch(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
+                className="bg-elevated border border-theme rounded-lg px-3 py-1.5 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
               />
             </div>
 
@@ -289,7 +289,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               <select
                 value={selectedClientFilter}
                 onChange={e => setSelectedClientFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+                className="bg-elevated text-primary border border-theme rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
               >
                 <option value="ALL">All Clients ({clients.length})</option>
                 {clients.map(c => (
@@ -303,7 +303,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               <select
                 value={selectedCourierFilter}
                 onChange={e => setSelectedCourierFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
+                className="bg-elevated text-primary border border-theme rounded-lg px-2.5 py-1.5 font-medium cursor-pointer text-xs focus:outline-none"
               >
                 <option value="ALL">All Couriers ({couriers.length})</option>
                 {couriers.map(cr => (
@@ -314,7 +314,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </select>
 
               {/* Status Filter */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center bg-elevated rounded-lg p-0.5 border border-theme">
                 {(['ALL', 'Closed', 'Open'] as const).map(st => (
                   <button
                     key={st}
@@ -322,7 +322,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                     className={`px-2.5 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer ${
                       selectedStatusFilter === st
                         ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        : 'text-secondary hover:text-primary'
                     }`}
                   >
                     {st}
@@ -333,10 +333,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
           </div>
 
           {/* Batches Manifest List Table */}
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+                <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                   <tr>
                     <th className="px-4 py-3">Batch Number</th>
                     <th className="px-4 py-3">Client / Brand</th>
@@ -349,10 +349,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                     <th className="px-4 py-3 text-right">Manifest Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                   {filteredBatches.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-secondary">
                         No return batches match the selected criteria.
                       </td>
                     </tr>
@@ -364,17 +364,17 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                       const isClosed = batch.status === 'Closed';
 
                       return (
-                        <tr key={batch.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                        <tr key={batch.id} className="hover:bg-elevated transition-colors">
                           <td className="px-4 py-3">
                             <div className="font-mono font-bold text-[#123B5D] dark:text-blue-400">{batch.batchNumber}</div>
-                            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                            <div className="text-[10px] text-secondary font-mono">
                               {new Date(batch.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+                          <td className="px-4 py-3 font-semibold text-primary">
                             {client?.name || batch.clientId}
                           </td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                          <td className="px-4 py-3 text-secondary">
                             {courier?.name || batch.courierId}
                           </td>
                           <td className="px-4 py-3">
@@ -383,11 +383,11 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                                 {batch.dockNumber}
                               </span>
                             ) : (
-                              <span className="text-slate-400 dark:text-slate-500">Dock 01</span>
+                              <span className="text-secondary">Dock 01</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 font-mono font-bold text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 text-xs">
+                            <span className="px-2 py-1 rounded bg-elevated font-mono font-bold text-emerald-600 dark:text-emerald-400 border border-theme text-xs">
                               {batch.totalScanned} AWBs
                             </span>
                           </td>
@@ -423,11 +423,11 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                               {batch.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                          <td className="px-4 py-3 text-secondary text-[11px]">
                             {batch.closedAt ? (
                               <div>
-                                <div className="text-slate-800 dark:text-slate-200 font-medium">{new Date(batch.closedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
-                                <div className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(batch.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div className="text-primary font-medium">{new Date(batch.closedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
+                                <div className="text-[10px] text-secondary">{new Date(batch.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                               </div>
                             ) : (
                               <span className="text-amber-600 dark:text-amber-400/80 font-mono">Open</span>
@@ -438,7 +438,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                               {/* View Live Manifest Modal */}
                               <button
                                 onClick={() => setPreviewBatch(batch)}
-                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer border border-theme"
                                 title="View Live Handover Manifest"
                               >
                                 <Eye className="w-3.5 h-3.5 text-[#123B5D] dark:text-blue-400" />
@@ -458,7 +458,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                               {/* Export CSV */}
                               <button
                                 onClick={() => handleExportBatchCSV(batch)}
-                                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-elevated hover:bg-emerald-600 hover:text-white text-secondary transition-colors cursor-pointer border border-theme"
                                 title="Download CSV Scanned AWB List"
                               >
                                 <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -478,10 +478,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 2. INWARD GATE REGISTER */}
       {reportType === 'inward' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Gate Pass #</th>
                   <th className="px-4 py-3">Vehicle #</th>
@@ -494,14 +494,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Entry Time</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                 {whGateEntries.map(g => (
-                  <tr key={g.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                  <tr key={g.id} className="hover:bg-elevated">
                     <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{g.gatePassNumber}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{g.vehicleNumber}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{g.driverName}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{clients.find(c => c.id === g.clientId)?.name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{couriers.find(cr => cr.id === g.courierId)?.name}</td>
+                    <td className="px-4 py-3 font-bold text-primary">{g.vehicleNumber}</td>
+                    <td className="px-4 py-3 text-secondary">{g.driverName}</td>
+                    <td className="px-4 py-3 text-secondary">{clients.find(c => c.id === g.clientId)?.name}</td>
+                    <td className="px-4 py-3 text-secondary">{couriers.find(cr => cr.id === g.courierId)?.name}</td>
                     <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{g.expectedBoxCount} Cartons</td>
                     <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">₹{g.invoiceValue?.toLocaleString() || '0'}</td>
                     <td className="px-4 py-3">
@@ -509,7 +509,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                         {g.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                    <td className="px-4 py-3 text-secondary font-mono text-[11px]">
                       {new Date(g.entryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </td>
                   </tr>
@@ -522,10 +522,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 3. CLIENT BRAND PERFORMANCE */}
       {reportType === 'client_wise' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Client Brand</th>
                   <th className="px-4 py-3">Client Code</th>
@@ -534,13 +534,13 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Total Scanned AWBs</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                 {clientBreakdown.map((cb, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{cb.clientName}</td>
+                  <tr key={idx} className="hover:bg-elevated">
+                    <td className="px-4 py-3 font-bold text-primary">{cb.clientName}</td>
                     <td className="px-4 py-3 font-mono text-indigo-600 dark:text-indigo-400">{cb.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cb.vehicles} Vehicles</td>
-                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cb.batches} Batches</td>
+                    <td className="px-4 py-3 font-bold text-secondary">{cb.vehicles} Vehicles</td>
+                    <td className="px-4 py-3 font-bold text-secondary">{cb.batches} Batches</td>
                     <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{cb.totalScanned} Items</td>
                   </tr>
                 ))}
@@ -552,10 +552,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 4. COURIER PERFORMANCE */}
       {reportType === 'courier_wise' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Courier Partner</th>
                   <th className="px-4 py-3">Code</th>
@@ -564,13 +564,13 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Total Scanned AWBs</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                 {courierBreakdown.map((cr, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{cr.courierName}</td>
+                  <tr key={idx} className="hover:bg-elevated">
+                    <td className="px-4 py-3 font-bold text-primary">{cr.courierName}</td>
                     <td className="px-4 py-3 font-mono text-[#123B5D] dark:text-blue-400">{cr.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cr.vehicles} Vehicles</td>
-                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{cr.batches} Batches</td>
+                    <td className="px-4 py-3 font-bold text-secondary">{cr.vehicles} Vehicles</td>
+                    <td className="px-4 py-3 font-bold text-secondary">{cr.batches} Batches</td>
                     <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{cr.totalScanned} Items</td>
                   </tr>
                 ))}
@@ -582,10 +582,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
       {/* 5. OPERATOR PRODUCTIVITY */}
       {reportType === 'user_productivity' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Operator Name</th>
                   <th className="px-4 py-3">Role</th>
@@ -594,13 +594,13 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                   <th className="px-4 py-3">Scanning Speed (Avg Items / Hr)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                 {operatorProductivity.map((usr, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{usr.userName}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{usr.role}</td>
+                  <tr key={idx} className="hover:bg-elevated">
+                    <td className="px-4 py-3 font-bold text-primary">{usr.userName}</td>
+                    <td className="px-4 py-3 text-secondary">{usr.role}</td>
                     <td className="px-4 py-3 font-extrabold text-emerald-600 dark:text-emerald-400">{usr.itemsScanned} Scanned</td>
-                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-slate-300">{usr.batchesCreated} Batches</td>
+                    <td className="px-4 py-3 font-bold text-secondary">{usr.batchesCreated} Batches</td>
                     <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{usr.avgSpeedPerHour} items/hr</td>
                   </tr>
                 ))}
@@ -613,7 +613,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
       {/* LIVE ON-SCREEN MANIFEST PREVIEW MODAL */}
       {previewBatch && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#111D2C] text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+          <div className="bg-surface text-primary rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-theme">
             {/* Modal Top Control Bar */}
             <div className="bg-[#123B5D] dark:bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between border-b border-blue-900/40 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -647,7 +647,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
             </div>
 
             {/* Exact PDF Layout Replicated on Screen */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 dark:bg-[#0c141f] text-xs">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-elevated text-xs">
               {/* Header Banner */}
               <div className="bg-[#123B5D] dark:bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between border-b-2 border-blue-400">
                 <div>
@@ -662,51 +662,51 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </div>
 
               {/* Metadata Grid */}
-              <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shadow-xs">
+              <div className="bg-surface border border-theme rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shadow-xs">
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Number</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Batch Number</span>
                   <span className="font-bold text-[#123B5D] dark:text-blue-400 font-mono text-sm">{previewBatch.batchNumber}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Client / Account</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewClient?.name || previewBatch.clientId}</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Client / Account</span>
+                  <span className="font-bold text-primary">{previewClient?.name || previewBatch.clientId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Courier Partner</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewCourier?.name || previewBatch.courierId}</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Courier Partner</span>
+                  <span className="font-bold text-primary">{previewCourier?.name || previewBatch.courierId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Type / Dock</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Batch Type / Dock</span>
+                  <span className="font-bold text-primary">
                     {previewBatch.batchType || 'RTO/B2C'} {previewBatch.dockNumber ? `(${previewBatch.dockNumber})` : ''}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Facility / Hub</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{activeWarehouse.name} ({activeWarehouse.code})</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Facility / Hub</span>
+                  <span className="font-bold text-primary">{activeWarehouse.name} ({activeWarehouse.code})</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Total Scanned</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Total Scanned</span>
                   <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{previewItems.length} Parcels / AWBs</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Batch Created</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{new Date(previewBatch.createdAt).toLocaleString()}</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Batch Created</span>
+                  <span className="font-medium text-primary">{new Date(previewBatch.createdAt).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase">Driver / Rep</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">{previewBatch.driverName || 'Supervisor Handover'}</span>
+                  <span className="text-secondary block text-[10px] font-bold uppercase">Driver / Rep</span>
+                  <span className="font-bold text-primary">{previewBatch.driverName || 'Supervisor Handover'}</span>
                 </div>
               </div>
 
               {/* QC Breakdown Summary */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">QC Conditions Breakdown Summary</h4>
-                <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap gap-4 shadow-xs">
+                <h4 className="font-bold text-primary text-[11px] uppercase tracking-wider">QC Conditions Breakdown Summary</h4>
+                <div className="bg-surface border border-theme rounded-xl p-3 flex flex-wrap gap-4 shadow-xs">
                   {Object.entries(previewBatch.remarksBreakdown || {}).map(([rem, cnt]) => (
                     <div key={rem} className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-600 dark:text-slate-400">{rem}:</span>
-                      <span className="font-black text-[#123B5D] dark:text-blue-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">{cnt}</span>
+                      <span className="font-bold text-secondary">{rem}:</span>
+                      <span className="font-black text-[#123B5D] dark:text-blue-400 bg-elevated px-2 py-0.5 rounded border border-theme">{cnt}</span>
                     </div>
                   ))}
                 </div>
@@ -714,12 +714,12 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
 
               {/* Scanned AWBs Table */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">
+                <h4 className="font-bold text-primary text-[11px] uppercase tracking-wider">
                   Scanned AWBs Manifest ({previewItems.length} Items)
                 </h4>
-                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-[#111D2C] max-h-60 overflow-y-auto shadow-xs">
+                <div className="border border-theme rounded-xl overflow-hidden bg-surface max-h-60 overflow-y-auto shadow-xs">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200 dark:border-slate-700">
+                    <thead className="bg-elevated text-primary uppercase font-bold text-[10px] sticky top-0 border-b border-theme">
                       <tr>
                         <th className="px-3 py-2">#</th>
                         <th className="px-3 py-2">AWB / Tracking Number</th>
@@ -728,15 +728,15 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                         <th className="px-3 py-2">Scanned By</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
                       {previewItems.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-4 text-center text-slate-400 dark:text-slate-500">No scanned items in this batch.</td>
+                          <td colSpan={5} className="p-4 text-center text-secondary">No scanned items in this batch.</td>
                         </tr>
                       ) : (
                         previewItems.map((it, i) => (
-                          <tr key={it.id} className={i % 2 === 0 ? 'bg-white dark:bg-[#111D2C]' : 'bg-slate-50/60 dark:bg-slate-800/40'}>
-                            <td className="px-3 py-1.5 font-mono text-slate-400 dark:text-slate-500">{i + 1}</td>
+                          <tr key={it.id} className={i % 2 === 0 ? 'bg-surface' : 'bg-elevated'}>
+                            <td className="px-3 py-1.5 font-mono text-secondary">{i + 1}</td>
                             <td className="px-3 py-1.5 font-mono font-bold text-[#123B5D] dark:text-blue-400">{it.trackingNumber}</td>
                             <td className="px-3 py-1.5">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -745,10 +745,10 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                                 {it.remark}
                               </span>
                             </td>
-                            <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                            <td className="px-3 py-1.5 text-secondary font-mono text-[11px]">
                               {new Date(it.scannedAt).toLocaleTimeString()}
                             </td>
-                            <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                            <td className="px-3 py-1.5 text-primary font-medium">
                               {it.scannedByName || 'Operator'}
                             </td>
                           </tr>
@@ -760,27 +760,27 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
               </div>
 
               {/* Handover & Sign-off Signature Box */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-[#111D2C] grid grid-cols-2 gap-8 shadow-xs">
+              <div className="border border-theme rounded-xl p-4 bg-surface grid grid-cols-2 gap-8 shadow-xs">
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block">Courier Driver / Rep</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{previewBatch.driverName || '-'}</span>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Phone: {previewBatch.driverMobile || '-'}</div>
+                    <span className="text-[10px] font-bold uppercase text-secondary block">Courier Driver / Rep</span>
+                    <span className="font-bold text-primary">{previewBatch.driverName || '-'}</span>
+                    <div className="text-[10px] text-secondary">Phone: {previewBatch.driverMobile || '-'}</div>
                   </div>
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-1 text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
+                  <div className="border-t border-theme pt-1 text-[10px] text-secondary text-center italic">
                     Courier Driver Signature & Handover Stamp
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block">Warehouse Supervisor</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{previewBatch.createdByName || 'Vikram Mehta'}</span>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] font-bold uppercase text-secondary block">Warehouse Supervisor</span>
+                    <span className="font-bold text-primary">{previewBatch.createdByName || 'Vikram Mehta'}</span>
+                    <div className="text-[10px] text-secondary">
                       Handover Date: {previewBatch.closedAt ? new Date(previewBatch.closedAt).toLocaleString() : 'Pending Close'}
                     </div>
                   </div>
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-1 text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
+                  <div className="border-t border-theme pt-1 text-[10px] text-secondary text-center italic">
                     Warehouse Inward Stamp & Supervisor Sign-off
                   </div>
                 </div>

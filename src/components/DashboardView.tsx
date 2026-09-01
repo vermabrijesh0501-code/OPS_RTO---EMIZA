@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import {
   Truck,
   RotateCcw,
@@ -65,6 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewBatchModal,
 }) => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [selectedClientFilter, setSelectedClientFilter] = useState<string>('all');
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isInwardCollapsed, setIsInwardCollapsed] = useState(false);
@@ -215,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const y2 = center + radius * Math.sin(angleRad);
 
       const isActive = i < activeTickCount;
-      const strokeColor = isActive ? '#10B981' : '#1E2D42';
+      const strokeColor = isActive ? '#10B981' : (theme === 'dark' ? '#1E2D42' : '#CBD5E1');
 
       ticks.push(
         <line
@@ -237,13 +239,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {ticks}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+          <span className="text-[10px] font-bold text-secondary tracking-wider uppercase">
             ALL ACCOUNTS
           </span>
-          <span className="text-3xl font-black text-white my-0.5 tracking-tight">
+          <span className="text-3xl font-black text-primary my-0.5 tracking-tight">
             {metrics.totalScanned}
           </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded bg-[#062419] text-emerald-400 border border-emerald-700/70 text-[10px] font-bold">
+          <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
             {metrics.goodCount} Good ({metrics.goodPct}%)
           </span>
         </div>
@@ -252,14 +254,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-white">
+    <div className="space-y-4 text-primary">
       {/* 1. Header Row: Title, Facility Pill & Top Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-primary tracking-tight">
             Warehouse Operations Dashboard
           </h1>
-          <span className="bg-[#122846] text-[#4F9CF8] border border-[#1E4378] text-xs font-semibold px-2.5 py-0.5 rounded-md">
+          <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-semibold px-2.5 py-0.5 rounded-md">
             {warehouse.name || 'EMIZA Central Fulfillment Facility'}
           </span>
         </div>
@@ -304,11 +306,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="pt-0.5">
         <div
           onClick={() => alert('Date filter coming soon!')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0B1526] hover:bg-[#101F38] hover:bg-opacity-80 border border-slate-800 text-xs font-semibold text-slate-200 cursor-pointer transition-all"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface hover:bg-elevated border border-theme text-xs font-semibold text-primary cursor-pointer transition-all shadow-xs"
         >
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <Calendar className="w-3.5 h-3.5 text-secondary" />
           <span>{currentDateDisplay}</span>
-          <ChevronDown className="w-3 h-3 text-slate-400" />
+          <ChevronDown className="w-3 h-3 text-secondary" />
         </div>
       </div>
 
@@ -318,21 +320,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div
           id="kpi-b2c-returns"
           onClick={() => onNavigateTab('returns_rto')}
-          className="bg-[#0B1526] border border-slate-800/80 hover:border-slate-700/90 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
+          className="bg-surface border border-theme hover:border-blue-500/40 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">B2C Returns</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-950/70 border border-blue-800/40 text-blue-400 flex items-center justify-center">
+            <span className="text-xs font-medium text-secondary">B2C Returns</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <RotateCcw className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-white tracking-tight">
+            <span className="text-2xl font-black text-primary tracking-tight">
               {metrics.totalScanned}
             </span>
-            <span className="text-xs font-semibold text-slate-400">Units</span>
+            <span className="text-xs font-semibold text-secondary">Units</span>
           </div>
-          <div className="mt-1 text-xs font-medium text-emerald-400">
+          <div className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             {metrics.goodCount} Good ({metrics.goodPct}%) • {metrics.defectiveCount} Defects
           </div>
         </div>
@@ -341,21 +343,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div
           id="kpi-gate-inward"
           onClick={() => onNavigateTab('inward')}
-          className="bg-[#0B1526] border border-slate-800/80 hover:border-slate-700/90 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
+          className="bg-surface border border-theme hover:border-blue-500/40 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Gate Inward</span>
-            <div className="w-7 h-7 rounded-lg bg-teal-950/70 border border-teal-800/40 text-teal-400 flex items-center justify-center">
+            <span className="text-xs font-medium text-secondary">Gate Inward</span>
+            <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
               <Truck className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-white tracking-tight">
+            <span className="text-2xl font-black text-primary tracking-tight">
               {metrics.inwardVehiclesCount}
             </span>
-            <span className="text-xs font-semibold text-slate-400">Vehicles</span>
+            <span className="text-xs font-semibold text-secondary">Vehicles</span>
           </div>
-          <div className="mt-1 text-xs font-medium text-emerald-400">
+          <div className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             {metrics.totalBoxesUnloaded} Boxes Unloaded
           </div>
         </div>
@@ -364,21 +366,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div
           id="kpi-cycle-count"
           onClick={() => onNavigateTab('inventory')}
-          className="bg-[#0B1526] border border-slate-800/80 hover:border-slate-700/90 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
+          className="bg-surface border border-theme hover:border-blue-500/40 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Cycle Count</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-950/70 border border-purple-800/40 text-purple-400 flex items-center justify-center">
+            <span className="text-xs font-medium text-secondary">Cycle Count</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
               <Scan className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-white tracking-tight">
+            <span className="text-2xl font-black text-primary tracking-tight">
               {metrics.totalCycleScans}
             </span>
-            <span className="text-xs font-semibold text-slate-400">Scans</span>
+            <span className="text-xs font-semibold text-secondary">Scans</span>
           </div>
-          <div className="mt-1 text-xs font-medium text-purple-400">
+          <div className="mt-1 text-xs font-medium text-purple-600 dark:text-purple-400">
             {metrics.binsAudited} Bins Audited
           </div>
         </div>
@@ -387,35 +389,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div
           id="kpi-scanner-guns"
           onClick={() => onNavigateTab('inventory')}
-          className="bg-[#0B1526] border border-slate-800/80 hover:border-slate-700/90 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
+          className="bg-surface border border-theme hover:border-blue-500/40 rounded-xl p-4 shadow-sm transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Scanner Guns</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-950/70 border border-amber-800/40 text-amber-400 flex items-center justify-center">
+            <span className="text-xs font-medium text-secondary">Scanner Guns</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Smartphone className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-white tracking-tight">
+            <span className="text-2xl font-black text-primary tracking-tight">
               {metrics.activeGuns}
             </span>
-            <span className="text-xs font-semibold text-slate-400">Guns</span>
+            <span className="text-xs font-semibold text-secondary">Guns</span>
           </div>
-          <div className="mt-1 text-xs font-medium text-amber-400">
+          <div className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
             {metrics.activeGuns} Active on Floor
           </div>
         </div>
       </div>
 
       {/* 3. B2C Returns Live Operations Main Container */}
-      <div className="bg-[#0B1526] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+      <div className="bg-surface border border-theme rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
         {/* Section Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-blue-950 text-blue-400 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <RotateCcw className="w-3.5 h-3.5" />
             </div>
-            <h2 className="text-sm font-bold text-white tracking-wide">
+            <h2 className="text-sm font-bold text-primary tracking-wide">
               B2C Returns Live Operations
             </h2>
           </div>
@@ -425,28 +427,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
-              className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-[#0E1A2E] hover:bg-[#152540] border border-slate-700/80 text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+              className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-elevated hover:bg-surface border border-theme text-xs font-semibold text-primary transition-colors cursor-pointer"
             >
               <span>{selectedClientLabel}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+              <ChevronDown className="w-3 h-3 text-secondary shrink-0" />
             </button>
 
             {isClientFilterOpen && (
-              <div className="absolute right-0 mt-1.5 w-64 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
+              <div className="absolute right-0 mt-1.5 w-64 bg-surface border border-theme rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedClientFilter('all');
                     setIsClientFilterOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800/80 transition-colors ${
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-elevated transition-colors ${
                     selectedClientFilter === 'all'
-                      ? 'bg-blue-900/40 text-blue-300 font-bold'
-                      : 'text-slate-300'
+                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold'
+                      : 'text-primary'
                   }`}
                 >
                   <span>All Accounts</span>
-                  <span className="text-[10px] font-mono text-slate-400">
+                  <span className="text-[10px] font-mono text-secondary">
                     {scannedItems.length} Units
                   </span>
                 </button>
@@ -458,10 +460,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       setSelectedClientFilter(c.id);
                       setIsClientFilterOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800/80 transition-colors ${
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-elevated transition-colors ${
                       selectedClientFilter === c.id
-                        ? 'bg-blue-900/40 text-blue-300 font-bold'
-                        : 'text-slate-300'
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold'
+                        : 'text-primary'
                     }`}
                   >
                     <span className="truncate">{c.name}</span>
@@ -473,18 +475,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 7 QC Conditions Bar */}
-        <div className="bg-[#080F1D] border border-slate-800/80 rounded-xl p-3.5 space-y-3">
+        <div className="bg-elevated border border-theme rounded-xl p-3.5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              <Tag className="w-3 h-3 text-slate-400" />
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-secondary uppercase tracking-wider">
+              <Tag className="w-3 h-3 text-secondary" />
               <span>CONDITIONS (ALL ACCOUNTS):</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="bg-[#072418] text-emerald-300 border border-emerald-800/80 text-xs px-2.5 py-0.5 rounded font-bold">
+              <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-0.5 rounded font-bold">
                 {metrics.goodCount} Good ({metrics.goodPct}%)
               </span>
-              <span className="bg-[#280D15] text-rose-300 border border-rose-800/80 text-xs px-2.5 py-0.5 rounded font-bold">
+              <span className="bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-xs px-2.5 py-0.5 rounded font-bold">
                 {metrics.defectiveCount} Defective
               </span>
             </div>
@@ -493,9 +495,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* 7 Condition Badges Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
             {/* 1. GOOD */}
-            <div className="bg-[#062419] border border-emerald-700/60 text-emerald-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                 <span className="truncate">1. GOOD</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -504,9 +506,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 2. DAMAGE */}
-            <div className="bg-[#280D15] border border-rose-700/60 text-rose-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                 <span className="truncate">2. DAMAGE</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -515,9 +517,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 3. OPEN BOX */}
-            <div className="bg-[#2B1B06] border border-amber-700/60 text-amber-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                 <span className="truncate">3. OPEN BOX</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -526,9 +528,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 4. WRONG PROD */}
-            <div className="bg-[#0E1A38] border border-indigo-700/60 text-indigo-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
                 <span className="truncate">4. WRONG PROD</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -537,9 +539,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 5. SHORT QTY */}
-            <div className="bg-[#2D1606] border border-orange-700/60 text-orange-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
                 <span className="truncate">5. SHORT QTY</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -548,9 +550,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 6. MISSING */}
-            <div className="bg-[#2D0A1E] border border-pink-700/60 text-pink-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-pink-500/10 border border-pink-500/30 text-pink-600 dark:text-pink-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0" />
                 <span className="truncate">6. MISSING</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -559,9 +561,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* 7. OTHERS */}
-            <div className="bg-[#1E0E38] border border-purple-700/60 text-purple-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
+            <div className="bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs font-bold">
               <div className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
                 <span className="truncate">7. OTHERS</span>
               </div>
               <span className="font-mono text-[11px] font-bold shrink-0 ml-1">
@@ -572,13 +574,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Whole Return Distribution: Radial Gauge + Accounts Breakdown */}
-        <div className="bg-[#080F1D] border border-slate-800/80 rounded-xl p-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800/70 mb-4">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              <Clock className="w-3 h-3 text-slate-400" />
+        <div className="bg-elevated border border-theme rounded-xl p-4">
+          <div className="flex items-center justify-between pb-3 border-b border-theme mb-4">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-secondary uppercase tracking-wider">
+              <Clock className="w-3 h-3 text-secondary" />
               <span>WHOLE RETURN DISTRIBUTION</span>
             </div>
-            <span className="text-xs font-semibold text-emerald-400">
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               {metrics.goodCount} Good ({metrics.goodPct}%) • {metrics.defectiveCount} Defective
             </span>
           </div>
@@ -591,7 +593,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Right List: Accounts Breakdown */}
             <div className="md:col-span-7 space-y-2.5">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <div className="text-[11px] font-bold text-secondary uppercase tracking-wider mb-2">
                 ACCOUNTS BREAKDOWN
               </div>
 
@@ -599,19 +601,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {clientAccountsList.slice(0, 5).map(c => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-[#0E1A2E]/80 hover:bg-[#13233B] border border-slate-800 transition-colors text-xs"
+                    className="flex items-center justify-between p-2 rounded-lg bg-surface hover:bg-elevated border border-theme transition-colors text-xs"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: c.color }}
                       />
-                      <span className="font-semibold text-slate-200 truncate">{c.name}</span>
+                      <span className="font-semibold text-primary truncate">{c.name}</span>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-slate-400 font-mono text-[11px]">{c.pct}%</span>
-                      <span className="bg-slate-900 border border-slate-700 text-slate-200 px-2 py-0.5 rounded text-xs font-mono font-bold">
+                      <span className="text-secondary font-mono text-[11px]">{c.pct}%</span>
+                      <span className="bg-elevated border border-theme text-primary px-2 py-0.5 rounded text-xs font-mono font-bold">
                         {c.count}
                       </span>
                     </div>
@@ -626,26 +628,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 4. Bottom Row: Inward Vehicles & Boxes + Operator & Gun Scans */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left: Inward Vehicles & Boxes */}
-        <div className="lg:col-span-5 bg-[#0B1526] border border-slate-800/80 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="lg:col-span-5 bg-surface border border-theme rounded-xl p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => setIsInwardCollapsed(!isInwardCollapsed)}
-              className="flex items-center gap-2 text-xs font-bold text-white hover:text-slate-200 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-xs font-bold text-primary hover:text-secondary transition-colors cursor-pointer"
             >
-              <Truck className="w-3.5 h-3.5 text-teal-400" />
+              <Truck className="w-3.5 h-3.5 text-teal-500" />
               <span>Inward Vehicles & Boxes</span>
               {isInwardCollapsed ? (
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-secondary" />
               ) : (
-                <ChevronUp className="w-3 h-3 text-slate-400" />
+                <ChevronUp className="w-3 h-3 text-secondary" />
               )}
             </button>
 
             <button
               type="button"
               onClick={() => onNavigateTab('inward')}
-              className="text-xs font-semibold text-teal-400 hover:text-teal-300 flex items-center gap-1 cursor-pointer transition-colors"
+              className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
             >
               <span>Full Register</span>
               <ArrowRight className="w-3 h-3" />
@@ -657,18 +659,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {clientAccountsList.slice(0, 2).map(c => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#080F1D] border border-slate-800/80 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-elevated border border-theme text-xs"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
-                    <span className="font-semibold text-slate-200 truncate">{c.name}</span>
+                    <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
+                    <span className="font-semibold text-primary truncate">{c.name}</span>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] font-mono">
+                    <span className="bg-surface border border-theme text-secondary px-2 py-0.5 rounded text-[11px] font-mono">
                       {c.vehCount} Veh.
                     </span>
-                    <span className="bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] font-mono">
+                    <span className="bg-surface border border-theme text-secondary px-2 py-0.5 rounded text-[11px] font-mono">
                       {c.boxCount} Bxs
                     </span>
                   </div>
@@ -679,26 +681,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Right: Operator & Gun Scans */}
-        <div className="lg:col-span-7 bg-[#0B1526] border border-slate-800/80 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="lg:col-span-7 bg-surface border border-theme rounded-xl p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => setIsOperatorsCollapsed(!isOperatorsCollapsed)}
-              className="flex items-center gap-2 text-xs font-bold text-white hover:text-slate-200 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-xs font-bold text-primary hover:text-secondary transition-colors cursor-pointer"
             >
-              <Scan className="w-3.5 h-3.5 text-purple-400" />
+              <Scan className="w-3.5 h-3.5 text-purple-500" />
               <span>Operator & Gun Scans</span>
               {isOperatorsCollapsed ? (
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-secondary" />
               ) : (
-                <ChevronUp className="w-3 h-3 text-slate-400" />
+                <ChevronUp className="w-3 h-3 text-secondary" />
               )}
             </button>
 
             <button
               type="button"
               onClick={() => onNavigateTab('inventory')}
-              className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
+              className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
             >
               <span>Audit Console</span>
               <ArrowRight className="w-3 h-3" />
@@ -706,7 +708,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {!isOperatorsCollapsed && (
-            <div className="bg-[#080E1A] border border-slate-800/80 rounded-lg p-6 text-center text-slate-400 text-xs flex items-center justify-center min-h-[95px]">
+            <div className="bg-elevated border border-theme rounded-lg p-6 text-center text-secondary text-xs flex items-center justify-center min-h-[95px]">
               No scans recorded for {currentDateDisplay}. Guns will appear here in real time as operators scan on this date.
             </div>
           )}

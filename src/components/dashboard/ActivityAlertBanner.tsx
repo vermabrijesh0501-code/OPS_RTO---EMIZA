@@ -23,7 +23,7 @@ export const ActivityAlertBanner: React.FC<ActivityAlertBannerProps> = ({
   return (
     <div
       id={id}
-      className="w-full rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-slate-50 dark:from-[#132238] dark:via-[#16253e] dark:to-[#111D2C] border border-blue-200/80 dark:border-blue-900/60 p-4 sm:p-4.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all"
+      className="w-full rounded-xl bg-surface border border-theme p-4 sm:p-4.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all"
     >
       {/* Left: Icon & Description */}
       <div className="flex items-start sm:items-center gap-3">
@@ -32,7 +32,7 @@ export const ActivityAlertBanner: React.FC<ActivityAlertBannerProps> = ({
         </div>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[#123B5D] dark:text-blue-300 tracking-wide">
+            <span className="text-xs font-bold text-primary tracking-wide">
               {title}
             </span>
             {badgeText && (
@@ -41,7 +41,7 @@ export const ActivityAlertBanner: React.FC<ActivityAlertBannerProps> = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+          <p className="text-xs text-secondary mt-0.5 leading-relaxed">
             {description}
           </p>
         </div>

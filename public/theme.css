@@ -1,0 +1,183 @@
+/* ============================================
+   EMIZA-WOP THEME SYSTEM
+   Toggle between dark and light modes
+   ============================================ */
+
+/* --- DARK MODE (default) --- */
+.dark {
+  --bg-primary: #0B131E;
+  --bg-surface: #111D2C;
+  --bg-elevated: #182738;
+  --bg-input: #182738;
+  --border-color: #1E2C3D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8FA0B5;
+  --text-muted: #5A6B7D;
+  --accent-cyan: #00BDD6;
+  --accent-purple: #635BFF;
+  --accent-blue: #2563EB;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --shadow: rgba(0, 0, 0, 0.4);
+  --overlay: rgba(11, 19, 30, 0.95);
+}
+
+/* --- LIGHT MODE --- */
+.light {
+  --bg-primary: #FFFFFF;
+  --bg-surface: #F8FAFC;
+  --bg-elevated: #F1F5F9;
+  --bg-input: #FFFFFF;
+  --border-color: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --accent-cyan: #0891B2;
+  --accent-purple: #4F46E5;
+  --accent-blue: #1D4ED8;
+  --success: #059669;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --overlay: rgba(255, 255, 255, 0.95);
+}
+
+/* --- Base Styles --- */
+html, body, #root {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Utility Classes --- */
+.bg-primary { background-color: var(--bg-primary) !important; }
+.bg-surface { background-color: var(--bg-surface) !important; }
+.bg-elevated { background-color: var(--bg-elevated) !important; }
+.bg-input { background-color: var(--bg-input) !important; }
+.border-theme { border-color: var(--border-color) !important; }
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-accent { color: var(--accent-cyan) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-danger { color: var(--danger) !important; }
+
+/* --- Card Component --- */
+.theme-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* --- Button Component --- */
+.theme-button {
+  background-color: var(--accent-purple);
+  color: #FFFFFF;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.theme-button:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* --- Input Component --- */
+.theme-input {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.theme-input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15);
+  outline: none;
+}
+
+/* --- Table Component --- */
+.theme-table {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.theme-table th {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.theme-table td {
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.theme-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- Sidebar / Panel --- */
+.theme-sidebar {
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+}
+
+/* --- Modal / Overlay --- */
+.theme-overlay {
+  background-color: var(--overlay);
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* --- Mobile Bottom Nav --- */
+.mobile-bottom-nav {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+}
+
+/* --- Touch Feedback --- */
+button, .clickable {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* --- Prevent iOS Zoom --- */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* --- Animation for theme switch --- */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}

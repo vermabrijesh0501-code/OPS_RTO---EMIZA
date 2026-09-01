@@ -334,12 +334,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Title & Top Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl font-extrabold text-primary flex items-center gap-2">
             <Layers className="w-6 h-6 text-[#123B5D] dark:text-blue-400" /> Master Data Management & RBAC Access Control
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-secondary mt-1">
             Configure Client Brands, Courier Logistics Partners, User Roles & Approved Tabs, SKUs, and Warehouse Facilities.
           </p>
         </div>
@@ -355,7 +355,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       </div>
 
       {/* Master Tabs List */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800/80 pb-2 scrollbar-thin">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-theme pb-2 scrollbar-thin">
         {masterCategories.map(cat => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -369,12 +369,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all cursor-pointer ${
                 isActive
                   ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-[#111D2C] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/90 dark:border-slate-800'
+                  : 'bg-surface text-secondary hover:text-primary border border-theme'
               }`}
             >
               <Icon className="w-4 h-4" />
               <span>{cat.label}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-elevated text-secondary'}`}>
                 {cat.count}
               </span>
             </button>
@@ -383,21 +383,21 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
+      <div className="bg-surface border border-theme p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm transition-colors">
         <div className="flex items-center gap-2.5 flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+          <Search className="w-4 h-4 text-muted shrink-0" />
           <input
             type="text"
             placeholder={`Search in ${activeTab.toUpperCase()} master...`}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
+            className="bg-elevated border border-theme rounded-lg px-3 py-1.5 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 w-full"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Status:</span>
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+          <span className="text-secondary font-medium">Status:</span>
+          <div className="flex items-center bg-elevated rounded-lg p-0.5 border border-theme">
             {(['ALL', 'Active', 'On Hold', 'Inactive'] as const).map(st => (
               <button
                 key={st}
@@ -405,7 +405,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 className={`px-2.5 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer ${
                   statusFilter === st
                     ? 'bg-[#123B5D] dark:bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-secondary hover:text-primary'
                 }`}
               >
                 {st}
@@ -417,12 +417,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* QUICK PRESETS FOR CLIENTS & BRANDS */}
       {activeTab === 'clients' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
+        <div className="bg-surface border border-theme p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <span className="font-bold text-primary flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Quick Add Popular Brands & Accounts:
             </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">Click any brand to instantly provision</span>
+            <span className="text-[11px] text-muted">Click any brand to instantly provision</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -442,7 +442,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               <button
                 key={b.code}
                 onClick={() => handleQuickAddBrand(b.name, b.cat, b.code)}
-                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-elevated hover:bg-elevated/80 border border-theme text-secondary hover:text-primary text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
                 <Plus className="w-3 h-3 text-[#123B5D] dark:text-blue-400" /> {b.name}
               </button>
@@ -453,12 +453,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* QUICK PRESETS FOR COURIERS */}
       {activeTab === 'couriers' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
+        <div className="bg-surface border border-theme p-3.5 rounded-xl space-y-2 shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <span className="font-bold text-primary flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#123B5D] dark:text-blue-400" /> Quick Add Popular Courier Logistics Partners:
             </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">Click any courier to instantly provision</span>
+            <span className="text-[11px] text-muted">Click any courier to instantly provision</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -475,7 +475,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               <button
                 key={cr.code}
                 onClick={() => handleQuickAddCourier(cr.name, cr.code, cr.pattern, cr.helpline)}
-                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg bg-elevated hover:bg-elevated/80 border border-theme text-secondary hover:text-primary text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
                 <Plus className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> {cr.name}
               </button>
@@ -486,10 +486,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 1. CLIENTS TABLE */}
       {activeTab === 'clients' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Client Code</th>
                   <th className="px-4 py-3">Brand Name</th>
@@ -499,7 +499,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {clients
                   .filter(c => {
                     if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
@@ -510,17 +510,17 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(client => (
-                    <tr key={client.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <tr key={client.id} className="hover:bg-elevated/50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400">{client.code}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{client.name}</td>
+                      <td className="px-4 py-3 font-bold text-primary text-sm">{client.name}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        <span className="px-2 py-0.5 rounded bg-elevated font-medium text-secondary border border-theme">
                           {client.category || 'General'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                      <td className="px-4 py-3 text-secondary">
                         <div>{client.email || '-'}</div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500">{client.phone || '-'}</div>
+                        <div className="text-[10px] text-muted">{client.phone || '-'}</div>
                       </td>
                       <td className="px-4 py-3">{getStatusBadge(client.status)}</td>
                       <td className="px-4 py-3 text-right">
@@ -536,14 +536,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           </button>
                           <button
                             onClick={() => handleOpenEdit('clients', client)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                             title="Edit Client"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('clients', client.id, client.name)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-red-50 dark:hover:bg-red-900/50 text-muted hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer border border-theme"
                             title="Delete Client"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -560,10 +560,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 2. COURIERS TABLE */}
       {activeTab === 'couriers' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Courier Code</th>
                   <th className="px-4 py-3">Logistics Partner Name</th>
@@ -573,7 +573,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {couriers
                   .filter(cr => {
                     if (statusFilter !== 'ALL' && cr.status !== statusFilter) return false;
@@ -584,13 +584,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(courier => (
-                    <tr key={courier.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <tr key={courier.id} className="hover:bg-elevated/50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{courier.code}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{courier.name}</td>
-                      <td className="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                      <td className="px-4 py-3 font-bold text-primary text-sm">{courier.name}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-secondary">
                         {courier.trackingFormatPattern || 'Standard 10-14 Digits'}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{courier.contactNumber || '1800-100-2000'}</td>
+                      <td className="px-4 py-3 text-secondary">{courier.contactNumber || '1800-100-2000'}</td>
                       <td className="px-4 py-3">{getStatusBadge(courier.status)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -604,13 +604,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           </button>
                           <button
                             onClick={() => handleOpenEdit('couriers', courier)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('couriers', courier.id, courier.name)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-red-50 dark:hover:bg-red-900/50 text-muted hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer border border-theme"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -626,10 +626,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 3. USERS & RBAC ACCESS CONTROL TABLE */}
       {activeTab === 'users' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Emp ID</th>
                   <th className="px-4 py-3">User Name & Email</th>
@@ -640,7 +640,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {users
                   .filter(u => {
                     if (statusFilter !== 'ALL' && u.status !== statusFilter) return false;
@@ -656,18 +656,18 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     const visibleModulesCount = Object.values(perms).filter((p: any) => p.view).length;
 
                     return (
-                      <tr key={user.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                      <tr key={user.id} className="hover:bg-elevated/50 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{user.empId || 'EMP-1001'}</td>
                         <td className="px-4 py-3">
-                          <div className="font-bold text-slate-900 dark:text-white text-sm">{user.name}</div>
-                          <div className="text-slate-400 dark:text-slate-500 text-[11px]">{user.email}</div>
+                          <div className="font-bold text-primary text-sm">{user.name}</div>
+                          <div className="text-muted text-[11px]">{user.email}</div>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold border ${roleCfg.bg} ${roleCfg.text} ${roleCfg.border}`}>
                             {user.role}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.department || 'Operations'}</td>
+                        <td className="px-4 py-3 text-secondary">{user.department || 'Operations'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-[#123B5D] dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800/50 text-[11px]">
@@ -680,14 +680,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEdit('users', user)}
-                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                               title="Edit User & Permissions"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete('users', user.id, user.name)}
-                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-elevated hover:bg-red-50 dark:hover:bg-red-900/50 text-muted hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer border border-theme"
                               title="Delete User"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -705,10 +705,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 4. SKUs TABLE */}
       {activeTab === 'skus' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">SKU Code</th>
                   <th className="px-4 py-3">EAN Barcode</th>
@@ -719,7 +719,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {skus
                   .filter(s => {
                     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
@@ -732,24 +732,24 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   .map(sku => {
                     const client = clients.find(c => c.id === sku.clientId);
                     return (
-                      <tr key={sku.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                      <tr key={sku.id} className="hover:bg-elevated/50 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{sku.skuCode}</td>
                         <td className="px-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{sku.eanBarcode}</td>
-                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{sku.name}</td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{client?.name || 'General'}</td>
-                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">₹{sku.unitPrice || 499}</td>
+                        <td className="px-4 py-3 font-bold text-primary">{sku.name}</td>
+                        <td className="px-4 py-3 text-secondary">{client?.name || 'General'}</td>
+                        <td className="px-4 py-3 font-bold text-primary">₹{sku.unitPrice || 499}</td>
                         <td className="px-4 py-3">{getStatusBadge(sku.status)}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEdit('skus', sku)}
-                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete('skus', sku.id, sku.name)}
-                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-elevated hover:bg-red-50 dark:hover:bg-red-900/50 text-muted hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer border border-theme"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -766,10 +766,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 5. WAREHOUSES TABLE */}
       {activeTab === 'warehouses' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Facility Code</th>
                   <th className="px-4 py-3">Warehouse Hub Name</th>
@@ -779,7 +779,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {warehouses
                   .filter(w => {
                     if (statusFilter !== 'ALL' && w.status !== statusFilter) return false;
@@ -790,23 +790,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                     return true;
                   })
                   .map(wh => (
-                    <tr key={wh.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                    <tr key={wh.id} className="hover:bg-elevated/50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{wh.code}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">{wh.name}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{wh.city}</td>
+                      <td className="px-4 py-3 font-bold text-primary text-sm">{wh.name}</td>
+                      <td className="px-4 py-3 text-secondary">{wh.city}</td>
                       <td className="px-4 py-3 font-bold text-amber-600 dark:text-amber-400">{wh.totalDocks || 10} Docks</td>
                       <td className="px-4 py-3">{getStatusBadge(wh.status)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleOpenEdit('warehouses', wh)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('warehouses', wh.id, wh.name)}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/50 text-slate-400 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-elevated hover:bg-red-50 dark:hover:bg-red-900/50 text-muted hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer border border-theme"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -822,10 +822,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 6. RETURN CONDITIONS TABLE */}
       {activeTab === 'return_reasons' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Reason Code</th>
                   <th className="px-4 py-3">Condition Label</th>
@@ -835,14 +835,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {returnReasons.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                  <tr key={r.id} className="hover:bg-elevated/50 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{r.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{r.label}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.category}</td>
+                    <td className="px-4 py-3 font-bold text-primary">{r.label}</td>
+                    <td className="px-4 py-3 text-secondary">{r.category}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.requirePhoto ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.requirePhoto ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50' : 'bg-elevated text-muted'}`}>
                         {r.requirePhoto ? 'Yes' : 'No'}
                       </span>
                     </td>
@@ -851,7 +851,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEdit('return_reasons', r)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -867,10 +867,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 7. COMPANIES TABLE */}
       {activeTab === 'companies' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Company Code</th>
                   <th className="px-4 py-3">Entity Name</th>
@@ -879,13 +879,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {companies.map(comp => (
-                  <tr key={comp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                  <tr key={comp.id} className="hover:bg-elevated/50 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{comp.code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{comp.name}</td>
-                    <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{comp.gstin || '27AAACE1234F1Z5'}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{comp.address || 'Mumbai, Maharashtra'}</td>
+                    <td className="px-4 py-3 font-bold text-primary">{comp.name}</td>
+                    <td className="px-4 py-3 font-mono text-secondary">{comp.gstin || '27AAACE1234F1Z5'}</td>
+                    <td className="px-4 py-3 text-secondary">{comp.address || 'Mumbai, Maharashtra'}</td>
                     <td className="px-4 py-3">{getStatusBadge(comp.status)}</td>
                   </tr>
                 ))}
@@ -897,10 +897,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 8. DRIVERS TABLE */}
       {activeTab === 'drivers' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Driver Name</th>
                   <th className="px-4 py-3">Mobile Contact</th>
@@ -910,19 +910,19 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {drivers.map(d => (
-                  <tr key={d.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{d.name}</td>
-                    <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{d.mobile}</td>
-                    <td className="px-4 py-3 font-mono text-slate-500 dark:text-slate-400">{d.licenseNumber}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{d.transporterName}</td>
+                  <tr key={d.id} className="hover:bg-elevated/50 transition-colors">
+                    <td className="px-4 py-3 font-bold text-primary">{d.name}</td>
+                    <td className="px-4 py-3 font-mono text-secondary">{d.mobile}</td>
+                    <td className="px-4 py-3 font-mono text-muted">{d.licenseNumber}</td>
+                    <td className="px-4 py-3 text-secondary">{d.transporterName}</td>
                     <td className="px-4 py-3">{getStatusBadge(d.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEdit('drivers', d)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -938,10 +938,10 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
       {/* 9. VEHICLE TYPES TABLE */}
       {activeTab === 'vehicle_types' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Vehicle Type Name</th>
                   <th className="px-4 py-3">Rated Capacity (Tons)</th>
@@ -949,17 +949,17 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {vehicleTypes.map(vt => (
-                  <tr key={vt.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{vt.typeName}</td>
+                  <tr key={vt.id} className="hover:bg-elevated/50 transition-colors">
+                    <td className="px-4 py-3 font-bold text-primary">{vt.typeName}</td>
                     <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">{vt.capacityTons} Tons</td>
                     <td className="px-4 py-3">{getStatusBadge(vt.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEdit('vehicle_types', vt)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -976,14 +976,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       {/* CREATE RECORD MODAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+          <div className="bg-surface border border-theme rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <h3 className="text-base font-extrabold text-primary">
                 Add New {masterCategories.find(c => c.id === activeTab)?.label.split('. ')[1]}
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-sm cursor-pointer"
+                className="text-muted hover:text-primary font-bold text-sm cursor-pointer"
               >
                 ✕
               </button>
@@ -995,24 +995,24 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Client Code *</label>
+                      <label className="block text-secondary font-semibold mb-1">Client Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                         placeholder="CLI-BV"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand / Company Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Brand / Company Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Bella Vita Organic"
                       />
                     </div>
@@ -1020,22 +1020,22 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Category</label>
+                      <label className="block text-secondary font-semibold mb-1">Category</label>
                       <input
                         type="text"
                         value={formData.category || ''}
                         onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Personal Care / Beauty"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Billing Email</label>
+                      <label className="block text-secondary font-semibold mb-1">Billing Email</label>
                       <input
                         type="email"
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="ops@brand.com"
                       />
                     </div>
@@ -1048,24 +1048,24 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Courier Code *</label>
+                      <label className="block text-secondary font-semibold mb-1">Courier Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                         placeholder="DELHIVERY"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Courier Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Courier Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Delhivery Surface"
                       />
                     </div>
@@ -1073,22 +1073,22 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">AWB Barcode Pattern</label>
+                      <label className="block text-secondary font-semibold mb-1">AWB Barcode Pattern</label>
                       <input
                         type="text"
                         value={formData.trackingFormatPattern || ''}
                         onChange={e => setFormData({ ...formData, trackingFormatPattern: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                         placeholder="14 Digits (DELH...)"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Helpline Phone</label>
+                      <label className="block text-secondary font-semibold mb-1">Helpline Phone</label>
                       <input
                         type="text"
                         value={formData.contactNumber || ''}
                         onChange={e => setFormData({ ...formData, contactNumber: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="1800-103-6354"
                       />
                     </div>
@@ -1101,23 +1101,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Employee ID *</label>
+                      <label className="block text-secondary font-semibold mb-1">Employee ID *</label>
                       <input
                         type="text"
                         required
                         value={formData.empId || ''}
                         onChange={e => setFormData({ ...formData, empId: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="e.g. Ramesh Kumar"
                       />
                     </div>
@@ -1125,30 +1125,30 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email / Login ID *</label>
+                      <label className="block text-secondary font-semibold mb-1">Email / Login ID *</label>
                       <input
                         type="email"
                         required
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="ramesh@emiza.com"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Password</label>
+                      <label className="block text-secondary font-semibold mb-1">Password</label>
                       <input
                         type="password"
                         value={formData.password || 'password123'}
                         onChange={e => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">System Role *</label>
+                      <label className="block text-secondary font-semibold mb-1">System Role *</label>
                       <select
                         value={formData.role || 'Supervisor'}
                         onChange={e => {
@@ -1156,7 +1156,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           setFormData({ ...formData, role: newRole });
                           applyRolePreset(newRole);
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
                       >
                         <option value="Super Admin">Super Admin (All Facilities & Settings)</option>
                         <option value="Admin">Admin</option>
@@ -1171,23 +1171,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Department</label>
+                      <label className="block text-secondary font-semibold mb-1">Department</label>
                       <input
                         type="text"
                         value={formData.department || 'Operations Management'}
                         onChange={e => setFormData({ ...formData, department: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   {/* Approved Navigation Tabs & Permissions Matrix */}
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-950/60 space-y-3">
+                  <div className="border border-theme rounded-xl p-4 bg-elevated space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <span className="font-bold text-primary text-xs flex items-center gap-1.5">
                         <Lock className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> Approved Tabs & Module Permissions
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">User will only see checked tabs</span>
+                      <span className="text-[11px] text-muted">User will only see checked tabs</span>
                     </div>
 
                     <div className="space-y-2">
@@ -1196,7 +1196,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                         const modPerm = userPermissions[mod.id] || { view: false };
 
                         return (
-                          <div key={mod.id} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 space-y-2 shadow-xs">
+                          <div key={mod.id} className="p-2.5 rounded-xl bg-surface border border-theme space-y-2 shadow-xs">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -1206,18 +1206,18 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                                   className="w-4 h-4 rounded text-[#123B5D] dark:text-blue-600 focus:ring-0 cursor-pointer"
                                 />
                                 <div>
-                                  <div className="font-bold text-slate-900 dark:text-white text-xs">{mod.label}</div>
-                                  <div className="text-[10px] text-slate-500 dark:text-slate-400">{mod.description}</div>
+                                  <div className="font-bold text-primary text-xs">{mod.label}</div>
+                                  <div className="text-[10px] text-muted">{mod.description}</div>
                                 </div>
                               </label>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-elevated text-muted'}`}>
                                 {isViewAllowed ? 'Tab Visible' : 'Hidden'}
                               </span>
                             </div>
 
                             {/* Granular Actions */}
                             {isViewAllowed && (
-                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-600 dark:text-slate-300">
+                              <div className="flex flex-wrap gap-3 pt-1 border-t border-theme text-[11px] text-secondary">
                                 {(['create', 'edit', 'delete', 'scan', 'export', 'closeBatch'] as const).map(act => (
                                   <label key={act} className="flex items-center gap-1 cursor-pointer">
                                     <input
@@ -1244,11 +1244,11 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Brand / Client *</label>
+                      <label className="block text-secondary font-semibold mb-1">Brand / Client *</label>
                       <select
                         value={formData.clientId || clients[0]?.id}
                         onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       >
                         {clients.map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
@@ -1256,13 +1256,13 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">SKU Code *</label>
+                      <label className="block text-secondary font-semibold mb-1">SKU Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.skuCode || ''}
                         onChange={e => setFormData({ ...formData, skuCode: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                         placeholder="BV-PERF-100ML"
                       />
                     </div>
@@ -1270,35 +1270,35 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">EAN Barcode *</label>
+                      <label className="block text-secondary font-semibold mb-1">EAN Barcode *</label>
                       <input
                         type="text"
                         required
                         value={formData.eanBarcode || ''}
                         onChange={e => setFormData({ ...formData, eanBarcode: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-emerald-600 dark:text-emerald-400 font-bold"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono text-emerald-600 dark:text-emerald-400 font-bold"
                         placeholder="8906105610014"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">MRP Price (₹)</label>
+                      <label className="block text-secondary font-semibold mb-1">MRP Price (₹)</label>
                       <input
                         type="number"
                         value={formData.unitPrice || 499}
                         onChange={e => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Product Description / Title *</label>
+                    <label className="block text-secondary font-semibold mb-1">Product Description / Title *</label>
                     <input
                       type="text"
                       required
                       value={formData.name || ''}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       placeholder="e.g. Bella Vita Luxury Man Perfume 100ml"
                     />
                   </div>
@@ -1310,47 +1310,47 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Warehouse Code *</label>
+                      <label className="block text-secondary font-semibold mb-1">Warehouse Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                         placeholder="WH-04"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Facility Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Facility Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="EMIZA Hyderabad Logistics Hub"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">City / Region *</label>
+                      <label className="block text-secondary font-semibold mb-1">City / Region *</label>
                       <input
                         type="text"
                         required
                         value={formData.city || ''}
                         onChange={e => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Hyderabad"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Total Dock Doors</label>
+                      <label className="block text-secondary font-semibold mb-1">Total Dock Doors</label>
                       <input
                         type="number"
                         value={formData.totalDocks || 10}
                         onChange={e => setFormData({ ...formData, totalDocks: Number(e.target.value) })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                   </div>
@@ -1362,23 +1362,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Reason Code *</label>
+                      <label className="block text-secondary font-semibold mb-1">Reason Code *</label>
                       <input
                         type="text"
                         required
                         value={formData.code || ''}
                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Reason Label *</label>
+                      <label className="block text-secondary font-semibold mb-1">Reason Label *</label>
                       <input
                         type="text"
                         required
                         value={formData.label || ''}
                         onChange={e => setFormData({ ...formData, label: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Customer Refused Delivery"
                       />
                     </div>
@@ -1391,23 +1391,23 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Driver Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Driver Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Mobile Contact *</label>
+                      <label className="block text-secondary font-semibold mb-1">Mobile Contact *</label>
                       <input
                         type="text"
                         required
                         value={formData.mobile || ''}
                         onChange={e => setFormData({ ...formData, mobile: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="+91 98765 43210"
                       />
                     </div>
@@ -1420,34 +1420,34 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Vehicle Type Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Vehicle Type Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.typeName || ''}
                         onChange={e => setFormData({ ...formData, typeName: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                         placeholder="Tata Ace / 14 Ft Truck"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Capacity (Tons)</label>
+                      <label className="block text-secondary font-semibold mb-1">Capacity (Tons)</label>
                       <input
                         type="number"
                         value={formData.capacityTons || 5}
                         onChange={e => setFormData({ ...formData, capacityTons: Number(e.target.value) })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                   </div>
                 </>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-theme">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-elevated text-secondary font-bold hover:bg-elevated/80 border border-theme cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
@@ -1466,14 +1466,14 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
       {/* EDIT RECORD MODAL */}
       {editingRecord && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+          <div className="bg-surface border border-theme rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <h3 className="text-base font-extrabold text-primary">
                 Edit {editingRecord.category.toUpperCase()} Record
               </h3>
               <button
                 onClick={() => setEditingRecord(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-sm cursor-pointer"
+                className="text-muted hover:text-primary font-bold text-sm cursor-pointer"
               >
                 ✕
               </button>
@@ -1485,39 +1485,39 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Employee ID</label>
+                      <label className="block text-secondary font-semibold mb-1">Employee ID</label>
                       <input
                         type="text"
                         disabled
                         value={formData.empId || ''}
-                        className="w-full bg-slate-100 dark:bg-slate-800/50 text-slate-500 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono"
+                        className="w-full bg-elevated/50 text-muted p-2.5 rounded-xl border border-theme font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Full Name *</label>
+                      <label className="block text-secondary font-semibold mb-1">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formData.name || ''}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email *</label>
+                      <label className="block text-secondary font-semibold mb-1">Email *</label>
                       <input
                         type="email"
                         required
                         value={formData.email || ''}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">System Role *</label>
+                      <label className="block text-secondary font-semibold mb-1">System Role *</label>
                       <select
                         value={formData.role || 'Supervisor'}
                         onChange={e => {
@@ -1525,7 +1525,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                           setFormData({ ...formData, role: newRole });
                           applyRolePreset(newRole);
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                       >
                         <option value="Super Admin">Super Admin (All Facilities & Settings)</option>
                         <option value="Admin">Admin</option>
@@ -1542,12 +1542,12 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                   </div>
 
                   {/* Permissions Checklist in Edit */}
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-950/60 space-y-3">
+                  <div className="border border-theme rounded-xl p-4 bg-elevated space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <span className="font-bold text-primary text-xs flex items-center gap-1.5">
                         <Lock className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> Module Access Rights & Granular Permissions
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Manage user view & action capabilities</span>
+                      <span className="text-[11px] text-muted">Manage user view & action capabilities</span>
                     </div>
 
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -1556,7 +1556,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                         const modPerm = userPermissions[mod.id] || { view: false };
 
                         return (
-                          <div key={mod.id} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 space-y-2 shadow-xs">
+                          <div key={mod.id} className="p-2.5 rounded-xl bg-surface border border-theme space-y-2 shadow-xs">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -1566,18 +1566,18 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                                   className="w-4 h-4 rounded text-[#123B5D] dark:text-blue-600 focus:ring-0 cursor-pointer"
                                 />
                                 <div>
-                                  <div className="font-bold text-slate-900 dark:text-white text-xs">{mod.label}</div>
-                                  <div className="text-[10px] text-slate-500 dark:text-slate-400">{mod.description}</div>
+                                  <div className="font-bold text-primary text-xs">{mod.label}</div>
+                                  <div className="text-[10px] text-muted">{mod.description}</div>
                                 </div>
                               </label>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isViewAllowed ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-elevated text-muted'}`}>
                                 {isViewAllowed ? 'Tab Visible' : 'Hidden'}
                               </span>
                             </div>
 
                             {/* Granular Actions */}
                             {isViewAllowed && (
-                              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-600 dark:text-slate-300">
+                              <div className="flex flex-wrap gap-3 pt-1 border-t border-theme text-[11px] text-secondary">
                                 {(['create', 'edit', 'delete', 'scan', 'export', 'closeBatch'] as const).map(act => (
                                   <label key={act} className="flex items-center gap-1 cursor-pointer">
                                     <input
@@ -1603,7 +1603,7 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               {editingRecord.category !== 'users' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Name / Label *</label>
+                    <label className="block text-secondary font-semibold mb-1">Name / Label *</label>
                     <input
                       type="text"
                       required
@@ -1614,16 +1614,16 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                         else if (formData.label !== undefined) setFormData({ ...formData, label: val });
                         else setFormData({ ...formData, typeName: val });
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Status</label>
+                    <label className="block text-secondary font-semibold mb-1">Status</label>
                     <select
                       value={formData.status || 'Active'}
                       onChange={e => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme"
                     >
                       <option value="Active">Active</option>
                       <option value="On Hold">On Hold</option>
@@ -1633,11 +1633,11 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-theme">
                 <button
                   type="button"
                   onClick={() => setEditingRecord(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-elevated text-secondary font-bold hover:bg-elevated/80 border border-theme cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>

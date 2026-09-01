@@ -162,7 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Backdrop Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 dark:bg-black/70 backdrop-blur-xs md:hidden"
+          className="mobile-sidebar-overlay fixed inset-0 z-[9998] bg-black/75 md:hidden"
           onClick={onCloseMobile}
         />
       )}
@@ -170,33 +170,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Container */}
       <aside
         id="app-fixed-sidebar"
-        className={`sidebar fixed md:sticky top-0 left-0 z-40 h-screen w-64 bg-[#08101E] border-r border-slate-800/80 flex flex-col justify-between transition-transform duration-200 ease-in-out shrink-0 select-none text-white ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`sidebar fixed md:sticky top-0 left-0 z-[9999] h-screen w-[78vw] max-w-[320px] md:w-64 theme-sidebar bg-[var(--bg-surface)] border-r border-[var(--border-color)] flex flex-col justify-between transition-all duration-200 ease-in-out shrink-0 select-none text-[var(--text-primary)] overflow-y-auto ${
+          isMobileOpen ? 'translate-x-0 !block' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Top Header */}
         <div>
-          <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black shadow-sm">
                 E
               </div>
               <div className="leading-tight">
-                <span className="text-sm font-extrabold text-white tracking-wide block">
+                <span className="text-sm font-extrabold text-[var(--text-primary)] tracking-wide block">
                   EMIZA-WOP
                 </span>
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-[9px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                   Logistics Platform
                 </span>
               </div>
             </div>
 
-            {/* Mobile close button */}
+            {/* Mobile close button (44px touch target, top right) */}
             {onCloseMobile && (
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200 md:hidden"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] md:hidden cursor-pointer"
+                aria-label="Close Navigation Menu"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -205,10 +206,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Section Heading with 7 modules badge */}
           <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
               Warehouse Operations
             </span>
-            <span className="text-[9px] font-semibold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono">
+            <span className="text-[9px] font-semibold bg-[var(--bg-elevated)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded border border-[var(--border-color)] font-mono">
               7 modules
             </span>
           </div>
@@ -238,13 +239,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer ${
                         active
                           ? 'bg-blue-600 text-white shadow-sm font-bold'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon
                           className={`w-4 h-4 shrink-0 transition-colors ${
-                            active ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
+                            active ? 'text-white' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
                           }`}
                         />
                         <span className="truncate">{item.label}</span>
@@ -268,23 +269,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Area: Working Authority Card */}
-        <div className="p-3 border-t border-slate-800/80 bg-[#060C16] space-y-2">
+        <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-surface)] space-y-2">
           {currentUser && (
-            <div className="p-3 rounded-xl bg-[#0E1A2E] border border-slate-700/70 shadow-sm">
+            <div className="p-3 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-sm">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
                   Working Authority
                 </span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-purple-950/40 text-purple-300 border border-purple-800/40">
                   {currentUser.role}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-white truncate">
+                  <div className="text-xs font-bold text-[var(--text-primary)] truncate">
                     {currentUser.name}
                   </div>
-                  <div className="text-[10px] text-slate-400 truncate">
+                  <div className="text-[10px] text-[var(--text-secondary)] truncate">
                     {currentUser.role === 'Super Admin' ? 'Central Admin' : activeWarehouseName}
                   </div>
                 </div>
@@ -294,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="button"
                     onClick={onLogout}
                     title="Sign Out"
-                    className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors shrink-0 cursor-pointer"
+                    className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-rose-500 hover:bg-rose-950/20 transition-colors shrink-0 cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                   </button>
@@ -307,32 +308,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Quick Help Modal */}
       {isHelpOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#162232] rounded-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl border border-theme max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-[#123B5D] dark:text-blue-400 flex items-center justify-center">
                   <HelpCircle className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-primary">
                   EMIZA-WOP Support & Guide
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsHelpOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                className="text-secondary hover:text-primary p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-100 dark:border-slate-700">
-                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-1">
+            <div className="space-y-3 text-xs text-secondary">
+              <div className="p-3 bg-elevated rounded-xl border border-theme">
+                <p className="font-semibold text-primary mb-1">
                   Warehouse Workflow Summary:
                 </p>
-                <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-secondary">
                   <li><strong>Inward:</strong> Register vehicle gate passes and assign unloading dock bays.</li>
                   <li><strong>GRN & Unloading:</strong> Verify box counts and inspect inbound materials.</li>
                   <li><strong>RTO / Returns:</strong> Scan AWB barcodes with gun verification and 7-point condition checks.</li>
@@ -340,7 +341,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </ul>
               </div>
 
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="text-[11px] text-secondary">
                 For operational support or custom credentials, reach out to warehouse admin at{' '}
                 <span className="font-mono text-[#123B5D] dark:text-blue-400">support@emiza.com</span>.
               </div>
@@ -350,7 +351,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHelpOpen(false)}
-                className="px-4 py-2 rounded-lg bg-[#123B5D] dark:bg-blue-600 hover:bg-[#0D2E49] dark:hover:bg-blue-700 text-white text-xs font-semibold"
+                className="px-4 py-2 rounded-lg bg-[#123B5D] dark:bg-blue-600 hover:bg-[#0D2E49] dark:hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
               >
                 Got it
               </button>

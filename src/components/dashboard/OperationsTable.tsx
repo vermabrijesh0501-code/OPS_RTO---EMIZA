@@ -217,33 +217,33 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#111D2C] rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col transition-colors">
+    <div className="bg-surface rounded-xl border border-theme shadow-sm overflow-hidden flex flex-col transition-colors">
       {/* Table Header Controls */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-4 sm:p-5 border-b border-theme flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h3 className="text-base font-bold text-primary tracking-tight">
             {title}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-secondary mt-0.5">{subtitle}</p>
         </div>
 
         {/* Search & Quick Process Tabs */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Search Box */}
           <div className="relative min-w-[220px] sm:min-w-[260px]">
-            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-secondary absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search reference, client, vehicle..."
               value={activeSearch}
               onChange={e => handleSearchChange(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg pl-9 pr-8 py-2 focus:bg-white dark:focus:bg-slate-900 focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none transition-all"
+              className="w-full bg-elevated border border-theme text-primary text-xs rounded-lg pl-9 pr-8 py-2 focus:border-blue-500 focus:outline-none transition-all placeholder:text-muted"
             />
             {activeSearch && (
               <button
                 type="button"
                 onClick={() => handleSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary hover:text-primary"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -257,7 +257,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
               setProcessFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#123B5D] dark:focus:border-blue-500 cursor-pointer"
+            className="bg-elevated border border-theme text-primary text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-blue-500 cursor-pointer"
           >
             <option value="all">All Processes</option>
             <option value="Inward">Inward Gate</option>
@@ -273,10 +273,10 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
       {isLoading && (
         <div className="p-12 flex flex-col items-center justify-center text-center">
           <RefreshCw className="w-8 h-8 text-[#123B5D] dark:text-blue-400 animate-spin mb-3" />
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          <p className="text-sm font-semibold text-primary">
             Loading Operations Data...
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-secondary mt-1">
             Fetching latest warehouse logs from storage.
           </p>
         </div>
@@ -288,17 +288,17 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
           <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          <h4 className="text-sm font-bold text-primary">
             Failed to Load Operational Records
           </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 mb-4">
+          <p className="text-xs text-secondary max-w-sm mt-1 mb-4">
             An unexpected error occurred while synchronizing records. Please try again.
           </p>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="px-4 py-2 bg-[#123B5D] dark:bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-[#0D2E49] dark:hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#123B5D] dark:bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-[#0D2E49] dark:hover:bg-blue-700 transition-colors cursor-pointer"
             >
               Retry Sync
             </button>
@@ -311,87 +311,87 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <tr className="bg-elevated border-b border-theme text-[11px] font-semibold text-secondary uppercase tracking-wider">
                 <th
                   onClick={() => handleSort('referenceNo')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Reference No</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('process')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Process</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('clientName')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Client</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('warehouseName')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors hidden md:table-cell"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors hidden md:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     <span>Warehouse</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('status')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Status</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('priority')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors hidden sm:table-cell"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors hidden sm:table-cell"
                 >
                   <div className="flex items-center gap-1">
                     <span>Priority</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('createdAt')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
+                  className="py-3 px-4 cursor-pointer hover:bg-surface transition-colors"
                 >
                   <div className="flex items-center gap-1">
                     <span>Created At</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                    <ArrowUpDown className="w-3 h-3 text-muted" />
                   </div>
                 </th>
-                <th className="py-3 px-4 hidden lg:table-cell text-slate-500 dark:text-slate-400">Assigned To</th>
-                <th className="py-3 px-4 text-right text-slate-500 dark:text-slate-400">Actions</th>
+                <th className="py-3 px-4 hidden lg:table-cell text-secondary">Assigned To</th>
+                <th className="py-3 px-4 text-right text-secondary">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-theme">
               {paginatedRecords.length === 0 ? (
                 /* Empty State */
                 <tr>
                   <td colSpan={9} className="py-14 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3">
+                      <div className="w-12 h-12 rounded-full bg-elevated flex items-center justify-center text-secondary mb-3">
                         <Search className="w-5 h-5" />
                       </div>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      <p className="text-sm font-bold text-primary">
                         No operational records found
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 max-w-xs mt-1">
+                      <p className="text-xs text-secondary max-w-xs mt-1">
                         Try adjusting your search criteria or changing selected filters.
                       </p>
                       {(activeSearch || processFilter !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all') && (
@@ -421,16 +421,16 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                         setSelectedRecord(record);
                         if (onSelectRecord) onSelectRecord(record);
                       }}
-                      className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
+                      className="hover:bg-elevated/70 cursor-pointer transition-colors group"
                     >
                       {/* 1. Reference No */}
-                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                      <td className="py-3.5 px-4 font-mono font-semibold text-primary text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="group-hover:text-[#123B5D] dark:group-hover:text-blue-400 transition-colors">
+                          <span className="group-hover:text-blue-500 transition-colors">
                             {record.referenceNo}
                           </span>
                           {record.vehicleNumber && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hidden xl:inline">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-secondary border border-theme hidden xl:inline">
                               {record.vehicleNumber}
                             </span>
                           )}
@@ -440,22 +440,22 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                       {/* 2. Process */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                          <div className="w-5 h-5 rounded-md bg-elevated flex items-center justify-center shrink-0 border border-theme">
                             {getProcessIcon(record.process)}
                           </div>
-                          <span className="font-medium text-slate-700 dark:text-slate-300">
+                          <span className="font-medium text-primary">
                             {record.process}
                           </span>
                         </div>
                       </td>
 
                       {/* 3. Client */}
-                      <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200">
+                      <td className="py-3.5 px-4 font-medium text-primary">
                         {record.clientName}
                       </td>
 
                       {/* 4. Warehouse */}
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 hidden md:table-cell">
+                      <td className="py-3.5 px-4 text-secondary hidden md:table-cell">
                         {record.warehouseName}
                       </td>
 
@@ -481,7 +481,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                       </td>
 
                       {/* 7. Created At */}
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-secondary font-mono text-[11px] whitespace-nowrap">
                         {new Date(record.createdAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
@@ -491,9 +491,9 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                       </td>
 
                       {/* 8. Assigned To */}
-                      <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 hidden lg:table-cell">
+                      <td className="py-3.5 px-4 text-secondary hidden lg:table-cell">
                         <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                          <div className="w-5 h-5 rounded-full bg-elevated text-secondary border border-theme flex items-center justify-center text-[10px] font-bold">
                             {record.assignedToName.charAt(0)}
                           </div>
                           <span className="truncate max-w-[120px]">
@@ -511,7 +511,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                               setSelectedRecord(record);
                               if (onSelectRecord) onSelectRecord(record);
                             }}
-                            className="p-1 rounded-md text-slate-400 dark:text-slate-500 hover:text-[#123B5D] dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="p-1 rounded-md text-secondary hover:text-primary hover:bg-elevated transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
@@ -529,19 +529,19 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
 
       {/* Table Pagination Footer */}
       {!isLoading && !isError && totalItems > 0 && (
-        <div className="p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+        <div className="p-3.5 sm:p-4 border-t border-theme bg-surface flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-secondary">
           <div className="flex items-center gap-2">
             <span>
               Showing{' '}
-              <strong className="font-semibold text-slate-800 dark:text-slate-200">
+              <strong className="font-semibold text-primary">
                 {startIndex + 1}
               </strong>{' '}
               to{' '}
-              <strong className="font-semibold text-slate-800 dark:text-slate-200">
+              <strong className="font-semibold text-primary">
                 {Math.min(startIndex + pageSize, totalItems)}
               </strong>{' '}
               of{' '}
-              <strong className="font-semibold text-slate-800 dark:text-slate-200">
+              <strong className="font-semibold text-primary">
                 {totalItems}
               </strong>{' '}
               entries
@@ -552,7 +552,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="ml-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
+              className="ml-2 bg-elevated border border-theme rounded px-2 py-1 text-xs text-primary focus:outline-none cursor-pointer"
             >
               <option value={5}>5 per page</option>
               <option value={10}>10 per page</option>
@@ -566,20 +566,20 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
               type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-md border border-theme bg-elevated hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              <ChevronLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              <ChevronLeft className="w-4 h-4 text-primary" />
             </button>
-            <span className="px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <span className="px-2.5 py-1 text-xs font-semibold text-primary">
               Page {currentPage} of {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-md border border-theme bg-elevated hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              <ChevronRight className="w-4 h-4 text-primary" />
             </button>
           </div>
         </div>
@@ -587,12 +587,12 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
 
       {/* Row Details Modal Drawer */}
       {selectedRecord && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#162232] rounded-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl border border-theme max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150 relative">
             <button
               type="button"
               onClick={() => setSelectedRecord(null)}
-              className="absolute right-4 top-4 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+              className="absolute right-4 top-4 text-secondary hover:text-primary p-1 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -602,73 +602,73 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                 {getProcessIcon(selectedRecord.process)}
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-primary">
                   {selectedRecord.referenceNo}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-secondary">
                   {selectedRecord.process} Details & Workflow Status
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 py-3 border-y border-slate-100 dark:border-slate-700 text-xs">
+            <div className="grid grid-cols-2 gap-3 py-3 border-y border-theme text-xs">
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Client</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                <span className="text-secondary block text-[11px]">Client</span>
+                <span className="font-semibold text-primary">
                   {selectedRecord.clientName}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Warehouse</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                <span className="text-secondary block text-[11px]">Warehouse</span>
+                <span className="font-semibold text-primary">
                   {selectedRecord.warehouseName}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Status</span>
+                <span className="text-secondary block text-[11px]">Status</span>
                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border mt-0.5 ${getStatusBadge(selectedRecord.status)}`}>
                   {selectedRecord.status}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Priority</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                <span className="text-secondary block text-[11px]">Priority</span>
+                <span className="font-semibold text-primary">
                   {selectedRecord.priority}
                 </span>
               </div>
               {selectedRecord.vehicleNumber && (
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Vehicle No</span>
-                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="text-secondary block text-[11px]">Vehicle No</span>
+                  <span className="font-mono font-semibold text-primary">
                     {selectedRecord.vehicleNumber}
                   </span>
                 </div>
               )}
               {selectedRecord.dockNumber && (
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Dock Bay</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="text-secondary block text-[11px]">Dock Bay</span>
+                  <span className="font-semibold text-primary">
                     {selectedRecord.dockNumber}
                   </span>
                 </div>
               )}
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Assigned Operator</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                <span className="text-secondary block text-[11px]">Assigned Operator</span>
+                <span className="font-semibold text-primary">
                   {selectedRecord.assignedToName}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Created At</span>
-                <span className="font-mono text-slate-600 dark:text-slate-300">
+                <span className="text-secondary block text-[11px]">Created At</span>
+                <span className="font-mono text-secondary">
                   {new Date(selectedRecord.createdAt).toLocaleString()}
                 </span>
               </div>
             </div>
 
             {selectedRecord.notes && (
-              <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/70 rounded-lg text-xs text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
-                <span className="font-semibold text-slate-700 dark:text-slate-200 block mb-0.5">Notes:</span>
+              <div className="mt-3 p-3 bg-elevated rounded-lg text-xs text-secondary border border-theme">
+                <span className="font-semibold text-primary block mb-0.5">Notes:</span>
                 {selectedRecord.notes}
               </div>
             )}
@@ -677,7 +677,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedRecord(null)}
-                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors"
+                className="px-4 py-2 rounded-lg bg-elevated hover:bg-surface border border-theme text-primary text-xs font-semibold transition-colors cursor-pointer"
               >
                 Close
               </button>

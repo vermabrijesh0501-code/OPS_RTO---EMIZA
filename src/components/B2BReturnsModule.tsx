@@ -62,12 +62,12 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl font-extrabold text-primary flex items-center gap-2">
             <Boxes className="w-6 h-6 text-purple-600 dark:text-purple-400" /> B2B Store & Distributor Returns
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-secondary mt-1">
             Commercial bulk returns, pallet verification, debit note reconciliation, and store dispatch returns.
           </p>
         </div>
@@ -81,21 +81,21 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
       </div>
 
       {/* Filter */}
-      <div className="bg-white dark:bg-[#111D2C] p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 flex items-center gap-3 shadow-sm transition-colors">
-        <Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+      <div className="bg-surface p-3 rounded-xl border border-theme flex items-center gap-3 shadow-sm transition-colors">
+        <Search className="w-4 h-4 text-muted" />
         <input
           type="text"
           placeholder="Search B2B Batch Number, Debit Note, Store Code..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none w-full"
+          className="bg-transparent text-xs text-primary placeholder:text-muted focus:outline-none w-full"
         />
       </div>
 
       {/* B2B Batches Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.length === 0 ? (
-          <div className="col-span-full bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-xl p-12 text-center text-slate-400 dark:text-slate-500 text-xs shadow-sm">
+          <div className="col-span-full bg-surface border border-theme rounded-xl p-12 text-center text-muted text-xs shadow-sm">
             No B2B return batches created for {activeWarehouse.code}. Click "Create B2B Return Batch" to initialize pallet batching.
           </div>
         ) : (
@@ -107,10 +107,10 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
             return (
               <div
                 key={batch.id}
-                className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 hover:border-purple-500/50 p-5 rounded-xl shadow-sm transition-all space-y-4"
+                className="bg-surface border border-theme hover:border-purple-500/50 p-5 rounded-xl shadow-sm transition-all space-y-4"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm font-mono">{batch.batchNumber}</span>
+                  <span className="font-extrabold text-primary text-sm font-mono">{batch.batchNumber}</span>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                       batch.status === 'Open'
@@ -122,33 +122,33 @@ export const B2BReturnsModule: React.FC<B2BReturnsModuleProps> = ({
                   </span>
                 </div>
 
-                <div className="text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
+                <div className="text-xs space-y-1.5 text-primary">
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Client Store:</span>
-                    <strong className="text-slate-800 dark:text-white">{client ? client.name : 'BoAt Audio'}</strong>
+                    <span className="text-secondary">Client Store:</span>
+                    <strong className="text-primary">{client ? client.name : 'BoAt Audio'}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Carrier / Courier:</span>
-                    <strong className="text-slate-700 dark:text-slate-200">{courier ? courier.name : 'BlueDart'}</strong>
+                    <span className="text-secondary">Carrier / Courier:</span>
+                    <strong className="text-secondary">{courier ? courier.name : 'BlueDart'}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Pallets / Cartons:</span>
+                    <span className="text-secondary">Pallets / Cartons:</span>
                     <strong className="text-purple-600 dark:text-purple-400">{batch.totalScanned} / {batch.expectedCount || 30} Verified</strong>
                   </div>
                 </div>
 
                 {batch.notes && (
-                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-[11px] text-slate-600 dark:text-slate-400 italic border border-slate-100 dark:border-slate-700/50">
+                  <div className="p-2.5 bg-elevated rounded-lg text-[11px] text-secondary italic border border-theme">
                     "{batch.notes}"
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Created: {new Date(batch.createdAt).toLocaleDateString()}</span>
+                <div className="pt-3 border-t border-theme flex items-center justify-between">
+                  <span className="text-[10px] text-muted">Created: {new Date(batch.createdAt).toLocaleDateString()}</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleExportCSV(batch)}
-                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-elevated text-secondary hover:text-primary cursor-pointer border border-theme"
                       title="Export CSV Manifest"
                     >
                       <FileSpreadsheet className="w-4 h-4" />

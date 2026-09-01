@@ -418,9 +418,9 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   return (
     <div className="p-2 sm:p-5 space-y-3 sm:space-y-4 max-w-[1680px] mx-auto w-full">
       {/* MODULE HEADER */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5 sm:pb-3">
+      <div className="flex items-center justify-between gap-2 border-b border-theme pb-2.5 sm:pb-3">
         <div className="min-w-0">
-          <h1 className="text-sm sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
+          <h1 className="text-sm sm:text-xl font-extrabold text-primary flex items-center gap-1.5 sm:gap-2 truncate">
             <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-[#123B5D] dark:text-indigo-400 shrink-0" />
             <span className="truncate">RTO / Returns Station</span>
           </h1>
@@ -443,7 +443,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       </div>
 
       {/* 3 TOP TABS */}
-      <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-3 gap-2 bg-elevated p-1 rounded-xl border border-theme">
         <button
           id="tab-open-batch"
           onClick={() => {
@@ -455,7 +455,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'open_batch'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
+              : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
           <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -471,7 +471,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'closed_batch'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
+              : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
           <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -484,7 +484,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'reports'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
+              : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
           <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -499,16 +499,16 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
         <div className="space-y-3.5">
           {/* VIEW A: CREATE NEW BATCH FORM */}
           {openBatchView === 'create' && (
-            <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm max-w-3xl mx-auto space-y-4">
-              <div className="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex items-center justify-between">
-                <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-6 shadow-sm max-w-3xl mx-auto space-y-4">
+              <div className="border-b border-theme pb-2.5 flex items-center justify-between">
+                <h2 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
                   <Plus className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> New Return Batch
                 </h2>
                 {openBatches.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setOpenBatchView('scan')}
-                    className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
                   >
                     <X className="w-4 h-4" /> Cancel
                   </button>
@@ -521,11 +521,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   <div className="text-[10px] text-[#123B5D] dark:text-indigo-300 font-bold uppercase tracking-wider">
                     Batch Code
                   </div>
-                  <div className="text-lg sm:text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5">
+                  <div className="text-lg sm:text-xl font-black font-mono text-primary mt-0.5">
                     {getAutoBatchCode(newBatchClient)}
                   </div>
                 </div>
-                <div className="text-right font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="text-right font-mono text-[11px] text-secondary">
                   {liveDateTime}
                 </div>
               </div>
@@ -534,13 +534,13 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Account Name */}
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-primary font-bold mb-1">
                       Account Name *
                     </label>
                     <select
                       value={newBatchClient}
                       onChange={e => setNewBatchClient(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
+                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
                     >
                       {clients.map(c => (
                         <option key={c.id} value={c.id}>
@@ -552,13 +552,13 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                   {/* Courier */}
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-primary font-bold mb-1">
                       Courier Partner *
                     </label>
                     <select
                       value={newBatchCourier}
                       onChange={e => setNewBatchCourier(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
+                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
                     >
                       {couriers.map(cr => (
                         <option key={cr.id} value={cr.id}>
@@ -570,13 +570,13 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                   {/* Channel */}
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-primary font-bold mb-1">
                       Channel *
                     </label>
                     <select
                       value={newBatchChannel}
                       onChange={e => setNewBatchChannel(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
+                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
                     >
                       <option value="B2C Return">B2C Return</option>
                       <option value="D2C Return">D2C Return</option>
@@ -587,13 +587,13 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                   {/* Dock No Dropdown */}
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-primary font-bold mb-1">
                       Dock No *
                     </label>
                     <select
                       value={newBatchDock}
                       onChange={e => setNewBatchDock(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
+                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
                     >
                       <option value="Dock 01">Dock 01</option>
                       <option value="Dock 02">Dock 02</option>
@@ -610,22 +610,22 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Batch Notes</label>
+                  <label className="block text-primary font-bold mb-1">Batch Notes</label>
                   <input
                     type="text"
                     placeholder="Optional notes"
                     value={newBatchNotes}
                     onChange={e => setNewBatchNotes(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 text-xs"
+                    className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 text-xs placeholder:text-muted"
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-theme">
                   {openBatches.length > 0 ? (
                     <button
                       type="button"
                       onClick={() => setOpenBatchView('scan')}
-                      className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs cursor-pointer transition-colors"
+                      className="px-3.5 py-1.5 rounded-xl bg-elevated text-secondary hover:text-primary font-bold text-xs cursor-pointer transition-colors border border-theme"
                     >
                       Cancel
                     </button>
@@ -646,11 +646,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           {openBatchView === 'scan' && (
             <div className="space-y-3">
               {activeBatch ? (
-                <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
+                <div className="bg-surface border border-theme rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
                   {/* Active Batch Sleek Compact Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/80 p-2 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-elevated p-2 sm:p-2.5 rounded-lg border border-theme">
                     <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                      <span className="text-xs font-bold font-mono text-slate-900 dark:text-white tracking-wide whitespace-nowrap bg-white dark:bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700/60 shadow-xs">
+                      <span className="text-xs font-bold font-mono text-primary tracking-wide whitespace-nowrap bg-surface px-1.5 py-0.5 rounded border border-theme shadow-xs">
                         {activeBatch.batchNumber}
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 truncate max-w-[120px] sm:max-w-[180px]">
@@ -664,19 +664,19 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           {activeBatch.dockNumber}
                         </span>
                       )}
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono hidden md:inline ml-1">
+                      <span className="text-[10px] text-secondary font-mono hidden md:inline ml-1">
                         {new Date(activeBatch.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700/50">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-theme">
                       {openBatches.length > 1 && (
                         <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                          <span className="text-slate-500 dark:text-slate-400 font-medium">Batch:</span>
+                          <span className="text-secondary font-medium">Batch:</span>
                           <select
                             value={activeBatchId || ''}
                             onChange={e => setActiveBatchId(e.target.value)}
-                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-[10px] sm:text-[11px] rounded px-1.5 py-0.5 font-mono focus:outline-none cursor-pointer"
+                            className="bg-surface border border-theme text-primary text-[10px] sm:text-[11px] rounded px-1.5 py-0.5 font-mono focus:outline-none cursor-pointer"
                           >
                             {openBatches.map(b => (
                               <option key={b.id} value={b.id}>
@@ -687,8 +687,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         </div>
                       )}
 
-                      <div className="flex items-center gap-1 bg-white dark:bg-slate-900/90 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700/70 shadow-xs">
-                        <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-semibold">Scanned:</span>
+                      <div className="flex items-center gap-1 bg-surface px-2 py-0.5 rounded border border-theme shadow-xs">
+                        <span className="text-[9px] text-secondary uppercase font-semibold">Scanned:</span>
                         <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono leading-none">{activeBatch.totalScanned}</span>
                       </div>
 
@@ -703,11 +703,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   </div>
 
                   {/* SCANNING WORKBENCH */}
-                  <div className="bg-slate-50 dark:bg-slate-950 border border-indigo-200 dark:border-indigo-500/30 p-2.5 sm:p-3 rounded-xl shadow-xs space-y-2">
+                  <div className="bg-elevated border border-indigo-200 dark:border-indigo-500/30 p-2.5 sm:p-3 rounded-xl shadow-xs space-y-2">
                     {/* Barcode Scan Box */}
                     <form onSubmit={handleBarcodeSubmit} className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="block text-[10px] sm:text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                        <label className="block text-[10px] sm:text-[11px] font-bold text-primary uppercase tracking-wide flex items-center gap-1.5">
                           <QrCode className="w-3 h-3 text-[#123B5D] dark:text-indigo-400" />
                           AWB / Order Barcode
                         </label>
@@ -724,7 +724,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           placeholder="Scan barcode with gun or type AWB..."
                           value={barcodeInput}
                           onChange={e => setBarcodeInput(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-emerald-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 pl-2.5 pr-16 py-1.5 sm:py-2 rounded-lg text-xs font-mono font-medium border border-indigo-300 dark:border-indigo-500/60 focus:outline-none focus:border-emerald-500 shadow-inner"
+                          className="w-full bg-surface text-primary placeholder:text-muted pl-2.5 pr-16 py-1.5 sm:py-2 rounded-lg text-xs font-mono font-medium border border-indigo-300 dark:border-indigo-500/60 focus:outline-none focus:border-emerald-500 shadow-inner"
                         />
                         <div className="absolute right-1 top-1 bottom-1 flex items-center gap-1">
                           {barcodeInput && (
@@ -734,7 +734,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                 setBarcodeInput('');
                                 barcodeInputRef.current?.focus();
                               }}
-                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                              className="p-1 text-secondary hover:text-primary cursor-pointer"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -770,11 +770,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     {/* 7 QC CONDITIONS SELECTOR */}
                     <div className="space-y-1 pt-1">
                       <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        <span className="font-bold text-secondary uppercase tracking-wider">
                           QC Condition for Next Scan:
                         </span>
                         <span className="font-bold text-[#123B5D] dark:text-indigo-400">
-                          Selected: <strong className="text-slate-900 dark:text-white underline">{selectedRemark}</strong>
+                          Selected: <strong className="text-primary underline">{selectedRemark}</strong>
                         </span>
                       </div>
 
@@ -790,7 +790,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                 barcodeInputRef.current?.focus();
                               }}
                               className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all text-center truncate cursor-pointer ${
-                                isSelected ? item.activeColor : `${item.color} hover:bg-slate-100 dark:hover:bg-slate-800`
+                                isSelected ? item.activeColor : `${item.color} hover:bg-surface`
                               }`}
                             >
                               {item.label}
@@ -804,7 +804,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   {/* FULL SCANNED TABLE & EXPORT */}
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      <h3 className="text-[11px] font-bold text-secondary uppercase tracking-wider">
                         All Items in Batch ({activeBatchItems.length})
                       </h3>
                       <button
@@ -815,9 +815,9 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       </button>
                     </div>
 
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
+                    <div className="border border-theme rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200 dark:border-slate-800">
+                        <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] sticky top-0 border-b border-theme">
                           <tr>
                             <th className="px-2.5 py-1.5">#</th>
                             <th className="px-2.5 py-1.5">AWB</th>
@@ -827,18 +827,18 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             <th className="px-2.5 py-1.5 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 text-[11px]">
+                        <tbody className="divide-y divide-theme text-primary text-[11px]">
                           {activeBatchItems.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-2.5 py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
+                              <td colSpan={6} className="px-2.5 py-4 text-center text-muted text-xs">
                                 No items scanned yet. Scan AWB barcode above.
                               </td>
                             </tr>
                           ) : (
                             activeBatchItems.map((item, idx) => (
-                              <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                                <td className="px-2.5 py-1 font-mono text-slate-400">{idx + 1}</td>
-                                <td className="px-2.5 py-1 font-mono font-bold text-slate-900 dark:text-white">{item.trackingNumber}</td>
+                              <tr key={item.id} className="hover:bg-elevated">
+                                <td className="px-2.5 py-1 font-mono text-secondary">{idx + 1}</td>
+                                <td className="px-2.5 py-1 font-mono font-bold text-primary">{item.trackingNumber}</td>
                                 <td className="px-2.5 py-1">
                                   <span
                                     className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
@@ -852,22 +852,22 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                     {item.remark}
                                   </span>
                                 </td>
-                                <td className="px-2.5 py-1 text-slate-500 dark:text-slate-400 font-mono">
+                                <td className="px-2.5 py-1 text-secondary font-mono">
                                   {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </td>
-                                <td className="px-2.5 py-1 text-slate-500 dark:text-slate-400">{item.scannedByName}</td>
+                                <td className="px-2.5 py-1 text-secondary">{item.scannedByName}</td>
                                 <td className="px-2.5 py-1 text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <button
                                       onClick={() => handleEditScan(item)}
-                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#123B5D] dark:text-indigo-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                                      className="p-1 rounded bg-elevated hover:bg-surface text-[#123B5D] dark:text-indigo-300 hover:text-primary transition-colors cursor-pointer border border-theme"
                                       title="Edit AWB"
                                     >
                                       <Edit2 className="w-3 h-3" />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteScan(item.id)}
-                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 transition-colors cursor-pointer"
+                                      className="p-1 rounded bg-elevated hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 transition-colors cursor-pointer border border-theme"
                                       title="Delete AWB"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -883,7 +883,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-sm">
+                <div className="bg-surface border border-theme rounded-2xl p-8 text-center text-secondary space-y-3 shadow-sm">
                   <p className="text-xs">No active open batch.</p>
                   <button
                     onClick={() => setOpenBatchView('create')}
@@ -898,15 +898,15 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
           {/* VIEW C: CLOSE BATCH & SIGN HANDOVER */}
           {openBatchView === 'close' && (
-            <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 shadow-sm max-w-3xl mx-auto space-y-5">
-              <div className="border-b border-slate-200 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="bg-surface border border-theme rounded-2xl p-6 shadow-sm max-w-3xl mx-auto space-y-5">
+              <div className="border-b border-theme pb-3 flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-primary flex items-center gap-2">
                   <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Close Batch & Handover
                 </h2>
                 <button
                   type="button"
                   onClick={() => setOpenBatchView('scan')}
-                  className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
                 >
                   <X className="w-4 h-4" /> Cancel
                 </button>
@@ -916,26 +916,26 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 <form onSubmit={handleConfirmCloseBatch} className="space-y-5 text-xs">
                   {/* Summary Metric Pills */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Batch Code</div>
+                    <div className="p-3 bg-elevated border border-theme rounded-xl">
+                      <div className="text-[10px] text-secondary uppercase font-bold">Batch Code</div>
                       <div className="text-sm font-mono font-bold text-[#123B5D] dark:text-indigo-400 truncate mt-0.5">{activeBatch.batchNumber}</div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Total Scanned</div>
+                    <div className="p-3 bg-elevated border border-theme rounded-xl">
+                      <div className="text-[10px] text-secondary uppercase font-bold">Total Scanned</div>
                       <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">{activeBatch.totalScanned} Items</div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Account</div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white truncate mt-0.5">
+                    <div className="p-3 bg-elevated border border-theme rounded-xl">
+                      <div className="text-[10px] text-secondary uppercase font-bold">Account</div>
+                      <div className="text-sm font-bold text-primary truncate mt-0.5">
                         {clients.find(c => c.id === activeBatch.clientId)?.name}
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Courier</div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white truncate mt-0.5">
+                    <div className="p-3 bg-elevated border border-theme rounded-xl">
+                      <div className="text-[10px] text-secondary uppercase font-bold">Courier</div>
+                      <div className="text-sm font-bold text-primary truncate mt-0.5">
                         {couriers.find(cr => cr.id === activeBatch.courierId)?.name}
                       </div>
                     </div>
@@ -944,7 +944,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   {/* Courier Handover Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                      <label className="block text-primary font-bold mb-1">
                         Courier Driver / Rep Name *
                       </label>
                       <input
@@ -953,12 +953,12 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         placeholder="Driver Name"
                         value={driverName}
                         onChange={e => setDriverName(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 font-medium"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-emerald-500 font-medium placeholder:text-muted"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                      <label className="block text-primary font-bold mb-1">
                         Courier Driver Mobile *
                       </label>
                       <input
@@ -967,12 +967,12 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         placeholder="Mobile Number"
                         value={driverMobile}
                         onChange={e => setDriverMobile(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono focus:outline-none focus:border-emerald-500 placeholder:text-muted"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                      <label className="block text-primary font-bold mb-1">
                         Supervisor Name
                       </label>
                       <input
@@ -980,12 +980,12 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         required
                         value={supervisorSigner}
                         onChange={e => setSupervisorSigner(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-medium focus:outline-none focus:border-emerald-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                      <label className="block text-primary font-bold mb-1">
                         Notes (Optional)
                       </label>
                       <input
@@ -993,7 +993,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         placeholder="Bag seal or remarks"
                         value={handoverNotes}
                         onChange={e => setHandoverNotes(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none"
+                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none placeholder:text-muted"
                       />
                     </div>
                   </div>
@@ -1001,7 +1001,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   {/* Digital Signature Pad */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                      <label className="text-primary font-bold flex items-center gap-1.5">
                         <PenTool className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         Driver Signature *
                       </label>
@@ -1012,14 +1012,14 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         <button
                           type="button"
                           onClick={handleClearSig}
-                          className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
                         >
                           <Undo2 className="w-3 h-3" /> Clear
                         </button>
                       </div>
                     </div>
 
-                    <div className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-1 flex items-center justify-center">
+                    <div className="bg-elevated border border-theme rounded-xl p-1 flex items-center justify-center">
                       <canvas
                         ref={sigCanvasRef}
                         width={600}
@@ -1031,16 +1031,16 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         onTouchStart={handleStartDraw}
                         onTouchMove={handleDraw}
                         onTouchEnd={handleStopDraw}
-                        className="w-full h-[120px] bg-white dark:bg-slate-950 cursor-crosshair rounded-lg touch-none"
+                        className="w-full h-[120px] bg-surface cursor-crosshair rounded-lg touch-none"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center justify-between gap-3 pt-4 border-t border-theme">
                     <button
                       type="button"
                       onClick={() => setOpenBatchView('scan')}
-                      className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold flex items-center gap-1.5 cursor-pointer transition-colors border border-theme"
                     >
                       <ArrowLeft className="w-4 h-4" /> Back to Scanning
                     </button>
@@ -1055,7 +1055,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   </div>
                 </form>
               ) : (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-muted">
                   Select an open batch first.
                 </div>
               )}
@@ -1068,10 +1068,10 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* TAB 2: CLOSED BATCH                                      */}
       {/* ======================================================== */}
       {activeMainTab === 'closed_batch' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="bg-surface border border-theme rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-3">
             <div>
-              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-sm font-extrabold text-primary flex items-center gap-2">
                 <Lock className="w-4 h-4 text-amber-500" /> Closed Batches ({closedBatches.length})
               </h2>
             </div>
@@ -1082,14 +1082,14 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 placeholder="Search batches..."
                 value={batchSearchQuery}
                 onChange={e => setBatchSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-200 p-2 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                className="w-full bg-elevated text-xs text-primary p-2 rounded-lg border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
                   <th className="px-4 py-3">Batch Number</th>
                   <th className="px-4 py-3">Client / Brand</th>
@@ -1100,10 +1100,10 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-theme text-primary">
                 {closedBatches.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       No closed batches.
                     </td>
                   </tr>
@@ -1121,19 +1121,19 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             setSelectedClosedBatch(b);
                             setClosedBatchItemSearch('');
                           }}
-                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 cursor-pointer transition-colors group"
+                          className="hover:bg-elevated cursor-pointer transition-colors group"
                         >
                           <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:text-blue-700 dark:group-hover:text-indigo-300 flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span>{b.batchNumber}</span>
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{client?.name}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{courier?.name}</td>
+                          <td className="px-4 py-3 font-bold text-primary">{client?.name}</td>
+                          <td className="px-4 py-3 text-secondary">{courier?.name}</td>
                           <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">{b.totalScanned} Items</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                          <td className="px-4 py-3 text-secondary">
                             {b.driverName ? `${b.driverName} (${b.driverMobile || 'Signed'})` : 'Supervisor Verified'}
                           </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                          <td className="px-4 py-3 text-secondary">
                             {b.closedAt ? new Date(b.closedAt).toLocaleString() : new Date(b.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
@@ -1143,7 +1143,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                   setSelectedClosedBatch(b);
                                   setClosedBatchItemSearch('');
                                 }}
-                                className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-indigo-300 hover:text-slate-900 dark:hover:text-white font-bold text-[11px] flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-xs cursor-pointer"
+                                className="px-2.5 py-1 rounded bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-[11px] flex items-center gap-1 border border-theme shadow-xs cursor-pointer"
                                 title="View Batch Details & AWBs"
                               >
                                 <Eye className="w-3.5 h-3.5 text-[#123B5D] dark:text-indigo-400" /> View
@@ -1172,38 +1172,38 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* TAB 3: REPORT & MANIFEST                                 */}
       {/* ======================================================== */}
       {activeMainTab === 'reports' && (
-        <div className="bg-white dark:bg-[#111D2C] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="bg-surface border border-theme rounded-2xl p-6 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-theme pb-3">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-extrabold text-primary flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Return Reports & Audit Manifests
               </h2>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Total Batches</div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white">{warehouseBatches.length}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">{openBatches.length} Open • {closedBatches.length} Closed</div>
+            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
+              <div className="text-xs text-secondary font-bold uppercase">Total Batches</div>
+              <div className="text-2xl font-black text-primary">{warehouseBatches.length}</div>
+              <div className="text-[11px] text-secondary">{openBatches.length} Open • {closedBatches.length} Closed</div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Total Scanned Items</div>
+            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
+              <div className="text-xs text-secondary font-bold uppercase">Total Scanned Items</div>
               <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 {warehouseBatches.reduce((sum, b) => sum + b.totalScanned, 0)}
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">Across {clients.length} Accounts</div>
+              <div className="text-[11px] text-secondary">Across {clients.length} Accounts</div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Warehouse Hub</div>
+            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
+              <div className="text-xs text-secondary font-bold uppercase">Warehouse Hub</div>
               <div className="text-2xl font-black text-[#123B5D] dark:text-indigo-400">{activeWarehouse.code}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">{activeWarehouse.city}</div>
+              <div className="text-[11px] text-secondary">{activeWarehouse.city}</div>
             </div>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-800 pt-4 flex justify-end">
+          <div className="border-t border-theme pt-4 flex justify-end">
             <button
               onClick={() => {
                 generateWarehouseBatchesSummaryPDF(warehouseBatches, activeWarehouse, clients, couriers);
@@ -1221,34 +1221,34 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* ======================================================== */}
       {editingItem && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="bg-surface border border-theme rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-theme pb-3">
+              <h3 className="text-sm font-extrabold text-primary flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> Edit Scanned AWB
               </h3>
-              <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer">
+              <button onClick={() => setEditingItem(null)} className="text-secondary hover:text-primary font-bold cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveEditItem} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">AWB / Tracking Number *</label>
+                <label className="block text-primary font-bold mb-1">AWB / Tracking Number *</label>
                 <input
                   type="text"
                   required
                   value={editAwbValue}
                   onChange={e => setEditAwbValue(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold uppercase focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                  className="w-full bg-elevated text-emerald-600 dark:text-emerald-400 p-2.5 rounded-xl border border-theme font-mono font-bold uppercase focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Condition (QC Status) *</label>
+                <label className="block text-primary font-bold mb-1">Condition (QC Status) *</label>
                 <select
                   value={editRemarkValue}
                   onChange={e => setEditRemarkValue(e.target.value as ReturnRemarkType)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-bold focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
                 >
                   <option value="Good">1. Good</option>
                   <option value="Damage">2. Damage</option>
@@ -1260,11 +1260,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 </select>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-theme">
                 <button
                   type="button"
                   onClick={() => setEditingItem(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold cursor-pointer transition-colors border border-theme"
                 >
                   Cancel
                 </button>
@@ -1285,22 +1285,22 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* ======================================================== */}
       {deletingItemId && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+          <div className="bg-surface border border-theme rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Remove AWB?</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">This will deduct 1 unit from total count.</p>
+                <h3 className="text-sm font-extrabold text-primary">Remove AWB?</h3>
+                <p className="text-xs text-secondary mt-0.5">This will deduct 1 unit from total count.</p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs">
+            <div className="flex justify-end gap-3 pt-3 border-t border-theme text-xs">
               <button
                 type="button"
                 onClick={() => setDeletingItemId(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold cursor-pointer transition-colors"
+                className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold cursor-pointer transition-colors border border-theme"
               >
                 Cancel
               </button>
@@ -1338,16 +1338,16 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
         return (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 z-50 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-[#111D2C] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            <div className="bg-surface border border-theme rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
               {/* MODAL HEADER */}
-              <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/80">
+              <div className="p-4 sm:p-5 border-b border-theme flex items-center justify-between bg-elevated">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 text-[#123B5D] dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">
                     <Lock className="w-5 h-5 text-amber-500" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+                      <h3 className="text-base sm:text-lg font-black font-mono text-primary">
                         {selectedClosedBatch.batchNumber}
                       </h3>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
@@ -1359,19 +1359,19 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                      <span className="text-slate-900 dark:text-white font-bold">{client?.name}</span>
+                    <div className="text-xs text-secondary flex items-center gap-2 mt-0.5">
+                      <span className="text-primary font-bold">{client?.name}</span>
                       <span>•</span>
                       <span className="text-[#123B5D] dark:text-indigo-300 font-mono font-medium">{courier?.name}</span>
                       <span>•</span>
-                      <span className="text-slate-500 dark:text-slate-400">{activeWarehouse.name} ({activeWarehouse.code})</span>
+                      <span className="text-secondary">{activeWarehouse.name} ({activeWarehouse.code})</span>
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedClosedBatch(null)}
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1381,33 +1381,33 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 text-xs">
                 {/* METRICS & HANDOVER SUMMARY */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Total Scanned</div>
+                  <div className="p-3 bg-elevated border border-theme rounded-xl">
+                    <div className="text-[10px] text-secondary uppercase font-bold">Total Scanned</div>
                     <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {selectedClosedBatch.totalScanned} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Items</span>
+                      {selectedClosedBatch.totalScanned} <span className="text-xs font-normal text-secondary">Items</span>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Closed Timestamp</div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                  <div className="p-3 bg-elevated border border-theme rounded-xl">
+                    <div className="text-[10px] text-secondary uppercase font-bold">Closed Timestamp</div>
+                    <div className="text-xs font-bold text-primary mt-1">
                       {selectedClosedBatch.closedAt ? new Date(selectedClosedBatch.closedAt).toLocaleString() : 'N/A'}
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Driver / Rep</div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white mt-1 truncate">
+                  <div className="p-3 bg-elevated border border-theme rounded-xl">
+                    <div className="text-[10px] text-secondary uppercase font-bold">Driver / Rep</div>
+                    <div className="text-xs font-bold text-primary mt-1 truncate">
                       {selectedClosedBatch.driverName || 'Supervisor Verified'}
                     </div>
                     {selectedClosedBatch.driverMobile && (
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{selectedClosedBatch.driverMobile}</div>
+                      <div className="text-[10px] text-secondary font-mono">{selectedClosedBatch.driverMobile}</div>
                     )}
                   </div>
 
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Supervisor Signoff</div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white mt-1 truncate">
+                  <div className="p-3 bg-elevated border border-theme rounded-xl">
+                    <div className="text-[10px] text-secondary uppercase font-bold">Supervisor Signoff</div>
+                    <div className="text-xs font-bold text-primary mt-1 truncate">
                       {selectedClosedBatch.supervisorSigner || 'Verified'}
                     </div>
                   </div>
@@ -1415,8 +1415,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                 {/* REMARKS BREAKDOWN */}
                 {Object.keys(breakdownCounts).length > 0 && (
-                  <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl">
-                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  <div className="p-3 bg-elevated border border-theme rounded-xl">
+                    <div className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-2">
                       QC Conditions Breakdown:
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -1431,7 +1431,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                               : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
                           }`}
                         >
-                          {remark}: <strong className="font-mono text-slate-900 dark:text-white ml-1">{count}</strong>
+                          {remark}: <strong className="font-mono text-primary ml-1">{count}</strong>
                         </span>
                       ))}
                     </div>
@@ -1441,28 +1441,28 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 {/* SCANNED AWBs LIST TABLE */}
                 <div className="space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <h4 className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <h4 className="text-xs font-extrabold text-primary flex items-center gap-1.5">
                       <List className="w-3.5 h-3.5 text-[#123B5D] dark:text-indigo-400" />
                       Scanned Parcels in Batch ({batchItems.length})
                     </h4>
 
                     <div className="w-full sm:w-60">
                       <div className="relative">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                        <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-2.5" />
                         <input
                           type="text"
                           placeholder="Search AWB or condition..."
                           value={closedBatchItemSearch}
                           onChange={e => setClosedBatchItemSearch(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-200 pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                          className="w-full bg-elevated text-primary pl-8 pr-3 py-1.5 rounded-lg border border-theme text-xs focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 max-h-72">
+                  <div className="overflow-x-auto rounded-xl border border-theme max-h-72">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200 dark:border-slate-800">
+                      <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] sticky top-0 border-b border-theme">
                         <tr>
                           <th className="px-3 py-2 w-12 text-center">#</th>
                           <th className="px-3 py-2">AWB / Tracking Number</th>
@@ -1471,20 +1471,20 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           <th className="px-3 py-2">Operator</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                      <tbody className="divide-y divide-theme text-primary">
                         {filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={5} className="px-4 py-6 text-center text-muted">
                               {batchItems.length === 0 ? 'No items in this batch.' : 'No items match your search.'}
                             </td>
                           </tr>
                         ) : (
                           filteredItems.map((item, idx) => (
-                            <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                              <td className="px-3 py-2 text-center text-slate-400 font-mono text-[10px]">
+                            <tr key={item.id} className="hover:bg-elevated">
+                              <td className="px-3 py-2 text-center text-secondary font-mono text-[10px]">
                                 {idx + 1}
                               </td>
-                              <td className="px-3 py-2 font-mono font-bold text-slate-900 dark:text-white text-xs">
+                              <td className="px-3 py-2 font-mono font-bold text-primary text-xs">
                                 {item.trackingNumber}
                               </td>
                               <td className="px-3 py-2">
@@ -1500,10 +1500,10 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                   {item.remark}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                              <td className="px-3 py-2 text-secondary font-mono text-[11px]">
                                 {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                               </td>
-                              <td className="px-3 py-2 text-slate-500 dark:text-slate-400 text-[11px]">
+                              <td className="px-3 py-2 text-secondary text-[11px]">
                                 {item.scannedByName || 'Staff'}
                               </td>
                             </tr>
@@ -1516,7 +1516,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
               </div>
 
               {/* MODAL FOOTER */}
-              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="p-4 border-t border-theme bg-elevated flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => generateBatchPDF(selectedClosedBatch, batchItems, activeWarehouse, client, courier)}
@@ -1530,7 +1530,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedClosedBatch(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs cursor-pointer transition-colors border border-theme"
                 >
                   Close
                 </button>

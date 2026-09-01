@@ -1,113 +1,52 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+type Theme = 'dark' | 'light';
 
 interface ThemeContextType {
-  theme: ThemeMode;
-  mode: ThemeMode;
-  resolvedTheme: ResolvedTheme;
-  setTheme: (mode: ThemeMode) => void;
-  setMode: (mode: ThemeMode) => void;
+  theme: Theme;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
-  mode: 'system',
-  resolvedTheme: 'light',
-  setTheme: () => {},
-  setMode: () => {},
+  theme: 'dark',
   toggleTheme: () => {},
 });
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    try {
-      const saved = localStorage.getItem('emiza_app_theme');
-      if (saved === 'light' || saved === 'dark' || saved === 'system') {
-        return saved;
-      }
-    } catch {
-      // ignore
+export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('emiza-theme') as Theme;
+      if (saved) return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    return 'system';
+    return 'dark';
   });
 
-  const [systemIsDark, setSystemIsDark] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
-
-  // Listen to OS system color scheme changes
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemIsDark(e.matches);
-    };
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    } else {
-      // Fallback for older browsers
-      mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
-    }
-  }, []);
-
-  const resolvedTheme: ResolvedTheme = theme === 'system' ? (systemIsDark ? 'dark' : 'light') : theme;
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('emiza_app_theme', theme);
-    } catch {
-      // ignore
-    }
-
     const root = document.documentElement;
-    if (resolvedTheme === 'dark') {
+    if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
-      root.setAttribute('data-theme', 'dark');
-      root.style.colorScheme = 'dark';
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
-      root.setAttribute('data-theme', 'light');
-      root.style.colorScheme = 'light';
     }
-  }, [theme, resolvedTheme]);
+    localStorage.setItem('emiza-theme', theme);
+  }, [theme]);
 
-  const setTheme = useCallback((mode: ThemeMode) => {
-    setThemeState(mode);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setThemeState(prev => {
-      const current = prev === 'system' ? (systemIsDark ? 'dark' : 'light') : prev;
-      return current === 'dark' ? 'light' : 'dark';
-    });
-  }, [systemIsDark]);
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        mode: theme,
-        resolvedTheme,
-        setTheme,
-        setMode: setTheme,
-        toggleTheme,
-      }}
-    >
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
-export const useTheme = () => useContext(ThemeContext);
-
+export const useTheme = (): ThemeContextType => {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
+};
