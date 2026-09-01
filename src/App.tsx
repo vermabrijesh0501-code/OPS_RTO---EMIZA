@@ -23,7 +23,7 @@ import { B2BReturnsModule } from './components/B2BReturnsModule';
 import { AuditModule } from './components/AuditModule';
 import { MastersModule } from './components/MastersModule';
 import { ReportsModule } from './components/ReportsModule';
-import { SupabaseNetlifyHub } from './components/SupabaseNetlifyHub';
+import { SettingsModule } from './components/SettingsModule';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -1197,7 +1197,7 @@ export default function App() {
             )}
 
             {(viewTab === 'supabase_hub' || viewTab === 'settings') && (
-              <SupabaseNetlifyHub
+              <SettingsModule
                 config={supabaseConfig}
                 onSaveConfig={handleSaveSupabaseConfig}
               />
@@ -1227,7 +1227,7 @@ export default function App() {
         path="/login"
         element={
           <PublicRoute>
-            <LoginPage users={users} />
+            <LoginPage />
           </PublicRoute>
         }
       />

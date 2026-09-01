@@ -102,7 +102,6 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  password?: string;
   role: UserRole;
   department?: Department | string;
   companyId?: string;
@@ -111,6 +110,7 @@ export interface User {
   assignedClientIds: string[];
   permissions?: Partial<Record<ModuleId, ModulePermission>>;
   status: 'Active' | 'Inactive';
+  authProvider?: 'supabase' | 'local';
   lastLoginAt?: string;
   createdAt?: string;
 }

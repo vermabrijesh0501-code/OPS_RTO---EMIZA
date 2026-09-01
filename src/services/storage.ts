@@ -285,29 +285,6 @@ export const StorageService = {
   clearAuthSession: () =>
     saveItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false }),
 
-  // User Credential & Password Management
-  updateUserPassword: (email: string, newPassword: string): boolean => {
-    const users = StorageService.getUsers();
-    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-    if (userIndex === -1) return false;
-    users[userIndex].password = newPassword;
-    StorageService.saveUsers(users);
-    return true;
-  },
-
-  registerTeamUser: (userData: Omit<User, 'id'> & { id?: string }): User => {
-    const users = StorageService.getUsers();
-    const newUser: User = {
-      ...userData,
-      id: userData.id || `usr-${Date.now()}`,
-      status: 'Active',
-      lastLoginAt: new Date().toISOString(),
-    };
-    const updated = [...users, newUser];
-    StorageService.saveUsers(updated);
-    return newUser;
-  },
-
   resetToDefault: () => {
     localStorage.clear();
     window.location.reload();

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Session, User as SupabaseAuthUser } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured, mapSupabaseUserToAppUser } from '../services/supabase';
+import { getSupabase, isSupabaseConfigured, fetchAppUserFromSupabase } from '../services/supabase';
 import { User, UserRole, ActiveDeviceSession } from '../types';
 import { StorageService } from '../services/storage';
 import { ROLE_DEFAULT_PERMISSIONS } from '../utils/rbac';
@@ -37,15 +37,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState<boolean>(true);
   const isConfigured = isSupabaseConfigured();
 
-  // Helper to sync App User state from Supabase Auth User & local storage
-  const syncAppUser = useCallback((sbUser: SupabaseAuthUser | null) => {
+  const registerDeviceSession = useCallback(async (user: User) => {
+    const deviceId = SyncService.getDeviceId();
+    const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+    const sessionObj: ActiveDeviceSession = {
+      id: `sess-${user.id}-${deviceId}`,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      userEmail: user.email,
+      warehouseId: user.assignedWarehouseIds?.[0] || 'wh-main',
+      warehouseName: 'Bhiwandi WH',
+      deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
+      browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
+      loginTime: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      status: 'Online',
+    };
+
+    // 1. Local Storage
+    StorageService.registerDeviceSession(sessionObj);
+
+    // 2. Supabase active_devices table
+    const sb = getSupabase();
+    if (sb) {
+      try {
+        await sb.from('active_devices').upsert({
+          id: sessionObj.id,
+          user_id: sessionObj.userId,
+          user_name: sessionObj.userName,
+          user_role: sessionObj.userRole,
+          user_email: sessionObj.userEmail,
+          warehouse_id: sessionObj.warehouseId,
+          warehouse_name: sessionObj.warehouseName,
+          device_type: sessionObj.deviceType,
+          browser_info: sessionObj.browserInfo,
+          login_time: sessionObj.loginTime,
+          last_active_at: sessionObj.lastActiveAt,
+          status: sessionObj.status,
+        }, { onConflict: 'id' });
+      } catch (err) {
+        console.warn('[AuthContext] Failed to upsert active device to Supabase:', err);
+      }
+    }
+  }, []);
+
+  // Sync App User state from Supabase Auth User & users table
+  const syncAppUser = useCallback(async (sbUser: SupabaseAuthUser | null) => {
     if (!sbUser) {
       setAppUser(null);
       StorageService.clearAuthSession();
       return;
     }
     const allUsers = StorageService.getUsers();
-    const mapped = mapSupabaseUserToAppUser(sbUser, allUsers);
+    const mapped = await fetchAppUserFromSupabase(sbUser, allUsers);
     if (mapped) {
       if (mapped.status === 'Inactive') {
         setAppUser(null);
@@ -56,26 +101,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       StorageService.saveCurrentUser(mapped);
       StorageService.saveAuthSession({ isLoggedIn: true, userId: mapped.id });
 
-      // Register live device session
-      const deviceId = SyncService.getDeviceId();
-      const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
-      const sessionObj: ActiveDeviceSession = {
-        id: `sess-${mapped.id}-${deviceId}`,
-        userId: mapped.id,
-        userName: mapped.name,
-        userRole: mapped.role,
-        userEmail: mapped.email,
-        warehouseId: mapped.assignedWarehouseIds?.[0] || 'wh-main',
-        warehouseName: 'Bhiwandi WH',
-        deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
-        browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
-        loginTime: new Date().toISOString(),
-        lastActiveAt: new Date().toISOString(),
-        status: 'Online',
-      };
-      StorageService.registerDeviceSession(sessionObj);
+      // Register live device session in localStorage and Supabase
+      await registerDeviceSession(mapped);
     }
-  }, []);
+  }, [registerDeviceSession]);
 
   // 1. Initial Session Load & Subscription
   useEffect(() => {
@@ -83,9 +112,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     async function initializeAuth() {
       try {
-        if (isConfigured) {
+        const sb = getSupabase();
+        if (sb) {
           // Fetch existing Supabase Session from persistent storage
-          const { data, error } = await supabase.auth.getSession();
+          const { data, error } = await sb.auth.getSession();
           if (error) {
             console.warn('[Supabase Auth] Failed to get session:', error.message);
           }
@@ -93,39 +123,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (data?.session) {
               setSession(data.session);
               setSupabaseUser(data.session.user);
-              syncAppUser(data.session.user);
+              await syncAppUser(data.session.user);
             } else {
               setSession(null);
               setSupabaseUser(null);
               setAppUser(null);
+              StorageService.clearAuthSession();
             }
           }
         } else {
-          // If Supabase is not yet configured with valid env variables,
-          // check if there is an active local demo session in storage
+          // Fallback if Supabase credentials are not yet configured
           const localSession = StorageService.getAuthSession();
-          if (localSession.isLoggedIn && localSession.userId) {
-            const users = StorageService.getUsers();
-            const found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive') || users[0];
-            if (found && isMounted && found.status !== 'Inactive') {
-              setAppUser(found);
-              const deviceId = SyncService.getDeviceId();
-              const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
-              StorageService.registerDeviceSession({
-                id: `sess-${found.id}-${deviceId}`,
-                userId: found.id,
-                userName: found.name,
-                userRole: found.role,
-                userEmail: found.email,
-                warehouseId: found.assignedWarehouseIds?.[0] || 'wh-main',
-                warehouseName: 'Bhiwandi WH',
-                deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
-                browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
-                loginTime: new Date().toISOString(),
-                lastActiveAt: new Date().toISOString(),
-                status: 'Online',
-              });
-            }
+          const savedUser = StorageService.getCurrentUser();
+          const users = StorageService.getUsers();
+
+          let found = null;
+          if (savedUser && savedUser.status !== 'Inactive') {
+            found = savedUser;
+          } else if (localSession.isLoggedIn && localSession.userId) {
+            found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive');
+          }
+
+          if (found && isMounted && found.status !== 'Inactive') {
+            setAppUser(found);
+            await registerDeviceSession(found);
           }
         }
       } catch (err) {
@@ -141,13 +162,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // 2. Set up realtime Supabase auth state listener
     let authListener: { unsubscribe: () => void } | null = null;
-    if (isConfigured) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, newSession) => {
+    const sb = getSupabase();
+    if (sb) {
+      const { data: { subscription } } = sb.auth.onAuthStateChange(
+        async (_event, newSession) => {
           if (!isMounted) return;
           setSession(newSession);
           setSupabaseUser(newSession?.user || null);
-          syncAppUser(newSession?.user || null);
+          await syncAppUser(newSession?.user || null);
           setLoading(false);
         }
       );
@@ -155,12 +177,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     // 3. Set up periodic Heartbeat to keep active device session fresh
-    const heartbeatTimer = setInterval(() => {
+    const heartbeatTimer = setInterval(async () => {
       const currentSession = StorageService.getAuthSession();
       if (currentSession.isLoggedIn && currentSession.userId) {
         const deviceId = SyncService.getDeviceId();
-        StorageService.updateDeviceHeartbeat(`sess-${currentSession.userId}-${deviceId}`);
+        const sessionId = `sess-${currentSession.userId}-${deviceId}`;
+        StorageService.updateDeviceHeartbeat(sessionId);
         StorageService.cleanupStaleDevices(20);
+
+        const currentSb = getSupabase();
+        if (currentSb) {
+          try {
+            await currentSb.from('active_devices').update({
+              last_active_at: new Date().toISOString(),
+              status: 'Online',
+            }).eq('id', sessionId);
+          } catch (e) {
+            // Heartbeat update failure is silent
+          }
+        }
       }
     }, 20000);
 
@@ -171,101 +206,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       clearInterval(heartbeatTimer);
     };
-  }, [isConfigured, syncAppUser]);
+  }, [isConfigured, syncAppUser, registerDeviceSession]);
 
-  // Sign In with Supabase Auth or Local Team Registry
+  // Sign In with Supabase Auth
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
     try {
       const emailTrimmed = email.trim();
-      const inputLower = emailTrimmed.toLowerCase();
+      const sb = getSupabase();
 
-      // If real Supabase credentials are configured, try Supabase first
-      if (isConfigured) {
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: emailTrimmed,
-            password,
-          });
-
-          if (!error && data.session && data.user) {
-            setSession(data.session);
-            setSupabaseUser(data.user);
-            syncAppUser(data.user);
-            setLoading(false);
-            return { success: true };
-          }
-        } catch (sbErr) {
-          console.warn('[Supabase Auth] Fallback to local accounts due to connection issue:', sbErr);
-        }
-      }
-
-      // Local / Offline Team Account Authentication & Auto-Resolution
-      const users = StorageService.getUsers();
-      
-      // Match by exact email, empId, username, or prefix (e.g. brijesh.verma)
-      let matched = users.find(
-        u =>
-          u.email.toLowerCase() === inputLower ||
-          (u.empId && u.empId.toLowerCase() === inputLower) ||
-          u.name.toLowerCase() === inputLower ||
-          u.email.toLowerCase().startsWith(inputLower + '@') ||
-          inputLower.startsWith(u.email.toLowerCase().split('@')[0])
-      );
-
-      // If user is Brijesh Verma or admin email variant
-      if (!matched && (inputLower.includes('brijesh') || inputLower.includes('verma') || inputLower.includes('admin'))) {
-        matched = users.find(u => u.role === 'Super Admin') || users[0];
-      }
-
-      // If user is inactive, deny login
-      if (matched && matched.status === 'Inactive') {
+      if (!sb) {
+        // Supabase is not configured yet - informative error
         setLoading(false);
         return {
           success: false,
-          error: 'Your account is currently Inactive. Please contact Super Admin (Brijesh Verma) to reactivate access.',
+          error: 'Supabase credentials are not configured. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
         };
       }
 
-      // If not matched, deny arbitrary unauthorized login unless approved
-      if (!matched) {
+      const { data, error } = await sb.auth.signInWithPassword({
+        email: emailTrimmed,
+        password,
+      });
+
+      if (error || !data.session || !data.user) {
         setLoading(false);
         return {
           success: false,
-          error: 'Invalid credentials or user not authorized. New accounts must be created by Super Admin in User Master.',
+          error: error?.message || 'Invalid email or password. Please verify your Supabase credentials.',
         };
       }
 
-      setAppUser(matched);
-      StorageService.saveCurrentUser(matched);
-      StorageService.saveAuthSession({ isLoggedIn: true, userId: matched.id });
+      setSession(data.session);
+      setSupabaseUser(data.user);
+      await syncAppUser(data.user);
 
-      // Register Active Device session
-      const deviceId = SyncService.getDeviceId();
-      const isMobile = typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
-      StorageService.registerDeviceSession({
-        id: `sess-${matched.id}-${deviceId}`,
-        userId: matched.id,
-        userName: matched.name,
-        userRole: matched.role,
-        userEmail: matched.email,
-        warehouseId: matched.assignedWarehouseIds?.[0] || 'wh-main',
-        warehouseName: 'Bhiwandi WH',
-        deviceType: isMobile ? 'Mobile / Scanner' : 'Desktop',
-        browserInfo: typeof navigator !== 'undefined' ? `${navigator.platform || 'Device'} (${isMobile ? 'Mobile Gun/PDA' : 'Operations Terminal'})` : 'Terminal',
-        loginTime: new Date().toISOString(),
-        lastActiveAt: new Date().toISOString(),
-        status: 'Online',
-      });
+      // Record Activity Log
+      const activeUser = await fetchAppUserFromSupabase(data.user, StorageService.getUsers());
+      if (activeUser) {
+        StorageService.addActivityLog({
+          userId: activeUser.id,
+          userName: activeUser.name,
+          userRole: activeUser.role,
+          action: 'User Signed In',
+          module: 'Auth',
+          details: `Signed in as ${activeUser.role} via Supabase Auth (${activeUser.email})`,
+        });
+      }
 
-      StorageService.addActivityLog({
-        userId: matched.id,
-        userName: matched.name,
-        userRole: matched.role,
-        action: 'User Signed In',
-        module: 'Auth',
-        details: `Signed in as ${matched.role} (${matched.email}) on ${isMobile ? 'Handheld Gun/PDA' : 'Desktop Terminal'}`,
-      });
       setLoading(false);
       return { success: true };
     } catch (err: any) {
@@ -274,7 +262,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign Up with Supabase Auth (Disabled for public, managed by Super Admin)
+  // Sign Up with Supabase Auth
   const signUp = async ({
     email,
     password,
@@ -294,35 +282,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
     try {
+      const sb = getSupabase();
+      if (!sb) {
+        setLoading(false);
+        return { success: false, error: 'Supabase is not configured.' };
+      }
+
       const userMeta = {
         name,
         full_name: name,
-        role: role || 'Operator',
+        role: role || 'Supervisor',
         empId: empId || `EMP-${Date.now().toString().slice(-4)}`,
         department: department || 'Operations Management',
         phone: phone || '',
-        permissions: ROLE_DEFAULT_PERMISSIONS[role || 'Operator'],
+        permissions: ROLE_DEFAULT_PERMISSIONS[role || 'Supervisor'],
       };
 
-      const newUser: User = {
-        id: `usr-${Date.now()}`,
-        empId: userMeta.empId,
-        name,
+      const { data, error } = await sb.auth.signUp({
         email: email.trim(),
-        phone: phone || '',
         password,
-        role: userMeta.role,
-        department: userMeta.department,
-        assignedWarehouseIds: ['wh-main'],
-        assignedClientIds: ['cli-bellavita', 'cli-nykaa', 'cli-mama', 'cli-boat', 'cli-sugar'],
-        permissions: userMeta.permissions,
-        status: 'Active',
-        lastLoginAt: new Date().toISOString(),
-      };
-      StorageService.registerTeamUser(newUser);
-      setAppUser(newUser);
-      StorageService.saveCurrentUser(newUser);
-      StorageService.saveAuthSession({ isLoggedIn: true, userId: newUser.id });
+        options: {
+          data: userMeta,
+        },
+      });
+
+      if (error) {
+        setLoading(false);
+        return { success: false, error: error.message };
+      }
+
+      if (data.session && data.user) {
+        setSession(data.session);
+        setSupabaseUser(data.user);
+        await syncAppUser(data.user);
+      }
+
       setLoading(false);
       return { success: true };
     } catch (err: any) {
@@ -337,7 +331,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if (appUser) {
         const deviceId = SyncService.getDeviceId();
-        StorageService.removeDeviceSession(`sess-${appUser.id}-${deviceId}`);
+        const sessionId = `sess-${appUser.id}-${deviceId}`;
+        StorageService.removeDeviceSession(sessionId);
+
+        const sb = getSupabase();
+        if (sb) {
+          try {
+            await sb.from('active_devices').delete().eq('id', sessionId);
+          } catch (e) {
+            // Safe ignore
+          }
+        }
+
         StorageService.addActivityLog({
           userId: appUser.id,
           userName: appUser.name,
@@ -347,8 +352,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           details: `Signed out from ${appUser.role} session`,
         });
       }
-      if (isConfigured) {
-        await supabase.auth.signOut();
+
+      const sb = getSupabase();
+      if (sb) {
+        await sb.auth.signOut();
       }
     } catch (err) {
       console.error('[Supabase Auth] SignOut error:', err);
@@ -365,42 +372,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const emailTrimmed = email.trim();
-      if (isConfigured) {
-        try {
-          const { error } = await supabase.auth.resetPasswordForEmail(emailTrimmed, {
-            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login?reset=true` : undefined,
-          });
-          if (!error) {
-            return { success: true };
-          }
-        } catch (sbErr) {
-          console.warn('[Supabase Auth] Fallback on password reset:', sbErr);
+      const sb = getSupabase();
+      if (sb) {
+        const { error } = await sb.auth.resetPasswordForEmail(emailTrimmed, {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login?reset=true` : undefined,
+        });
+        if (error) {
+          return { success: false, error: error.message };
         }
       }
-
-      // Local account password update
-      StorageService.updateUserPassword(emailTrimmed, 'password123');
       return { success: true };
     } catch (err: any) {
-      return { success: true }; // Always return friendly recovery for user peace of mind
+      return { success: false, error: err?.message || 'Password reset request failed.' };
     }
   };
 
-  // Role Switcher for live demo / testing
+  // Role Switcher for testing/demo
   const switchUserRole = (role: UserRole) => {
     if (!appUser) return;
-    const allUsers = StorageService.getUsers();
-    const matching = allUsers.find(u => u.role === role) || {
+    const updated: User = {
       ...appUser,
       role,
       permissions: ROLE_DEFAULT_PERMISSIONS[role],
       name: `${appUser.name.split(' ')[0]} (${role})`,
     };
-    setAppUser(matching);
-    StorageService.saveCurrentUser(matching);
+    setAppUser(updated);
+    StorageService.saveCurrentUser(updated);
     StorageService.addActivityLog({
-      userId: matching.id,
-      userName: matching.name,
+      userId: updated.id,
+      userName: updated.name,
       userRole: role,
       action: 'Switched User Persona',
       module: 'Auth',
@@ -409,12 +409,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const refreshSession = async () => {
-    if (isConfigured) {
-      const { data } = await supabase.auth.getSession();
+    const sb = getSupabase();
+    if (sb) {
+      const { data } = await sb.auth.getSession();
       if (data?.session) {
         setSession(data.session);
         setSupabaseUser(data.session.user);
-        syncAppUser(data.session.user);
+        await syncAppUser(data.session.user);
       }
     }
   };

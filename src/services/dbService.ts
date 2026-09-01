@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { getSupabase, isSupabaseConfigured } from './supabase';
 import {
   ReturnBatch,
   ScannedReturnItem,
@@ -10,7 +10,8 @@ import {
   User,
 } from '../types';
 import { StorageService } from './storage';
-import { SyncService, SyncMessage } from './syncService';
+import { SyncService } from './syncService';
+import { OfflineQueue } from './offlineQueue';
 
 // Normalizers between TypeScript camelCase and PostgreSQL snake_case
 
@@ -178,6 +179,52 @@ export function mapActivityLogToDb(log: ActivityLog): Record<string, any> {
 }
 
 /**
+ * Executes a write operation against Supabase.
+ * If offline, fails, or unconfigured, it automatically enqueues to the OfflineQueue.
+ */
+async function safeSupabaseWrite(
+  table: string,
+  operation: 'insert' | 'update' | 'upsert' | 'delete',
+  payload: any,
+  filter?: { column: string; value: any }
+): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) {
+    OfflineQueue.enqueue({ table, operation, payload, filter });
+    return;
+  }
+
+  try {
+    let query: any;
+    if (operation === 'insert') {
+      query = sb.from(table).insert(payload);
+    } else if (operation === 'upsert') {
+      query = sb.from(table).upsert(payload, { onConflict: 'id' });
+    } else if (operation === 'update') {
+      if (!filter) {
+        query = sb.from(table).update(payload).eq('id', payload.id);
+      } else {
+        query = sb.from(table).update(payload).eq(filter.column, filter.value);
+      }
+    } else if (operation === 'delete') {
+      if (!filter) {
+        query = sb.from(table).delete().eq('id', payload.id || payload);
+      } else {
+        query = sb.from(table).delete().eq(filter.column, filter.value);
+      }
+    }
+
+    const { error } = await query;
+    if (error) {
+      throw error;
+    }
+  } catch (err: any) {
+    console.warn(`[DBService] Write failed for ${table} (${operation}). Enqueueing for offline retry:`, err?.message || err);
+    OfflineQueue.enqueue({ table, operation, payload, filter });
+  }
+}
+
+/**
  * DBService provides full Cloud database synchronization with local storage fallback
  * and real-time multi-device broadcasts.
  */
@@ -189,7 +236,8 @@ export const DBService = {
     gateEntries?: InwardGateEntry[];
     logs?: ActivityLog[];
   }> {
-    if (!isSupabaseConfigured()) {
+    const sb = getSupabase();
+    if (!sb) {
       return {
         batches: StorageService.getReturnBatches(),
         scannedItems: StorageService.getScannedItems(),
@@ -200,10 +248,10 @@ export const DBService = {
 
     try {
       const [batchesRes, itemsRes, gateRes, logsRes] = await Promise.allSettled([
-        supabase.from('return_batches').select('*').order('created_at', { ascending: false }),
-        supabase.from('scanned_return_items').select('*').order('scanned_at', { ascending: false }),
-        supabase.from('inward_gate_entries').select('*').order('entry_time', { ascending: false }),
-        supabase.from('activity_logs').select('*').order('timestamp', { ascending: false }).limit(100),
+        sb.from('return_batches').select('*').order('created_at', { ascending: false }),
+        sb.from('scanned_return_items').select('*').order('scanned_at', { ascending: false }),
+        sb.from('inward_gate_entries').select('*').order('entry_time', { ascending: false }),
+        sb.from('activity_logs').select('*').order('timestamp', { ascending: false }).limit(100),
       ]);
 
       const result: {
@@ -240,6 +288,9 @@ export const DBService = {
         result.logs = StorageService.getActivityLogs();
       }
 
+      // Also trigger queue flush if online
+      OfflineQueue.flush().catch(console.warn);
+
       return result;
     } catch (err) {
       console.warn('[DBService] Failed fetching remote data from Supabase, using storage cache:', err);
@@ -269,22 +320,15 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    // 2. Persist to Supabase if configured
-    if (isSupabaseConfigured()) {
-      try {
-        const itemRow = mapScannedItemToDb(item);
-        const batchRow = mapReturnBatchToDb(updatedBatch);
+    // 2. Reliable persisted writes with offline queue fallback
+    const itemRow = mapScannedItemToDb(item);
+    const batchRow = mapReturnBatchToDb(updatedBatch);
 
-        // Async write to Supabase
-        Promise.allSettled([
-          supabase.from('scanned_return_items').insert(itemRow),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on scan:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase scan persistence error:', e);
-      }
-    }
+    await Promise.all([
+      safeSupabaseWrite('scanned_return_items', 'insert', itemRow),
+      safeSupabaseWrite('return_batches', 'upsert', batchRow),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     // 3. Broadcast to all other devices & tabs with full payload
     SyncService.broadcast('ITEM_SCANNED', {
@@ -313,20 +357,14 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const itemRow = mapScannedItemToDb(updatedItem);
-        const batchRow = mapReturnBatchToDb(updatedBatch);
+    const itemRow = mapScannedItemToDb(updatedItem);
+    const batchRow = mapReturnBatchToDb(updatedBatch);
 
-        Promise.allSettled([
-          supabase.from('scanned_return_items').update(itemRow).eq('id', itemId),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on update:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase item update error:', e);
-      }
-    }
+    await Promise.all([
+      safeSupabaseWrite('scanned_return_items', 'update', itemRow, { column: 'id', value: itemId }),
+      safeSupabaseWrite('return_batches', 'upsert', batchRow),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('ITEM_UPDATED', {
       itemId,
@@ -355,19 +393,13 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(updatedBatch);
+    const batchRow = mapReturnBatchToDb(updatedBatch);
 
-        Promise.allSettled([
-          supabase.from('scanned_return_items').delete().eq('id', itemId),
-          supabase.from('return_batches').upsert(batchRow, { onConflict: 'id' }),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on delete:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase item delete error:', e);
-      }
-    }
+    await Promise.all([
+      safeSupabaseWrite('scanned_return_items', 'delete', { id: itemId }, { column: 'id', value: itemId }),
+      safeSupabaseWrite('return_batches', 'upsert', batchRow),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('ITEM_DELETED', {
       itemId,
@@ -392,17 +424,12 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(newBatch);
-        Promise.allSettled([
-          supabase.from('return_batches').insert(batchRow),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on create batch:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase batch create error:', e);
-      }
-    }
+    const batchRow = mapReturnBatchToDb(newBatch);
+
+    await Promise.all([
+      safeSupabaseWrite('return_batches', 'insert', batchRow),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('BATCH_CREATED', {
       batch: newBatch,
@@ -425,17 +452,12 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const batchRow = mapReturnBatchToDb(updatedBatch);
-        Promise.allSettled([
-          supabase.from('return_batches').update(batchRow).eq('id', batchId),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on close batch:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase batch close error:', e);
-      }
-    }
+    const batchRow = mapReturnBatchToDb(updatedBatch);
+
+    await Promise.all([
+      safeSupabaseWrite('return_batches', 'update', batchRow, { column: 'id', value: batchId }),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('BATCH_CLOSED', {
       batchId,
@@ -458,17 +480,12 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const entryRow = mapGateEntryToDb(newEntry);
-        Promise.allSettled([
-          supabase.from('inward_gate_entries').insert(entryRow),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on gate entry create:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase gate entry create error:', e);
-      }
-    }
+    const entryRow = mapGateEntryToDb(newEntry);
+
+    await Promise.all([
+      safeSupabaseWrite('inward_gate_entries', 'insert', entryRow),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('GATE_ENTRY_CREATED', {
       entry: newEntry,
@@ -491,17 +508,12 @@ export const DBService = {
       createdLog = StorageService.addActivityLog(logData);
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const entryRow = mapGateEntryToDb(updatedEntry);
-        Promise.allSettled([
-          supabase.from('inward_gate_entries').update(entryRow).eq('id', id),
-          createdLog ? supabase.from('activity_logs').insert(mapActivityLogToDb(createdLog)) : Promise.resolve(),
-        ]).catch(err => console.warn('[DBService] Supabase write error on gate entry update:', err));
-      } catch (e) {
-        console.warn('[DBService] Supabase gate entry update error:', e);
-      }
-    }
+    const entryRow = mapGateEntryToDb(updatedEntry);
+
+    await Promise.all([
+      safeSupabaseWrite('inward_gate_entries', 'update', entryRow, { column: 'id', value: id }),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
 
     SyncService.broadcast('GATE_ENTRY_UPDATED', {
       id,
