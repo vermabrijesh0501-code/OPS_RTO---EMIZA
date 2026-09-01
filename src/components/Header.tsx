@@ -295,44 +295,51 @@ export const Header: React.FC<HeaderProps> = ({
           <Search className="w-3.5 h-3.5" />
         </button>
 
-        {/* Role Pill Switcher */}
-        <div className="relative" ref={roleMenuRef}>
-          <button
-            type="button"
-            onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1C1438] hover:bg-[#251B4B] border border-purple-800/60 text-purple-200 text-xs font-semibold transition-colors cursor-pointer"
-          >
+        {/* Role Display & Switcher (Dropdown only for Super Admin) */}
+        {currentUser.role === 'Super Admin' ? (
+          <div className="relative" ref={roleMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1C1438] hover:bg-[#251B4B] border border-purple-800/60 text-purple-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Shield className="w-3 h-3 text-purple-300 shrink-0" />
+              <span className="text-[11px]">Role: {currentUser.role}</span>
+              <ChevronDown className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+            </button>
+
+            {isRoleMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-52 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                  Switch Role Persona
+                </div>
+                {roles.map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      onSwitchUserRole(r);
+                      setIsRoleMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
+                      r === currentUser.role
+                        ? 'bg-purple-900/40 text-purple-300 font-bold'
+                        : 'text-slate-300'
+                    }`}
+                  >
+                    <span>{r}</span>
+                    {r === currentUser.role && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1C1438]/80 border border-purple-800/40 text-purple-200 text-xs font-semibold select-none">
             <Shield className="w-3 h-3 text-purple-300 shrink-0" />
             <span className="text-[11px]">Role: {currentUser.role}</span>
-            <ChevronDown className="w-2.5 h-2.5 text-purple-400 shrink-0" />
-          </button>
-
-          {isRoleMenuOpen && (
-            <div className="absolute right-0 mt-1.5 w-52 bg-[#0E1A2E] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in-50 duration-100">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                Switch Role Persona
-              </div>
-              {roles.map(r => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => {
-                    onSwitchUserRole(r);
-                    setIsRoleMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
-                    r === currentUser.role
-                      ? 'bg-purple-900/40 text-purple-300 font-bold'
-                      : 'text-slate-300'
-                  }`}
-                >
-                  <span>{r}</span>
-                  {r === currentUser.role && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* User Profile Avatar Dropdown */}
         <div className="relative" ref={userMenuRef}>

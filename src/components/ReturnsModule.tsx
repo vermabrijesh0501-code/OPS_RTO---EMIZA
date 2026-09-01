@@ -168,7 +168,16 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   // Active batch object
   const activeBatch = openBatches.find(b => b.id === activeBatchId) || openBatches[0] || null;
   const activeBatchItems = activeBatch ? scannedItems.filter(i => i.batchId === activeBatch.id) : [];
-  const latest10ScannedItems = activeBatchItems.slice(-10).reverse();
+
+  const handleEditScan = (item: ScannedReturnItem) => {
+    setEditingItem(item);
+    setEditAwbValue(item.trackingNumber);
+    setEditRemarkValue(item.remark);
+  };
+
+  const handleDeleteScan = (itemId: string) => {
+    setDeletingItemId(itemId);
+  };
 
   // Audio Beep generator
   const playBeep = (success: boolean) => {
@@ -790,83 +799,6 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         })}
                       </div>
                     </div>
-
-                    {/* LATEST 10 SCANNED ITEMS */}
-                    <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Recent Scans ({latest10ScannedItems.length})
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Auto-Scroll Active
-                        </span>
-                      </div>
-
-                      {latest10ScannedItems.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2.5 text-center text-slate-400 dark:text-slate-500 text-[11px] border border-dashed border-slate-200 dark:border-slate-800">
-                          No items scanned in this batch yet. Scan AWB barcode above.
-                        </div>
-                      ) : (
-                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-0.5">
-                          {latest10ScannedItems.map((item, idx) => (
-                            <div
-                              key={item.id}
-                              className="bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-lg px-2 py-1 flex items-center justify-between gap-1.5 text-xs transition-all shadow-xs"
-                            >
-                              {/* AWB & Timestamp */}
-                              <div className="flex items-center gap-1.5 truncate">
-                                <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[9px] font-bold flex items-center justify-center shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px] sm:text-xs tracking-wide truncate">
-                                  {item.trackingNumber}
-                                </span>
-                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono shrink-0 hidden sm:inline">
-                                  {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                              </div>
-
-                              {/* Condition Badge & Actions */}
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${
-                                    item.remark === 'Good'
-                                      ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
-                                      : item.remark === 'Damage' || item.remark === 'Missing Product'
-                                      ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
-                                      : 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
-                                  }`}
-                                >
-                                  {item.remark}
-                                </span>
-
-                                <div className="flex items-center gap-0.5 pl-1 border-l border-slate-200 dark:border-slate-800">
-                                  <button
-                                    onClick={() => {
-                                      setEditingItem(item);
-                                      setEditAwbValue(item.trackingNumber);
-                                      setEditRemarkValue(item.remark);
-                                    }}
-                                    className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#123B5D] dark:text-indigo-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
-                                    title="Edit AWB"
-                                  >
-                                    <Edit2 className="w-2.5 h-2.5" />
-                                  </button>
-
-                                  <button
-                                    onClick={() => setDeletingItemId(item.id)}
-                                    className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 transition-all cursor-pointer"
-                                    title="Delete AWB"
-                                  >
-                                    <Trash2 className="w-2.5 h-2.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                   </div>
 
                   {/* FULL SCANNED TABLE & EXPORT */}
@@ -883,7 +815,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       </button>
                     </div>
 
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[220px] overflow-y-auto">
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200 dark:border-slate-800">
                           <tr>
@@ -899,7 +831,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           {activeBatchItems.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="px-2.5 py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
-                                No items scanned yet.
+                                No items scanned yet. Scan AWB barcode above.
                               </td>
                             </tr>
                           ) : (
@@ -927,19 +859,15 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                 <td className="px-2.5 py-1 text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <button
-                                      onClick={() => {
-                                        setEditingItem(item);
-                                        setEditAwbValue(item.trackingNumber);
-                                        setEditRemarkValue(item.remark);
-                                      }}
-                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#123B5D] dark:text-indigo-300 hover:text-slate-900 dark:hover:text-white"
+                                      onClick={() => handleEditScan(item)}
+                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#123B5D] dark:text-indigo-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                                       title="Edit AWB"
                                     >
                                       <Edit2 className="w-3 h-3" />
                                     </button>
                                     <button
-                                      onClick={() => setDeletingItemId(item.id)}
-                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200"
+                                      onClick={() => handleDeleteScan(item.id)}
+                                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 transition-colors cursor-pointer"
                                       title="Delete AWB"
                                     >
                                       <Trash2 className="w-3 h-3" />

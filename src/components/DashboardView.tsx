@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Truck,
   RotateCcw,
@@ -63,6 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewGateEntryModal,
   onOpenNewBatchModal,
 }) => {
+  const navigate = useNavigate();
   const [selectedClientFilter, setSelectedClientFilter] = useState<string>('all');
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isInwardCollapsed, setIsInwardCollapsed] = useState(false);
@@ -267,7 +269,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             id="btn-start-return-batch"
-            onClick={onOpenNewBatchModal}
+            onClick={() => navigate('/returns')}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1864FF] hover:bg-[#1354DB] text-white text-xs font-bold shadow-md hover:shadow-blue-500/20 transition-all cursor-pointer"
           >
             <QrCode className="w-3.5 h-3.5" />
@@ -278,7 +280,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             id="btn-inward-gate-entry"
-            onClick={onOpenNewGateEntryModal}
+            onClick={() => navigate('/inward')}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#062424] hover:bg-[#093535] text-[#2DD4BF] border border-[#115E59]/70 text-xs font-semibold transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -289,7 +291,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             id="btn-audit-guns"
-            onClick={() => onNavigateTab('inventory')}
+            onClick={() => navigate('/audit')}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#241038] hover:bg-[#351752] text-[#C084FC] border border-[#6B21A8]/70 text-xs font-semibold transition-all cursor-pointer"
           >
             <Scan className="w-3.5 h-3.5" />
@@ -300,14 +302,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Date Pill Dropdown Selector */}
       <div className="pt-0.5">
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0B1526] hover:bg-[#101F38] border border-slate-800 text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+        <div
+          onClick={() => alert('Date filter coming soon!')}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0B1526] hover:bg-[#101F38] hover:bg-opacity-80 border border-slate-800 text-xs font-semibold text-slate-200 cursor-pointer transition-all"
         >
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
           <span>{currentDateDisplay}</span>
           <ChevronDown className="w-3 h-3 text-slate-400" />
-        </button>
+        </div>
       </div>
 
       {/* 2. Top 4 KPI Stat Cards */}

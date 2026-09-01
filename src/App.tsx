@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
+  LayoutDashboard,
+  Truck,
+  ScanLine,
+  ClipboardCheck,
+} from 'lucide-react';
+import {
   User,
   UserRole,
   InwardGateEntry,
@@ -77,7 +83,7 @@ export const pathToTab = (pathname: string): ActiveTab => {
   const normalized = pathname.toLowerCase().replace(/\/$/, '');
   if (normalized === '/inward') return 'inward';
   if (normalized === '/grn') return 'grn';
-  if (normalized === '/returns/rto' || normalized === '/returns-rto' || normalized === '/rto') return 'returns_rto';
+  if (normalized === '/returns' || normalized === '/returns/rto' || normalized === '/returns-rto' || normalized === '/rto') return 'returns_rto';
   if (normalized === '/returns/b2b' || normalized === '/returns-b2b' || normalized === '/b2b') return 'returns_b2b';
   if (normalized === '/inventory') return 'inventory';
   if (normalized === '/audit') return 'audit';
@@ -1088,7 +1094,7 @@ export default function App() {
         />
 
         {/* Main Content View Container */}
-        <main className="flex-1 overflow-y-auto bg-[#070D18] min-h-[calc(100vh-53px)] transition-colors">
+        <main className="main-content flex-1 overflow-y-auto bg-[#070D18] min-h-[calc(100vh-53px)] transition-colors">
           <div className="p-3 sm:p-5 lg:p-6 max-w-[1600px] mx-auto w-full">
             {viewTab === 'dashboard' && (
               <DashboardView
@@ -1224,6 +1230,45 @@ export default function App() {
         couriers={couriers}
         onSelectResult={handleUniversalSelectResult}
       />
+
+      {/* Mobile Bottom Navigation */}
+      <div className="mobile-bottom-nav lg:hidden">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className={location.pathname === '/dashboard' ? 'active' : ''}
+        >
+          <LayoutDashboard />
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/inward')}
+          className={location.pathname === '/inward' ? 'active' : ''}
+        >
+          <Truck />
+          <span>Inward</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/returns')}
+          className={location.pathname.startsWith('/returns') || location.pathname === '/rto' ? 'active' : ''}
+        >
+          <ScanLine />
+          <span>Returns</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/audit')}
+          className={location.pathname === '/audit' || location.pathname === '/inventory' ? 'active' : ''}
+        >
+          <ClipboardCheck />
+          <span>Audit</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -1283,6 +1328,11 @@ export default function App() {
             {renderAppLayout('returns_rto')}
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/returns"
+        element={<Navigate to="/returns/rto" replace />}
       />
 
       <Route
