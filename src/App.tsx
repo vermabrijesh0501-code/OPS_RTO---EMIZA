@@ -13,6 +13,7 @@ import {
 } from './types';
 import { StorageService } from './services/storage';
 import { SyncService } from './services/syncService';
+import { startRealtimeSync } from './services/realtimeSync';
 import { DBService } from './services/dbService';
 import { Header } from './components/Header';
 import { Sidebar, ActiveTab } from './components/Sidebar';
@@ -147,6 +148,12 @@ export default function App() {
       if (data.gateEntries && data.gateEntries.length > 0) setGateEntries(data.gateEntries);
       if (data.logs && data.logs.length > 0) setLogs(data.logs);
     });
+  }, []);
+
+  // Real-time Supabase postgres synchronization
+  useEffect(() => {
+    const cleanup = startRealtimeSync();
+    return cleanup;
   }, []);
 
   // Real-time Cross-Device Synchronization Subscriber
