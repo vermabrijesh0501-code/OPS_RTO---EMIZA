@@ -66,20 +66,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-primary flex items-center justify-center p-4 font-sans text-primary relative theme-transition">
-      {/* Theme Toggle Top Right */}
-      <div className="absolute top-4 right-4 z-20">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="w-10 h-10 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-all active:scale-95 cursor-pointer shadow-md"
-          title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
-          aria-label="Toggle Theme"
-        >
-          {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-700" />}
-        </button>
-      </div>
-
-      <div className="w-full max-w-[1000px] min-h-[580px] bg-card rounded-[28px] shadow-[0_20px_50px_rgba(148,163,184,0.12)] border border-theme overflow-hidden flex flex-col md:flex-row theme-transition">
+      <div className="w-full max-w-[1000px] min-h-[580px] bg-card rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-theme overflow-hidden flex flex-col md:flex-row theme-transition">
         {/* Left Panel */}
         <div className="md:w-5/12 bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#EC4899] text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none blur-xl" />
@@ -87,7 +74,7 @@ export const LoginPage: React.FC = () => {
             <div className="w-14 h-14 rounded-2xl bg-white text-[#8B5CF6] flex items-center justify-center shadow-lg mb-3">
               <Warehouse className="w-7 h-7 text-[#8B5CF6]" />
             </div>
-            <span className="text-sm font-bold tracking-wider uppercase text-purple-100 font-mono">EMIZA-WOP</span>
+            <span className="text-sm font-bold tracking-wider uppercase text-purple-100 font-mono">WMS-WOP</span>
             <span className="text-[11px] text-purple-200 font-semibold mt-0.5">Warehouse Operations Platform</span>
           </div>
 

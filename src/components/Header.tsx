@@ -79,8 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left: Logo + Warehouse Switcher */}
       <div className="flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tight text-black dark:text-white">
-            EMIZA<span className="text-[#8B5CF6]">-WOP</span>
+          <span className="text-xl font-black tracking-tight text-white">
+            WMS<span className="text-[#8B5CF6]">-WOP</span>
           </span>
         </div>
 

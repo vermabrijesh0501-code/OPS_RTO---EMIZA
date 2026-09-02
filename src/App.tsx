@@ -1124,6 +1124,8 @@ export default function App() {
                   scannedItems={scannedItems}
                   auditorDevices={auditorDevices}
                   auditRecords={auditRecords}
+                  activeDevices={StorageService.getActiveDevices()}
+                  users={users}
                   logs={logs}
                   currentUser={currentUser}
                   onNavigateTab={tab => handleSelectTab(tab)}
