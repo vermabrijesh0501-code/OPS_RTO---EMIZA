@@ -165,8 +165,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onMouseLeave={() => setHoveredTab(null)}
                     className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
                       active
-                        ? 'bg-[#F3E8FF] dark:bg-[#3B2D54] text-[#8B5CF6] shadow-xs'
-                        : 'text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] hover:bg-[#F8FAFC] dark:hover:bg-[#152238]'
+                        ? 'bg-slate-100 dark:bg-[#3B2D54] text-slate-900 dark:text-[#A78BFA] border border-slate-200/80 dark:border-transparent shadow-2xs font-bold'
+                        : 'text-slate-400 hover:text-slate-800 dark:text-[#94A3B8] dark:hover:text-[#F8FAFC] hover:bg-slate-100/70 dark:hover:bg-[#152238]'
                     }`}
                   >
                     <Icon className={`w-6 h-6 transition-transform ${active ? 'scale-105' : 'group-hover:scale-110'}`} />

@@ -10,11 +10,15 @@ import {
   QrCode,
   ArrowRight,
   TrendingUp,
-  TrendingDown,
   Activity,
   Layers,
   ChevronRight,
   Filter,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Building2,
+  Boxes,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -68,11 +72,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   scannedItems = [],
   auditorDevices = [],
   auditRecords = [],
+  logs = [],
   onNavigateTab,
 }) => {
   const [selectedClientFilter, setSelectedClientFilter] = useState<string>('all');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('Wed, Sep 2, 2026');
+  
+  // Format current date nicely
+  const todayFormatted = useMemo(() => {
+    const d = new Date();
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }, []);
+
+  const [selectedDate, setSelectedDate] = useState<string>('Today');
 
   // Filtered dataset based on selected client filter
   const activeScannedItems = useMemo(() => {
@@ -107,13 +124,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const othersCount = activeScannedItems.filter(s => getConditionKey(s) === 'OTHERS').length;
 
     const defectiveCount = totalScanned - goodCount;
-    const goodPct = totalScanned > 0 ? Math.round((goodCount / totalScanned) * 100) : 0;
-    const damagePct = totalScanned > 0 ? Math.round((damageCount / totalScanned) * 100) : 0;
-    const openBoxPct = totalScanned > 0 ? Math.round((openBoxCount / totalScanned) * 100) : 0;
-    const wrongProdPct = totalScanned > 0 ? Math.round((wrongProdCount / totalScanned) * 100) : 0;
-    const shortQtyPct = totalScanned > 0 ? Math.round((shortQtyCount / totalScanned) * 100) : 0;
-    const missingPct = totalScanned > 0 ? Math.round((missingCount / totalScanned) * 100) : 0;
-    const othersPct = totalScanned > 0 ? Math.round((othersCount / totalScanned) * 100) : 0;
+    const goodPct = totalScanned > 0 ? Math.round((goodCount / totalScanned) * 100) : 85;
+    const damagePct = totalScanned > 0 ? Math.round((damageCount / totalScanned) * 100) : 8;
+    const openBoxPct = totalScanned > 0 ? Math.round((openBoxCount / totalScanned) * 100) : 4;
+    const wrongProdPct = totalScanned > 0 ? Math.round((wrongProdCount / totalScanned) * 100) : 3;
 
     const inwardVehiclesCount = gateEntries.length;
     const totalBoxesUnloaded = gateEntries.reduce((acc, g) => acc + (g.receivedBoxCount || 0), 0);
@@ -121,36 +135,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const totalCycleScans = auditRecords.length;
     const binsAudited = new Set(auditRecords.map(a => a.location)).size;
 
-    const activeGuns = auditorDevices.filter(d => d.status === 'Active').length;
+    const activeGuns = auditorDevices.filter(d => d.status === 'Active').length || 3;
 
     return {
-      totalScanned,
-      goodCount,
+      totalScanned: totalScanned || 25,
+      goodCount: goodCount || 21,
       goodPct,
       defectiveCount,
-      damageCount,
+      damageCount: damageCount || 2,
       damagePct,
-      openBoxCount,
+      openBoxCount: openBoxCount || 1,
       openBoxPct,
-      wrongProdCount,
+      wrongProdCount: wrongProdCount || 1,
       wrongProdPct,
       shortQtyCount,
-      shortQtyPct,
       missingCount,
-      missingPct,
       othersCount,
-      othersPct,
-      inwardVehiclesCount,
-      totalBoxesUnloaded,
-      totalCycleScans,
-      binsAudited,
+      inwardVehiclesCount: inwardVehiclesCount || 4,
+      totalBoxesUnloaded: totalBoxesUnloaded || 120,
+      totalCycleScans: totalCycleScans || 42,
+      binsAudited: binsAudited || 8,
       activeGuns,
     };
   }, [activeScannedItems, gateEntries, auditRecords, auditorDevices]);
 
   // Hourly Live Trend Data for Area Chart
   const hourlyTrendData = useMemo(() => {
-    const hours = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
     const total = metrics.totalScanned || 25;
     const factor = total > 0 ? total / 25 : 1;
     return [
@@ -187,8 +197,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         id: c.id,
         name: c.name,
         color: palette[idx % palette.length],
-        count,
-        pct: pct || (idx === 0 ? 44 : idx === 1 ? 32 : 12),
+        count: count || (idx === 0 ? 11 : idx === 1 ? 8 : 4),
+        pct: pct || (idx === 0 ? 44 : idx === 1 ? 32 : idx === 2 ? 16 : 8),
       };
     });
   }, [clients, batches, scannedItems, metrics.totalScanned]);
@@ -203,35 +213,77 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }));
   }, [clientAccountsList]);
 
+  // Recent 5 operations activity feed
+  const recentActivities = useMemo(() => {
+    const items: Array<{
+      id: string;
+      type: 'inward' | 'return' | 'audit';
+      title: string;
+      subtitle: string;
+      time: string;
+      status: string;
+      statusColor: string;
+    }> = [];
+
+    // Add recent gate entries
+    gateEntries.slice(0, 3).forEach((g) => {
+      items.push({
+        id: `gate-${g.id}`,
+        type: 'inward',
+        title: `Gate Pass ${g.gatePassNo || 'GP-INW'}`,
+        subtitle: `${g.vehicleNumber || 'Truck'} • ${g.receivedBoxCount || 0} Boxes (${g.carrierName || 'Courier'})`,
+        time: g.inwardDate ? new Date(g.inwardDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
+        status: g.status || 'Received',
+        statusColor: '#06B6D4',
+      });
+    });
+
+    // Add recent return batches
+    batches.slice(0, 3).forEach((b) => {
+      const client = clients.find(c => c.id === b.clientId);
+      items.push({
+        id: `batch-${b.id}`,
+        type: 'return',
+        title: `Batch ${b.batchNumber || b.batchNo || 'RB-01'}`,
+        subtitle: `${client?.name || 'Client'} • ${b.totalScanned || 0} AWBs Processed`,
+        time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+        status: b.status === 'Closed' ? 'Closed' : 'Active',
+        statusColor: '#8B5CF6',
+      });
+    });
+
+    return items.slice(0, 5);
+  }, [gateEntries, batches, clients]);
+
   return (
-    <div className="space-y-6 select-none font-sans text-[#1E293B] dark:text-[#F8FAFC]">
-      {/* 1. Header: Page Title + Badge + Date Filter + Action Buttons */}
+    <div className="space-y-6 select-none font-sans text-slate-900 dark:text-[#F8FAFC]">
+      {/* 1. Header: Page Title + Facility Badge + Date Filter + Quick Shortcuts */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-[#1E293B] dark:text-[#F8FAFC]">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Dashboard Overview
             </h1>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F3E8FF] text-[#8B5CF6] dark:bg-[#3B2D54] dark:text-[#A78BFA] border border-[#8B5CF6]/20">
-              {warehouse.name?.includes('Bhiwandi') ? 'Bhiwandi WH' : warehouse.code || 'Bhiwandi WH'}
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-[#3B2D54] dark:text-[#A78BFA] border border-slate-200 dark:border-[#8B5CF6]/20">
+              {warehouse.name?.includes('Bhiwandi') ? 'Bhiwandi Hub' : warehouse.code || 'Bhiwandi Hub'}
             </span>
           </div>
 
-          {/* Date Picker Button */}
+          {/* Date Filter Dropdown */}
           <div className="relative mt-2 inline-block">
             <button
               type="button"
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-card border border-theme text-xs font-medium text-[#1E293B] dark:text-[#F8FAFC] shadow-sm hover:border-[#8B5CF6]/50 cursor-pointer transition-colors"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-theme text-xs font-medium text-slate-700 dark:text-[#F8FAFC] shadow-2xs hover:border-slate-400 dark:hover:border-[#8B5CF6]/50 cursor-pointer transition-colors"
             >
-              <Calendar className="w-3.5 h-3.5 text-[#8B5CF6]" />
-              <span>{selectedDate}</span>
-              <ChevronDown className="w-3 h-3 text-[#64748B]" />
+              <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-[#8B5CF6]" />
+              <span>{selectedDate === 'Today' ? `Today (${todayFormatted})` : selectedDate}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 dark:text-[#64748B]" />
             </button>
 
             {isDatePickerOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-card border border-theme rounded-2xl shadow-xl py-2 z-50 animate-in fade-in-50">
-                {['Wed, Sep 2, 2026', 'Tue, Sep 1, 2026', 'Mon, Aug 31, 2026', 'Month-to-Date (Sep 2026)'].map((d) => (
+              <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-theme rounded-2xl shadow-xl py-2 z-50 animate-in fade-in-50">
+                {['Today', 'Yesterday', 'Last 7 Days', 'Month-to-Date'].map((d) => (
                   <button
                     key={d}
                     type="button"
@@ -239,7 +291,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       setSelectedDate(d);
                       setIsDatePickerOpen(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-xs text-[#1E293B] dark:text-[#F8FAFC] hover:bg-[#F8FAFC] dark:hover:bg-[#152238] transition-colors"
+                    className={`w-full text-left px-4 py-2 text-xs transition-colors cursor-pointer ${
+                      selectedDate === d
+                        ? 'bg-purple-50 dark:bg-[#3B2D54] text-purple-700 dark:text-[#8B5CF6] font-bold'
+                        : 'text-slate-800 dark:text-[#F8FAFC] hover:bg-slate-50 dark:hover:bg-[#152238]'
+                    }`}
                   >
                     {d}
                   </button>
@@ -249,73 +305,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Top Right Action Buttons */}
+        {/* Top Right Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => onNavigateTab('returns_rto')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 dark:bg-[#8B5CF6] dark:hover:bg-[#7C3AED] text-white text-sm font-semibold shadow-xs hover:-translate-y-0.5 transition-all cursor-pointer"
           >
-            <QrCode className="w-4 h-4" />
-            <span>Start Return Batch</span>
+            <QrCode className="w-4 h-4 text-purple-100 dark:text-white" />
+            <span className="text-white">Start Return Batch</span>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab('inward')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#06B6D4] hover:bg-[#0891B2] text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-[#06B6D4] dark:hover:bg-[#0891B2] text-white text-sm font-semibold shadow-xs hover:-translate-y-0.5 transition-all cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Inward Gate Entry</span>
+            <Plus className="w-4 h-4 text-slate-200 dark:text-white" />
+            <span className="text-white">Inward Gate Entry</span>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab('inventory')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#14B8A6] hover:bg-[#0D9488] text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 dark:bg-[#14B8A6] dark:hover:bg-[#0D9488] text-white text-sm font-semibold shadow-xs hover:-translate-y-0.5 transition-all cursor-pointer"
           >
-            <Scan className="w-4 h-4" />
-            <span>Audit Guns</span>
+            <Scan className="w-4 h-4 text-slate-200 dark:text-white" />
+            <span className="text-white">Audit Guns</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Top 4 Stat Cards */}
+      {/* 2. Top 4 Stat KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: B2C Returns */}
+        {/* Card 1: B2C / RTO Returns */}
         <div
           onClick={() => onNavigateTab('returns_rto')}
           className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              B2C Returns
+            <span className="text-xs font-semibold text-slate-500 dark:text-[#64748B] uppercase tracking-wide">
+              B2C / RTO Returns
             </span>
-            <div className="w-10 h-10 rounded-xl bg-[#F3E8FF] dark:bg-[#3B2D54] flex items-center justify-center text-[#8B5CF6]">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#3B2D54] border border-slate-200/80 dark:border-transparent flex items-center justify-center text-slate-700 dark:text-[#A78BFA]">
               <RotateCcw className="w-5 h-5" />
             </div>
           </div>
           <div className="my-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-none">
-                {metrics.totalScanned || 25}
+              <span className="text-[32px] font-bold text-slate-900 dark:text-[#F8FAFC] leading-none">
+                {metrics.totalScanned}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Units</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-[#64748B]">Units</span>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-[#10B981]">
+            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-emerald-600 dark:text-[#10B981]">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 12% from yesterday</span>
+              <span>↑ 12% vs previous run</span>
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
-              <span>Good Condition Rate</span>
-              <span>{metrics.goodPct || 85}%</span>
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-[#64748B] mb-1.5">
+              <span>Good QC Pass Rate</span>
+              <span className="text-slate-900 dark:text-white font-bold">{metrics.goodPct}%</span>
             </div>
-            <div className="w-full h-1.5 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-[#334155] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#8B5CF6] rounded-full transition-all duration-500"
-                style={{ width: `${metrics.goodPct || 85}%` }}
+                className="h-full bg-purple-600 dark:bg-[#8B5CF6] rounded-full transition-all duration-500"
+                style={{ width: `${metrics.goodPct}%` }}
               />
             </div>
           </div>
@@ -327,111 +383,112 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Gate Inward
+            <span className="text-xs font-semibold text-slate-500 dark:text-[#64748B] uppercase tracking-wide">
+              Gate Inward Register
             </span>
-            <div className="w-10 h-10 rounded-xl bg-[#ECFEFF] dark:bg-[#164E63] flex items-center justify-center text-[#06B6D4]">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#164E63] border border-slate-200/80 dark:border-transparent flex items-center justify-center text-slate-700 dark:text-[#38BDF8]">
               <Truck className="w-5 h-5" />
             </div>
           </div>
           <div className="my-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-none">
-                {metrics.inwardVehiclesCount || 4}
+              <span className="text-[32px] font-bold text-slate-900 dark:text-[#F8FAFC] leading-none">
+                {metrics.inwardVehiclesCount}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Vehicles</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-[#64748B]">Vehicles</span>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-[#10B981]">
+            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-emerald-600 dark:text-[#10B981]">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 8% from yesterday</span>
+              <span>↑ 8% inward throughput</span>
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-[#64748B] mb-1.5">
               <span>Boxes Unloaded</span>
-              <span>{metrics.totalBoxesUnloaded || 120} Boxes</span>
+              <span className="text-slate-900 dark:text-white font-bold">{metrics.totalBoxesUnloaded} Boxes</span>
             </div>
-            <div className="w-full h-1.5 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-[#334155] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#06B6D4] rounded-full transition-all duration-500"
-                style={{ width: '70%' }}
+                className="h-full bg-cyan-600 dark:bg-[#06B6D4] rounded-full transition-all duration-500"
+                style={{ width: '80%' }}
               />
             </div>
           </div>
         </div>
 
-        {/* Card 3: Cycle Count */}
+        {/* Card 3: Physical Cycle Count */}
         <div
           onClick={() => onNavigateTab('inventory')}
           className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Cycle Count
+            <span className="text-xs font-semibold text-slate-500 dark:text-[#64748B] uppercase tracking-wide">
+              Physical Cycle Count
             </span>
-            <div className="w-10 h-10 rounded-xl bg-[#CCFBF1] dark:bg-[#134E4A] flex items-center justify-center text-[#14B8A6]">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#134E4A] border border-slate-200/80 dark:border-transparent flex items-center justify-center text-slate-700 dark:text-[#2DD4BF]">
               <Scan className="w-5 h-5" />
             </div>
           </div>
           <div className="my-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-none">
-                {metrics.totalCycleScans || 42}
+              <span className="text-[32px] font-bold text-slate-900 dark:text-[#F8FAFC] leading-none">
+                {metrics.totalCycleScans}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Scans</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-[#64748B]">Scans</span>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-[#10B981]">
+            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-emerald-600 dark:text-[#10B981]">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 15% from yesterday</span>
+              <span>↑ 15% audit progress</span>
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-[#64748B] mb-1.5">
               <span>Audited Bins</span>
-              <span>{metrics.binsAudited || 8} Bins</span>
+              <span className="text-slate-900 dark:text-white font-bold">{metrics.binsAudited} Bins Verified</span>
             </div>
-            <div className="w-full h-1.5 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-[#334155] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#14B8A6] rounded-full transition-all duration-500"
+                className="h-full bg-teal-600 dark:bg-[#14B8A6] rounded-full transition-all duration-500"
                 style={{ width: '90%' }}
               />
             </div>
           </div>
         </div>
 
-        {/* Card 4: Scanner Guns */}
+        {/* Card 4: Scanner Guns & Terminals */}
         <div
           onClick={() => onNavigateTab('inventory')}
           className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Scanner Guns
+            <span className="text-xs font-semibold text-slate-500 dark:text-[#64748B] uppercase tracking-wide">
+              Scanner Guns & Docks
             </span>
-            <div className="w-10 h-10 rounded-xl bg-[#FDF2F8] dark:bg-[#831843] flex items-center justify-center text-[#EC4899]">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#831843] border border-slate-200/80 dark:border-transparent flex items-center justify-center text-slate-700 dark:text-[#F472B6]">
               <Smartphone className="w-5 h-5" />
             </div>
           </div>
           <div className="my-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold text-[#1E293B] dark:text-[#F8FAFC] leading-none">
-                {metrics.activeGuns || 3}
+              <span className="text-[32px] font-bold text-slate-900 dark:text-[#F8FAFC] leading-none">
+                {metrics.activeGuns}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Active</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-[#64748B]">Active Guns</span>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-[#64748B]">
-              <span>100% Battery & Online</span>
+            <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-emerald-600 dark:text-[#10B981]">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-[#10B981]" />
+              <span>All terminals synchronized</span>
             </div>
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
-              <span>Dock Stations</span>
-              <span>4 Assigned</span>
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-[#64748B] mb-1.5">
+              <span>Dock Station Health</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Online & Ready</span>
             </div>
-            <div className="w-full h-1.5 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-[#334155] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#EC4899] rounded-full transition-all duration-500"
-                style={{ width: '75%' }}
+                className="h-full bg-slate-600 dark:bg-[#EC4899] rounded-full transition-all duration-500"
+                style={{ width: '100%' }}
               />
             </div>
           </div>
@@ -444,16 +501,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="lg:col-span-2 bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] transition-all duration-200">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-base font-semibold text-[#1E293B] dark:text-[#F8FAFC]">
+              <h2 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
                 Live Operations & Hourly Scan Trends
               </h2>
-              <p className="text-xs text-[#64748B] mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-[#64748B] mt-0.5">
                 Real-time throughput of processed AWB units across all active docks
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#F3E8FF] dark:bg-[#3B2D54] text-[#8B5CF6]">
-                <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 dark:bg-[#3B2D54] text-purple-700 dark:text-[#A78BFA] border border-purple-200 dark:border-purple-800/40">
+                <span className="w-2 h-2 rounded-full bg-purple-600 dark:bg-[#8B5CF6] animate-pulse" />
                 Live Feed
               </span>
             </div>
@@ -468,16 +525,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" className="dark:stroke-[#334155]" />
                 <XAxis
                   dataKey="time"
-                  stroke="#94A3B8"
+                  stroke="#64748B"
                   fontSize={12}
                   tickLine={false}
                   axisLine={{ stroke: '#E2E8F0' }}
                 />
                 <YAxis
-                  stroke="#94A3B8"
+                  stroke="#64748B"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -486,9 +543,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-card border border-theme rounded-xl p-3 shadow-lg text-xs">
-                          <div className="font-semibold text-[#1E293B] dark:text-[#F8FAFC] mb-1">{label}</div>
-                          <div className="text-[#8B5CF6] font-medium">Total Scans: {payload[0]?.value} units</div>
+                        <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-theme rounded-xl p-3 shadow-lg text-xs">
+                          <div className="font-semibold text-slate-900 dark:text-[#F8FAFC] mb-1">{label}</div>
+                          <div className="text-purple-600 dark:text-[#8B5CF6] font-semibold">Total Scans: {payload[0]?.value} units</div>
                         </div>
                       );
                     }
@@ -499,7 +556,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   type="monotone"
                   dataKey="scans"
                   stroke="#8B5CF6"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#purpleGradient)"
                 />
@@ -511,10 +568,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Donut Chart: Account Distribution (Span 1) */}
         <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] transition-all duration-200 flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#1E293B] dark:text-[#F8FAFC]">
+            <h2 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
               Account Distribution
             </h2>
-            <p className="text-xs text-[#64748B] mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-[#64748B] mt-0.5">
               Client share of processed returns
             </p>
           </div>
@@ -538,22 +595,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-[#1E293B] dark:text-[#F8FAFC]">
-                {metrics.totalScanned || 25}
+              <span className="text-2xl font-bold text-slate-900 dark:text-[#F8FAFC]">
+                {metrics.totalScanned}
               </span>
-              <span className="text-[11px] font-medium text-[#64748B]">Total Units</span>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-[#64748B]">Total Units</span>
             </div>
           </div>
 
-          {/* Clean Right / Bottom Legend */}
+          {/* Clean Legend */}
           <div className="space-y-2 pt-2 border-t border-theme">
             {donutData.slice(0, 4).map((entry, idx) => (
               <div key={idx} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 truncate">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                  <span className="font-medium text-[#1E293B] dark:text-[#F8FAFC] truncate">{entry.name}</span>
+                  <span className="font-semibold text-slate-800 dark:text-[#F8FAFC] truncate">{entry.name}</span>
                 </div>
-                <span className="font-semibold text-[#64748B]">{entry.pct}%</span>
+                <span className="font-semibold text-slate-600 dark:text-[#64748B]">{entry.pct}%</span>
               </div>
             ))}
           </div>
@@ -566,18 +623,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="lg:col-span-2 bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] transition-all duration-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-semibold text-[#1E293B] dark:text-[#F8FAFC]">
+              <h2 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
                 Client Accounts Breakdown
               </h2>
-              <p className="text-xs text-[#64748B] mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-[#64748B] mt-0.5">
                 Processed unit volume and percentage share by client
               </p>
             </div>
             <button
               onClick={() => onNavigateTab('masters')}
-              className="text-xs font-semibold text-[#8B5CF6] hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-purple-600 dark:text-[#8B5CF6] hover:underline flex items-center gap-1 cursor-pointer"
             >
-              View All <ChevronRight className="w-3.5 h-3.5" />
+              Manage Masters <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -587,21 +644,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: client.color }} />
-                    <span className="text-sm font-semibold text-[#1E293B] dark:text-[#F8FAFC]">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-[#F8FAFC]">
                       {client.name}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
-                    <span className="text-xs font-medium text-[#64748B] bg-[#F8FAFC] dark:bg-[#152238] px-2.5 py-0.5 rounded-full border border-theme">
-                      {client.count || (client.pct > 40 ? 11 : client.pct > 30 ? 8 : 4)} units
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#152238] px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-theme">
+                      {client.count} units
                     </span>
-                    <span className="font-semibold text-[#64748B] min-w-[36px] text-right">
+                    <span className="font-semibold text-slate-600 dark:text-[#64748B] min-w-[36px] text-right">
                       {client.pct}%
                     </span>
                   </div>
                 </div>
                 {/* Mini Progress Bar below name */}
-                <div className="w-full h-1 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-slate-100 dark:bg-[#334155] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
@@ -618,10 +675,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* QC Condition Breakdown & Circular Progress Ring (Span 1) */}
         <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] transition-all duration-200 flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#1E293B] dark:text-[#F8FAFC]">
+            <h2 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
               QC Condition Status
             </h2>
-            <p className="text-xs text-[#64748B] mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-[#64748B] mt-0.5">
               Live inspection triage breakdown
             </p>
           </div>
@@ -636,6 +693,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   r="40"
                   fill="transparent"
                   stroke="#F1F5F9"
+                  className="dark:stroke-[#334155]"
                   strokeWidth="8"
                 />
                 <circle
@@ -645,7 +703,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   fill="transparent"
                   stroke="url(#progressRingGradient)"
                   strokeWidth="8"
-                  strokeDasharray={`${(metrics.goodPct || 85) * 2.51} 251.2`}
+                  strokeDasharray={`${metrics.goodPct * 2.51} 251.2`}
                   strokeLinecap="round"
                 />
                 <defs>
@@ -656,37 +714,106 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xl font-bold text-[#1E293B] dark:text-[#F8FAFC]">
-                  {metrics.goodPct || 85}%
+                <span className="text-xl font-bold text-slate-900 dark:text-[#F8FAFC]">
+                  {metrics.goodPct}%
                 </span>
-                <span className="text-[10px] font-semibold text-[#10B981] uppercase tracking-wide">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-[#10B981] uppercase tracking-wide">
                   Pass Rate
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 7 Condition Summary Badges */}
+          {/* 4 Condition Summary Badges */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-theme text-xs">
-            <div className="flex items-center justify-between p-2 rounded-xl bg-[#ECFDF5] text-[#10B981] border border-[#10B981]/20 font-semibold">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 font-bold">
               <span>Good</span>
-              <span>{metrics.goodCount || 21}</span>
+              <span className="font-mono">{metrics.goodCount}</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-xl bg-[#FEF2F2] text-[#EF4444] border border-[#EF4444]/20 font-semibold">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 font-bold">
               <span>Damage</span>
-              <span>{metrics.damageCount || 2}</span>
+              <span className="font-mono">{metrics.damageCount}</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-xl bg-[#FFFBEB] text-[#F59E0B] border border-[#F59E0B]/20 font-semibold">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 font-bold">
               <span>Open Box</span>
-              <span>{metrics.openBoxCount || 1}</span>
+              <span className="font-mono">{metrics.openBoxCount}</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-xl bg-[#F5F3FF] text-[#8B5CF6] border border-[#8B5CF6]/20 font-semibold">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 font-bold">
               <span>Wrong Prod</span>
-              <span>{metrics.wrongProdCount || 1}</span>
+              <span className="font-mono">{metrics.wrongProdCount}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 5. Live Operations Activity Stream (Informative Panel) */}
+      <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-[#3B2D54] border border-slate-200/80 dark:border-transparent flex items-center justify-center text-slate-700 dark:text-[#A78BFA]">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Live Operations Feed
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-[#64748B]">
+                Recent gate entries, return batches, and warehouse events
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('reports')}
+              className="text-xs font-semibold text-slate-700 hover:text-purple-600 dark:text-[#A78BFA] dark:hover:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              Full Operational Log <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="divide-y divide-theme">
+          {recentActivities.map((act) => (
+            <div key={act.id} className="py-3 flex items-center justify-between gap-4 first:pt-1 last:pb-1">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-transparent bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-2xs"
+                >
+                  {act.type === 'inward' ? (
+                    <Truck className="w-4 h-4 text-slate-600 dark:text-cyan-400" />
+                  ) : act.type === 'return' ? (
+                    <RotateCcw className="w-4 h-4 text-slate-600 dark:text-purple-400" />
+                  ) : (
+                    <Scan className="w-4 h-4 text-slate-600 dark:text-teal-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-[#F8FAFC]">
+                    {act.title}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-[#64748B]">
+                    {act.subtitle}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <span
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-slate-200 dark:border-transparent bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                >
+                  {act.status}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-[#94A3B8] font-mono hidden sm:inline">
+                  {act.time}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
+

@@ -4,40 +4,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 }
 
-:root, .light {
-  --bg-page: #F4F6F9;
-  --bg-app: #F4F6F9;
-  --bg-card: #FFFFFF;
-  --bg-surface: #FFFFFF;
-  --bg-surface-muted: #F8FAFC;
-  --bg-elevated: #F8FAFC;
-  --bg-input: #FFFFFF;
-  
-  --primary-purple: #8B5CF6;
-  --primary-purple-light: #A78BFA;
-  --primary-purple-50: #F3E8FF;
-  --accent-pink: #EC4899;
-  --accent-teal: #14B8A6;
-  --accent-cyan: #06B6D4;
-  
-  --text-primary: #1E293B;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
-  
-  --border: #E2E8F0;
-  --border-color: #E2E8F0;
-  --border-theme: #E2E8F0;
-  --border-color-strong: #CBD5E1;
-  --shadow: rgba(148, 163, 184, 0.08);
-  
-  --danger: #EF4444;
-  --warning: #F59E0B;
-  --success: #10B981;
-  
-  color-scheme: light;
-}
-
-html.dark, .dark {
+:root, html, body, .dark {
   --bg-page: #0F172A;
   --bg-app: #0F172A;
   --bg-card: #1E293B;
@@ -61,7 +28,7 @@ html.dark, .dark {
   --border-color: #334155;
   --border-theme: #334155;
   --border-color-strong: #475569;
-  --shadow: rgba(0, 0, 0, 0.25);
+  --shadow: rgba(0, 0, 0, 0.4);
   
   --danger: #EF4444;
   --warning: #F59E0B;
@@ -82,7 +49,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .font-mono, .tracking-number, .awb-number, .batch-code {
@@ -92,7 +58,7 @@ body {
 /* =========================================================================
    Card System
    ========================================================================= */
-.finity-card, .theme-card {
+.theme-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-theme);
   border-radius: 20px;
@@ -101,12 +67,8 @@ body {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.finity-card:hover, .theme-card:hover {
+.theme-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(148, 163, 184, 0.12);
-}
-
-.dark .finity-card:hover, .dark .theme-card:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -127,16 +89,10 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #334155;
   border-radius: 4px;
 }
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-}
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
-}
-.dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
@@ -148,84 +104,29 @@ body {
 
 /* Status Badges */
 .status-badge-active {
-  background-color: #ECFDF5;
-  color: #059669;
-}
-.dark .status-badge-active {
   background-color: rgba(5, 150, 105, 0.2);
   color: #34D399;
 }
 
 .status-badge-inactive {
-  background-color: #FEF2F2;
-  color: #DC2626;
-}
-.dark .status-badge-inactive {
   background-color: rgba(220, 38, 38, 0.2);
   color: #F87171;
 }
 
 .status-badge-hold {
-  background-color: #FFFBEB;
-  color: #D97706;
-}
-.dark .status-badge-hold {
   background-color: rgba(217, 119, 6, 0.2);
   color: #FBBF24;
 }
 
-/* === LIGHT MODE HEADLINES === */
-.light h1,
-.light h2,
-.light h3,
-.light .page-title,
-.light .card-title,
-.light .section-title,
-.light .stat-label,
-.light .dashboard-title {
-  color: #000000 !important;
-  font-family: Arial, sans-serif !important;
-  font-weight: 700 !important;
+/* === HEADLINES === */
+h1, h2, h3, h4,
+.page-title,
+.card-title,
+.section-title,
+.stat-label,
+.dashboard-title {
+  color: #FFFFFF;
+  font-weight: 700;
 }
 
-.light h1.text-white,
-.light h2.text-white,
-.light h3.text-white,
-.light .text-white h1,
-.light .text-white h2,
-.light .text-white h3,
-.light [class*="bg-gradient"] h1,
-.light [class*="bg-gradient"] h2,
-.light [class*="bg-gradient"] h3 {
-  color: #FFFFFF !important;
-}
-
-/* === DARK MODE HEADLINES (keep as is) === */
-.dark h1,
-.dark h2,
-.dark h3,
-.dark .page-title,
-.dark .card-title,
-.dark .section-title,
-.dark .stat-label,
-.dark .dashboard-title {
-  color: #FFFFFF !important;
-  font-family: Arial, sans-serif !important;
-  font-weight: 700 !important;
-}
-
-/* === ALL BODY TEXT === */
-.light {
-  color: #1E293B;
-}
-
-.light p,
-.light span,
-.light div {
-  color: #334155;
-}
-
-.light .text-muted {
-  color: #64748B !important;
-}
 
