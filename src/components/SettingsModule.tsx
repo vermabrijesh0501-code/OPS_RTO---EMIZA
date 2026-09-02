@@ -86,12 +86,12 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   };
 
   return (
-    <div className="p-6 space-y-6 bg-primary text-primary min-h-screen theme-transition">
+    <div className="p-4 sm:p-6 space-y-6 text-[#1E293B] dark:text-[#F8FAFC] theme-transition">
       {/* Title */}
-      <div className="border-b border-theme pb-4 flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-4">
         <div>
-          <h1 className="text-xl font-black text-primary flex items-center gap-2">
-            <Cloud className="w-6 h-6 text-[var(--accent-cyan)]" /> Production Database & Cloudflare Settings
+          <h1 className="text-2xl font-bold tracking-tight text-[#1E293B] dark:text-[#F8FAFC] flex items-center gap-2.5">
+            <Cloud className="w-6 h-6 text-[#8B5CF6]" /> Production Database & Cloudflare Settings
           </h1>
           <p className="text-xs text-secondary mt-1">
             Manage your live Supabase connection, Cloudflare Pages deployment environment, and offline sync queue.
@@ -99,13 +99,13 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
               configured
-                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                : 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                ? 'bg-[#ECFDF5] text-[#10B981] border-[#10B981]/30'
+                : 'bg-[#FEF2F2] text-[#EF4444] border-[#EF4444]/30'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${configured ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${configured ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`} />
             {configured ? 'Supabase Connected' : 'Supabase Not Configured'}
           </span>
         </div>
@@ -113,11 +113,11 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Box 1: Supabase Configuration */}
-        <div className="bg-surface border border-theme rounded-[12px] p-6 shadow-xl space-y-5">
+        <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] space-y-5">
           <div className="flex items-center justify-between border-b border-theme pb-3">
             <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-[var(--accent-cyan)]" />
-              <h2 className="text-sm font-extrabold text-primary">1. Supabase Database Connection</h2>
+              <Database className="w-5 h-5 text-[#8B5CF6]" />
+              <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC]">1. Supabase Database Connection</h2>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 placeholder="https://your-project.supabase.co"
                 value={supabaseUrl}
                 onChange={e => setSupabaseUrl(e.target.value)}
-                className="w-full theme-input p-2.5 rounded-[10px] border border-theme font-mono focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#F8FAFC] dark:bg-[#152238] p-3 rounded-xl border border-theme font-mono focus:outline-none focus:border-[#8B5CF6]"
               />
             </div>
 
@@ -146,26 +146,26 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 value={supabaseAnonKey}
                 onChange={e => setSupabaseAnonKey(e.target.value)}
-                className="w-full theme-input p-2.5 rounded-[10px] border border-theme font-mono focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#F8FAFC] dark:bg-[#152238] p-3 rounded-xl border border-theme font-mono focus:outline-none focus:border-[#8B5CF6]"
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-elevated rounded-[10px] border border-theme">
+            <div className="flex items-center justify-between p-3.5 bg-[#F8FAFC] dark:bg-[#152238] rounded-xl border border-theme">
               <div>
-                <div className="font-bold text-primary">Auto-Sync Local Operations</div>
-                <div className="text-[10px] text-secondary">Syncs Gate Passes, Scans, and Batches in real-time.</div>
+                <div className="font-bold text-[#1E293B] dark:text-[#F8FAFC]">Auto-Sync Local Operations</div>
+                <div className="text-[11px] text-secondary">Syncs Gate Passes, Scans, and Batches in real-time.</div>
               </div>
               <input
                 type="checkbox"
                 checked={autoSyncEnabled}
                 onChange={e => setAutoSyncEnabled(e.target.checked)}
-                className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                className="w-4 h-4 accent-[#8B5CF6] rounded cursor-pointer"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-[10px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/30 transition-all cursor-pointer"
+              className="w-full py-3 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               Save Credentials Locally
             </button>
@@ -174,44 +174,44 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
 
         {/* Box 2: Cloudflare Pages Deployment & Offline Queue */}
         <div className="space-y-6">
-          <div className="bg-surface border border-theme rounded-[12px] p-6 shadow-xl space-y-4">
+          <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] space-y-4">
             <div className="flex items-center gap-2 border-b border-theme pb-3">
-              <Globe className="w-5 h-5 text-[var(--accent-cyan)]" />
-              <h2 className="text-sm font-extrabold text-primary">2. Cloudflare Pages Deployment Settings</h2>
+              <Globe className="w-5 h-5 text-[#06B6D4]" />
+              <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC]">2. Cloudflare Pages Deployment Settings</h2>
             </div>
 
             <p className="text-xs text-secondary leading-relaxed">
-              This app is configured for <strong className="text-primary">Cloudflare Pages</strong>. In production, set your environment variables as encrypted variables in Cloudflare Dashboard:
+              This app is configured for <strong className="text-primary font-semibold">Cloudflare Pages</strong>. In production, set your environment variables as encrypted variables in Cloudflare Dashboard:
             </p>
 
             <div className="space-y-2 text-xs">
-              <div className="p-3 bg-elevated rounded-[10px] border border-theme space-y-1 font-mono text-[11px]">
-                <div className="text-secondary">Build Command: <span className="text-[var(--accent-cyan)]">npm run build</span></div>
-                <div className="text-secondary">Build Output Directory: <span className="text-[var(--accent-cyan)]">dist</span></div>
-                <div className="text-secondary">Framework Preset: <span className="text-[var(--accent-cyan)]">Vite</span></div>
+              <div className="p-3 bg-[#F8FAFC] dark:bg-[#152238] rounded-xl border border-theme space-y-1 font-mono text-[11px]">
+                <div className="text-secondary">Build Command: <span className="text-[#8B5CF6] font-semibold">npm run build</span></div>
+                <div className="text-secondary">Build Output Directory: <span className="text-[#8B5CF6] font-semibold">dist</span></div>
+                <div className="text-secondary">Framework Preset: <span className="text-[#8B5CF6] font-semibold">Vite</span></div>
               </div>
 
-              <div className="p-3 bg-elevated rounded-[10px] border border-theme space-y-1 font-mono text-[11px]">
-                <div className="text-blue-500 font-bold">Cloudflare Pages Environment Variables:</div>
-                <div className="text-secondary">VITE_SUPABASE_URL = <span className="text-primary">{supabaseUrl || 'https://xyz.supabase.co'}</span></div>
-                <div className="text-secondary">VITE_SUPABASE_ANON_KEY = <span className="text-primary">{supabaseAnonKey ? `${supabaseAnonKey.slice(0, 15)}...` : 'your_anon_key'}</span></div>
+              <div className="p-3 bg-[#F8FAFC] dark:bg-[#152238] rounded-xl border border-theme space-y-1 font-mono text-[11px]">
+                <div className="text-[#8B5CF6] font-bold">Cloudflare Pages Environment Variables:</div>
+                <div className="text-secondary">VITE_SUPABASE_URL = <span className="text-primary font-medium">{supabaseUrl || 'https://xyz.supabase.co'}</span></div>
+                <div className="text-secondary">VITE_SUPABASE_ANON_KEY = <span className="text-primary font-medium">{supabaseAnonKey ? `${supabaseAnonKey.slice(0, 15)}...` : 'your_anon_key'}</span></div>
               </div>
             </div>
           </div>
 
           {/* Box 3: Offline Queue Monitor */}
-          <div className="bg-surface border border-theme rounded-[12px] p-6 shadow-xl space-y-4">
+          <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] space-y-4">
             <div className="flex items-center justify-between border-b border-theme pb-3">
               <div className="flex items-center gap-2">
-                <HardDrive className="w-5 h-5 text-amber-500" />
-                <h2 className="text-sm font-extrabold text-primary">3. Offline Sync Queue ({queueItems.length})</h2>
+                <HardDrive className="w-5 h-5 text-[#F59E0B]" />
+                <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC]">3. Offline Sync Queue ({queueItems.length})</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleFlushQueue}
                   disabled={isFlushing || queueItems.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-blue-600/15 hover:bg-blue-600/25 text-blue-500 border border-blue-500/30 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F3E8FF] dark:bg-[#3B2D54] hover:bg-[#E9D5FF] text-[#8B5CF6] border border-[#8B5CF6]/30 text-xs font-semibold transition-all disabled:opacity-40 cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isFlushing ? 'animate-spin' : ''}`} />
                   <span>{isFlushing ? 'Flushing...' : 'Flush Queue'}</span>
@@ -220,7 +220,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                   <button
                     type="button"
                     onClick={handleClearQueue}
-                    className="p-1.5 rounded-[8px] bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 border border-rose-500/40 text-xs transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg bg-[#FEF2F2] hover:bg-rose-100 text-[#EF4444] border border-[#EF4444]/30 text-xs transition-all cursor-pointer"
                     title="Clear queue"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -230,7 +230,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
             </div>
 
             {flushStatus && (
-              <div className="p-2.5 rounded-[8px] bg-elevated border border-theme text-[11px] text-[var(--accent-cyan)]">
+              <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#152238] border border-theme text-[11px] text-[#06B6D4]">
                 {flushStatus}
               </div>
             )}
@@ -244,11 +244,11 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 {queueItems.map(item => (
                   <div
                     key={item.id}
-                    className="p-2.5 rounded-[8px] bg-elevated border border-theme text-[11px] flex items-center justify-between"
+                    className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#152238] border border-theme text-[11px] flex items-center justify-between"
                   >
                     <div>
                       <span className="font-bold text-primary uppercase">{item.operation}</span>{' '}
-                      <span className="text-[var(--accent-cyan)] font-mono">{item.table}</span>
+                      <span className="text-[#8B5CF6] font-mono">{item.table}</span>
                       <div className="text-[10px] text-secondary">
                         Attempts: {item.attempts} &bull; {new Date(item.timestamp).toLocaleTimeString()}
                       </div>
@@ -267,29 +267,29 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
       </div>
 
       {/* SQL DDL Schema Generator Box */}
-      <div className="bg-surface border border-theme rounded-[12px] p-6 shadow-xl space-y-4">
+      <div className="bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] space-y-4">
         <div className="flex items-center justify-between border-b border-theme pb-3">
           <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-amber-500" />
-            <h2 className="text-sm font-extrabold text-primary">
+            <Terminal className="w-5 h-5 text-[#F59E0B]" />
+            <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F8FAFC]">
               4. Supabase SQL DDL Schema & RLS Generator (14+ Tables & Policies)
             </h2>
           </div>
 
           <button
             onClick={handleCopySQL}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FFFBEB] dark:bg-[#78350F]/30 hover:bg-[#FEF3C7] text-[#F59E0B] border border-[#F59E0B]/30 text-xs font-bold transition-all cursor-pointer"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+            {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4 text-[#F59E0B]" />}
             <span>{copied ? 'Copied to Clipboard!' : 'Copy SQL Schema'}</span>
           </button>
         </div>
 
         <p className="text-xs text-secondary">
-          Copy and paste this SQL script into your <strong className="text-primary">Supabase Project → SQL Editor</strong> to create all tables (Companies, Warehouses, Clients, Couriers, SKUs, Gate Entries, Return Batches, Scanned Items, Active Devices, Activity Logs, and Users).
+          Copy and paste this SQL script into your <strong className="text-primary font-semibold">Supabase Project → SQL Editor</strong> to create all tables (Companies, Warehouses, Clients, Couriers, SKUs, Gate Entries, Return Batches, Scanned Items, Active Devices, Activity Logs, and Users).
         </p>
 
-        <div className="bg-primary p-4 rounded-[10px] border border-theme max-h-80 overflow-y-auto font-mono text-[11px] text-[var(--accent-cyan)] whitespace-pre">
+        <div className="bg-[#F8FAFC] dark:bg-[#0B1120] p-4 rounded-xl border border-theme max-h-80 overflow-y-auto font-mono text-[11px] text-[#8B5CF6] dark:text-[#A78BFA] whitespace-pre">
           {ddlSql}
         </div>
       </div>

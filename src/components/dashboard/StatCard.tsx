@@ -5,10 +5,12 @@ export interface StatCardProps {
   id?: string;
   title: string;
   value: string | number;
-  subtitle?: string;
+  unit?: string;
   icon: LucideIcon;
   iconColor?: string;
   iconBg?: string;
+  progressPercent?: number;
+  progressBarColor?: string;
   trend?: {
     value: string;
     isPositive?: boolean;
@@ -16,81 +18,96 @@ export interface StatCardProps {
     label?: string;
   };
   onClick?: () => void;
-  badge?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
   id,
   title,
   value,
-  subtitle,
+  unit,
   icon: Icon,
-  iconColor = 'text-[#123B5D] dark:text-blue-400',
-  iconBg = 'bg-blue-50 dark:bg-blue-900/30',
+  iconColor = '#8B5CF6',
+  iconBg = '#F3E8FF',
+  progressPercent = 85,
+  progressBarColor = '#8B5CF6',
   trend,
   onClick,
-  badge,
 }) => {
   return (
     <div
       id={id}
       onClick={onClick}
-      className={`bg-surface rounded-xl border border-theme p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
-        onClick ? 'cursor-pointer hover:border-blue-400' : ''
+      className={`bg-card border border-theme rounded-[20px] p-6 shadow-[0_4px_24px_rgba(148,163,184,0.08)] hover:shadow-[0_8px_32px_rgba(148,163,184,0.12)] hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between select-none ${
+        onClick ? 'cursor-pointer' : ''
       }`}
     >
-      {/* Top row: Title + Icon */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
-            {title}
+      {/* Top row: Label + Icon Container 40x40px */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+          {title}
+        </span>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: iconBg }}
+        >
+          <Icon className="w-5 h-5" style={{ color: iconColor }} />
+        </div>
+      </div>
+
+      {/* Middle: Stat Number */}
+      <div className="my-1">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[32px] font-bold text-black dark:text-white leading-none tracking-tight">
+            {typeof value === 'number' ? value.toLocaleString() : value}
           </span>
-          {badge && (
-            <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-elevated text-secondary border border-theme">
-              {badge}
+          {unit && (
+            <span className="text-sm font-semibold text-[#64748B]">
+              {unit}
             </span>
           )}
         </div>
-        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0 border border-theme`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
-        </div>
-      </div>
 
-      {/* Middle: Big Metric Value */}
-      <div className="mt-1 mb-2">
-        <div className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight font-sans">
-          {typeof value === 'number' ? value.toLocaleString() : value}
-        </div>
-      </div>
-
-      {/* Bottom row: Trend indicator & Subtitle */}
-      <div className="flex items-center justify-between text-xs text-secondary pt-2 border-t border-theme gap-2">
+        {/* Trend Indicator */}
         {trend && (
-          <div className="flex items-center gap-1 font-medium">
+          <div className="flex items-center gap-1 mt-2 text-xs">
             {trend.isNeutral ? (
-              <span className="inline-flex items-center gap-0.5 text-secondary">
+              <span className="inline-flex items-center gap-0.5 text-[#64748B] font-medium">
                 <Minus className="w-3.5 h-3.5" />
                 <span>{trend.value}</span>
               </span>
             ) : trend.isPositive ? (
-              <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
+              <span className="inline-flex items-center gap-0.5 text-[#10B981] font-semibold">
                 <TrendingUp className="w-3.5 h-3.5" />
                 <span>{trend.value}</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-md">
+              <span className="inline-flex items-center gap-0.5 text-[#EF4444] font-semibold">
                 <TrendingDown className="w-3.5 h-3.5" />
                 <span>{trend.value}</span>
               </span>
             )}
-            {trend.label && <span className="text-[11px] text-muted font-normal">{trend.label}</span>}
+            {trend.label && (
+              <span className="text-[#64748B] font-normal">{trend.label}</span>
+            )}
           </div>
         )}
-        {subtitle && (
-          <span className="text-[11px] text-muted font-medium truncate ml-auto">
-            {subtitle}
-          </span>
-        )}
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
+          <span>Progress</span>
+          <span>{Math.min(100, Math.max(0, progressPercent))}%</span>
+        </div>
+        <div className="w-full h-1.5 bg-[#E2E8F0] dark:bg-[#334155] rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(100, Math.max(0, progressPercent))}%`,
+              backgroundColor: progressBarColor,
+            }}
+          />
+        </div>
       </div>
     </div>
   );

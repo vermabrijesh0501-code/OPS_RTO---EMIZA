@@ -1103,7 +1103,7 @@ export default function App() {
         />
 
         {/* Main Content View Container */}
-        <main className="main-content flex-1 overflow-y-auto bg-primary min-h-[calc(100vh-53px)] theme-transition">
+        <main className="main-content flex-1 overflow-y-auto bg-page min-h-[calc(100vh-64px)] transition-colors duration-200 lg:pl-[72px] pb-20 lg:pb-8 w-full">
           <div className="p-3 sm:p-5 lg:p-6 max-w-[1600px] mx-auto w-full">
             {viewTab === 'dashboard' && (
               isMobile ? (

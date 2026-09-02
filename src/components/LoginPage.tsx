@@ -79,47 +79,47 @@ export const LoginPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="w-full max-w-[1000px] min-h-[580px] bg-surface rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-theme overflow-hidden flex flex-col md:flex-row theme-transition">
+      <div className="w-full max-w-[1000px] min-h-[580px] bg-card rounded-[28px] shadow-[0_20px_50px_rgba(148,163,184,0.12)] border border-theme overflow-hidden flex flex-col md:flex-row theme-transition">
         {/* Left Panel */}
-        <div className="md:w-5/12 bg-[#123B5D] text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-[#0D2E49] opacity-70 pointer-events-none" />
+        <div className="md:w-5/12 bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#EC4899] text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/10 pointer-events-none blur-xl" />
           <div className="relative z-10 flex flex-col items-center md:items-start text-center md:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-lg mb-3">
-              <Warehouse className="w-7 h-7 text-[#123B5D]" />
+            <div className="w-14 h-14 rounded-2xl bg-white text-[#8B5CF6] flex items-center justify-center shadow-lg mb-3">
+              <Warehouse className="w-7 h-7 text-[#8B5CF6]" />
             </div>
-            <span className="text-sm font-bold tracking-wider uppercase text-blue-100/90 font-mono">EMIZA-WOP</span>
-            <span className="text-[11px] text-cyan-300 font-semibold mt-0.5">Warehouse Operations Platform</span>
+            <span className="text-sm font-bold tracking-wider uppercase text-purple-100 font-mono">EMIZA-WOP</span>
+            <span className="text-[11px] text-purple-200 font-semibold mt-0.5">Warehouse Operations Platform</span>
           </div>
 
           <div className="relative z-10 my-6 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">Welcome Back!</h1>
-            <p className="text-blue-100/85 text-xs leading-relaxed max-w-xs mx-auto md:mx-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">Welcome Back!</h1>
+            <p className="text-purple-100/90 text-xs leading-relaxed max-w-xs mx-auto md:mx-0">
               Enterprise Inward Gate Management, RTO Returns QC Scanning, Cycle Audits & Live Dispatch.
             </p>
 
-            <div className="mt-4 pt-4 border-t border-blue-400/20">
-              <div className="flex items-center gap-2 text-[11px] text-blue-200/80">
-                <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <div className="flex items-center gap-2 text-[11px] text-purple-100">
+                <Shield className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
                 <span>RBAC Protected Multi-Role Security</span>
               </div>
-              <div className="flex items-center gap-2 text-[11px] text-blue-200/80 mt-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+              <div className="flex items-center gap-2 text-[11px] text-purple-100 mt-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                 <span>{isConfigured ? 'Supabase Cloud Sync Active' : 'Offline & Local Engine Ready'}</span>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 text-[11px] text-blue-200/60 font-medium flex items-center justify-between">
+          <div className="relative z-10 text-[11px] text-purple-200/80 font-medium flex items-center justify-between">
             <span>v3.4 Production</span>
-            <span className="font-mono text-[10px] text-blue-300/80">Bhiwandi Hub 01</span>
+            <span className="font-mono text-[10px] text-purple-200">Bhiwandi Hub 01</span>
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className="md:w-7/12 bg-surface text-primary p-6 sm:p-10 flex flex-col justify-center">
+        <div className="md:w-7/12 bg-card text-[#1E293B] dark:text-[#F8FAFC] p-6 sm:p-10 flex flex-col justify-center">
           <div className="max-w-md w-full mx-auto">
             <div className="mb-6 text-center">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#123B5D] dark:text-cyan-400 tracking-tight">Sign In</h2>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] dark:text-[#F8FAFC] tracking-tight">Sign In</h2>
               <p className="text-secondary text-xs mt-1">Enter your credentials or click any demo persona below</p>
             </div>
 
@@ -139,7 +139,7 @@ export const LoginPage: React.FC = () => {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full theme-input text-xs sm:text-sm rounded-full px-5 py-3 pr-11 shadow-sm"
+                  className="w-full bg-[#F8FAFC] dark:bg-[#152238] border border-theme text-xs sm:text-sm rounded-full px-5 py-3 pr-11 shadow-xs focus:border-[#8B5CF6] focus:outline-none"
                 />
                 <Mail className="w-4 h-4 text-muted absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -152,7 +152,7 @@ export const LoginPage: React.FC = () => {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full theme-input text-xs sm:text-sm rounded-full pl-5 pr-11 py-3 shadow-sm"
+                  className="w-full bg-[#F8FAFC] dark:bg-[#152238] border border-theme text-xs sm:text-sm rounded-full pl-5 pr-11 py-3 shadow-xs focus:border-[#8B5CF6] focus:outline-none"
                 />
                 <button
                   type="button"
@@ -168,7 +168,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 rounded-full bg-[#123B5D] hover:bg-[#0D2E49] text-white text-xs sm:text-sm font-bold uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-3.5 rounded-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs sm:text-sm font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isSubmitting ? (
                     <>

@@ -340,14 +340,20 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   };
 
   // 7 QC Conditions List
-  const remarksList: { key: ReturnRemarkType; label: string; color: string; activeColor: string }[] = [
-    { key: 'Good', label: '1. Good', color: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50', activeColor: 'bg-emerald-600 text-white border-emerald-500 shadow-sm' },
-    { key: 'Damage', label: '2. Damage', color: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/50', activeColor: 'bg-rose-600 text-white border-rose-500 shadow-sm' },
-    { key: 'Open Box', label: '3. Open Box', color: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50', activeColor: 'bg-amber-600 text-white border-amber-500 shadow-sm' },
-    { key: 'Wrong Product', label: '4. Wrong Product', color: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/50', activeColor: 'bg-purple-600 text-white border-purple-500 shadow-sm' },
-    { key: 'Short Qty', label: '5. Short Qty', color: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700/50', activeColor: 'bg-orange-600 text-white border-orange-500 shadow-sm' },
-    { key: 'Missing Product', label: '6. Missing Product', color: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700/50', activeColor: 'bg-red-600 text-white border-red-500 shadow-sm' },
-    { key: 'Others', label: '7. Others', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700', activeColor: 'bg-slate-600 text-white border-slate-500 shadow-sm' },
+  const remarksList: {
+    key: ReturnRemarkType;
+    label: string;
+    textColor: string;
+    bgColor: string;
+    borderColor: string;
+  }[] = [
+    { key: 'Good', label: '✓ Good', textColor: '#10B981', bgColor: '#ECFDF5', borderColor: 'rgba(16, 185, 129, 0.2)' },
+    { key: 'Damage', label: '⚠ Damage', textColor: '#EF4444', bgColor: '#FEF2F2', borderColor: 'rgba(239, 68, 68, 0.2)' },
+    { key: 'Open Box', label: 'Open Box', textColor: '#F59E0B', bgColor: '#FFFBEB', borderColor: 'rgba(245, 158, 11, 0.2)' },
+    { key: 'Wrong Product', label: 'Wrong Prod', textColor: '#8B5CF6', bgColor: '#F5F3FF', borderColor: 'rgba(139, 92, 246, 0.2)' },
+    { key: 'Short Qty', label: 'Short Qty', textColor: '#F97316', bgColor: '#FFF7ED', borderColor: 'rgba(249, 115, 22, 0.2)' },
+    { key: 'Missing Product', label: 'Missing', textColor: '#EC4899', bgColor: '#FDF2F8', borderColor: 'rgba(236, 72, 153, 0.2)' },
+    { key: 'Others', label: 'Others', textColor: '#64748B', bgColor: '#F8FAFC', borderColor: 'rgba(100, 116, 139, 0.2)' },
   ];
 
   // Signature pad drawing helpers
@@ -768,17 +774,17 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     </form>
 
                     {/* 7 QC CONDITIONS SELECTOR */}
-                    <div className="space-y-1 pt-1">
-                      <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="font-bold text-secondary uppercase tracking-wider">
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-secondary uppercase tracking-wider text-[11px]">
                           QC Condition for Next Scan:
                         </span>
-                        <span className="font-bold text-[#123B5D] dark:text-indigo-400">
-                          Selected: <strong className="text-primary underline">{selectedRemark}</strong>
+                        <span className="font-semibold text-[#8B5CF6]">
+                          Selected: <strong className="text-primary font-bold underline">{selectedRemark}</strong>
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
                         {remarksList.map(item => {
                           const isSelected = selectedRemark === item.key;
                           return (
@@ -789,8 +795,15 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                 setSelectedRemark(item.key);
                                 barcodeInputRef.current?.focus();
                               }}
-                              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all text-center truncate cursor-pointer ${
-                                isSelected ? item.activeColor : `${item.color} hover:bg-surface`
+                              style={{
+                                backgroundColor: item.bgColor,
+                                borderColor: isSelected ? item.textColor : item.borderColor,
+                                color: item.textColor,
+                              }}
+                              className={`h-12 px-3 rounded-xl text-xs font-semibold border transition-all duration-150 flex items-center justify-center text-center truncate cursor-pointer ${
+                                isSelected
+                                  ? 'border-2 shadow-sm scale-[1.02] font-bold'
+                                  : 'hover:opacity-90'
                               }`}
                             >
                               {item.label}
