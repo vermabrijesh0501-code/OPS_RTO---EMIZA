@@ -261,65 +261,6 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
         </div>
       </div>
 
-      {/* B2C Returns Live Operations Card */}
-      <div className="p-4 rounded-2xl bg-surface border border-theme shadow-lg mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse" />
-            <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-primary">
-              Account Distribution by Count
-            </h2>
-          </div>
-          <span className="text-[10px] font-mono font-bold text-secondary">
-            {activeBatches} Active Batches
-          </span>
-        </div>
-
-        {/* Distribution Progress Bar (44% / 56% style visual) */}
-        <div className="space-y-1.5 mb-3.5">
-          <div className="flex items-center justify-between text-[11px] font-medium text-secondary">
-            <span>Account Distribution by Count</span>
-            <span className="font-mono text-[var(--accent-cyan)] font-bold">1,103 Items</span>
-          </div>
-          <div className="w-full h-3.5 bg-elevated rounded-full overflow-hidden flex shadow-inner">
-            <div style={{ width: '44%' }} className="h-full bg-[#00BDD6] transition-all" title="Bella Vita: 44%" />
-            <div style={{ width: '29%' }} className="h-full bg-blue-500 transition-all" title="Nykaa: 29%" />
-            <div style={{ width: '17%' }} className="h-full bg-purple-500 transition-all" title="Mamaearth: 17%" />
-            <div style={{ width: '10%' }} className="h-full bg-emerald-500 transition-all" title="boAt: 10%" />
-          </div>
-          <div className="flex items-center justify-between text-[9px] text-muted font-mono">
-            <span>Bella Vita 44%</span>
-            <span>Nykaa 29%</span>
-            <span>Mamaearth 17%</span>
-            <span>boAt 10%</span>
-          </div>
-        </div>
-
-        {/* Account Breakdown List with Colored Dots */}
-        <div className="divide-y divide-[var(--border-color)]">
-          {clientBreakdown.map((cli) => (
-            <div
-              key={cli.name}
-              onClick={() => navigate('/returns')}
-              className="py-2 flex items-center justify-between text-xs cursor-pointer hover:bg-elevated px-1 rounded-lg transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-                  style={{ backgroundColor: cli.color }}
-                />
-                <span className="font-medium text-primary">{cli.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-primary text-[11px]">{cli.count} pcs</span>
-                <span className="text-[10px] font-mono text-muted">({cli.pct}%)</span>
-                <ArrowRight className="w-3 h-3 text-secondary" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Direct Shift Status Indicator */}
       <div className="p-3 rounded-xl bg-surface border border-theme flex items-center justify-between text-xs text-secondary">
         <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import {
   Smartphone,
   Calendar,
   ChevronDown,
+  ChevronLeft,
   Plus,
   QrCode,
   ArrowRight,
@@ -396,14 +397,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   }, [filteredScannedItems]);
 
-  // Account Distribution by Count
+  // Account Distribution by Count (Sorted by Count Descending)
   const clientAccountsList = useMemo(() => {
     const palette = ['#8B5CF6', '#14B8A6', '#EC4899', '#F59E0B', '#06B6D4', '#3B82F6', '#10B981', '#64748B'];
     if (clients.length === 0) return [];
 
     const totalUnits = metrics.totalScanned;
 
-    return clients.map((c, idx) => {
+    const list = clients.map((c) => {
       const clientBatches = filteredBatches.filter(b => b.clientId === c.id);
       const clientBatchIds = new Set(clientBatches.map(b => b.id));
       const count = filteredScannedItems.filter(s => clientBatchIds.has(s.batchId)).length;
@@ -413,11 +414,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         id: c.id,
         name: c.name,
         code: c.code,
-        color: palette[idx % palette.length],
         count,
         pct,
       };
     });
+
+    // Automatically sort all existing accounts by count descending, highest count first
+    list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+    return list.map((item, idx) => ({
+      ...item,
+      color: palette[idx % palette.length],
+    }));
   }, [clients, filteredBatches, filteredScannedItems, metrics.totalScanned]);
 
   // Donut Chart Data
@@ -971,13 +979,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Donut Chart: Account Distribution by Count (Span 1) */}
         <div id="account-distribution-donut" className="bg-card border border-theme rounded-[20px] p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <h2 className="text-base font-bold text-white">
-              Account Distribution by Count
-            </h2>
-            <p className="text-xs text-[#64748B] mt-0.5">
-              Client share of processed returns in period
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-white">
+                Account Distribution by Count
+              </h2>
+              <p className="text-xs text-[#64748B] mt-0.5">
+                Client share of processed returns in period
+              </p>
+            </div>
+            {clientAccountsList.length > 4 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('account-distribution-legend-scroll');
+                    if (el) el.scrollBy({ left: -140, behavior: 'smooth' });
+                  }}
+                  className="w-6 h-6 rounded-lg bg-[#1E293B] hover:bg-[#334155] border border-theme text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Slide left"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('account-distribution-legend-scroll');
+                    if (el) el.scrollBy({ left: 140, behavior: 'smooth' });
+                  }}
+                  className="w-6 h-6 rounded-lg bg-[#1E293B] hover:bg-[#334155] border border-theme text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Slide right"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="relative h-[180px] w-full my-2 flex items-center justify-center">
@@ -1006,19 +1042,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Clean Legend */}
-          <div className="space-y-2 pt-2 border-t border-theme">
-            {clientAccountsList.slice(0, 4).map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 truncate">
+          {/* Horizontal Slide / Scroll Accounts Legend (Shows 4-5 accounts initially, slide to view remaining) */}
+          <div className="pt-2.5 border-t border-theme">
+            <div
+              id="account-distribution-legend-scroll"
+              className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scroll-smooth scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent snap-x"
+            >
+              {clientAccountsList.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#152238] border border-theme shrink-0 snap-start text-xs min-w-[125px] max-w-[150px] hover:border-[#8B5CF6]/40 transition-colors"
+                >
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                  <span className="font-semibold text-[#F8FAFC] truncate">{entry.name}</span>
+                  <div className="truncate flex-1 min-w-0">
+                    <div className="font-semibold text-[#F8FAFC] truncate text-[11px]" title={entry.name}>
+                      {entry.name}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {entry.count} <span className="text-slate-500">({entry.pct}%)</span>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-semibold text-slate-400 font-mono">
-                  {entry.count} ({entry.pct}%)
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
