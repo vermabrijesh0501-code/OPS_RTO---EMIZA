@@ -374,94 +374,167 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   const pageWidth = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(15, 23, 42);
-  doc.rect(0, 0, pageWidth, 30, 'F');
+  doc.rect(0, 0, pageWidth, 28, 'F');
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 28, pageWidth, 1.5, 'F');
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('EMIZA INWARD GATE ENTRY PASS', 14, 14);
+  doc.text('EMIZA INWARD GATE ENTRY & HANDOVER PASS', 14, 13);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('VEHICLE UNLOADING & DOCK ALLOCATION PERMIT', 14, 22);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`3-PHASE LINKED INWARD WORKFLOW MANIFEST | GATE ENTRY ID: ${entry.gatePassNumber}`, 14, 21);
 
-  let y = 40;
+  let y = 35;
 
+  // Phase 1 Security Box
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(14, y, pageWidth - 28, 55, 2, 2, 'FD');
+  doc.roundedRect(14, y, pageWidth - 28, 48, 2, 2, 'FD');
 
-  doc.setFontSize(9);
-  doc.setTextColor(51, 65, 85);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Gate Pass #:', 18, y + 10);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.gatePassNumber, 55, y + 10);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Vehicle Number:', 18, y + 18);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.vehicleNumber, 55, y + 18);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Driver Name:', 18, y + 26);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.driverName, 55, y + 26);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Driver Mobile:', 18, y + 34);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.driverMobile, 55, y + 34);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Driver License:', 18, y + 42);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.driverLicense || 'N/A', 55, y + 42);
-
-  // Column 2
-  doc.setFont('helvetica', 'bold'); doc.text('Warehouse:', 110, y + 10);
-  doc.setFont('helvetica', 'normal'); doc.text(warehouse ? warehouse.name : entry.warehouseId, 140, y + 10);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Client:', 110, y + 18);
-  doc.setFont('helvetica', 'normal'); doc.text(client ? client.name : entry.clientId, 140, y + 18);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Courier:', 110, y + 26);
-  doc.setFont('helvetica', 'normal'); doc.text(courier ? courier.name : entry.courierId, 140, y + 26);
-
-  doc.setFont('helvetica', 'bold'); doc.text('Dock Number:', 110, y + 34);
-  doc.setFont('helvetica', 'bold'); doc.setTextColor(37, 99, 235);
-  doc.text(entry.dockNumber || 'Unassigned', 140, y + 34);
-
-  doc.setFont('helvetica', 'bold'); doc.setTextColor(51, 65, 85); doc.text('Invoice / Challan #:', 110, y + 42);
-  doc.setFont('helvetica', 'normal'); doc.text(entry.invoiceChallanNumber || 'N/A', 140, y + 42);
-
-  y += 65;
-
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('CARGO & VERIFICATION SUMMARY', 14, y);
+  doc.text('PHASE 01: VEHICLE ARRIVAL & SECURITY CHECK-IN', 18, y + 7);
 
-  y += 6;
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(14, y, pageWidth - 28, 25);
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold'); doc.text('Expected Cartons:', 18, y + 8);
-  doc.setFont('helvetica', 'normal'); doc.text(`${entry.expectedBoxCount} Cartons`, 55, y + 8);
+  doc.setFont('helvetica', 'bold'); doc.text('Gate Entry ID:', 18, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.text(entry.gatePassNumber, 52, y + 15);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Received Cartons:', 110, y + 8);
-  doc.setFont('helvetica', 'normal'); doc.text(`${entry.receivedBoxCount} Cartons`, 145, y + 8);
+  doc.setFont('helvetica', 'bold'); doc.text('Vehicle Number:', 18, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.text(entry.vehicleNumber, 52, y + 22);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Invoice Value (INR):', 18, y + 17);
-  doc.setFont('helvetica', 'normal'); doc.text(`Rs. ${entry.invoiceValue.toLocaleString()}`, 55, y + 17);
+  doc.setFont('helvetica', 'bold'); doc.text('Driver Name:', 18, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.text(entry.driverName, 52, y + 29);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Entry Timestamp:', 110, y + 17);
-  doc.setFont('helvetica', 'normal'); doc.text(new Date(entry.entryTime).toLocaleString(), 145, y + 17);
+  doc.setFont('helvetica', 'bold'); doc.text('Driver Mobile / DL:', 18, y + 36);
+  doc.setFont('helvetica', 'normal'); doc.text(`${entry.driverMobile} | ${entry.driverLicense || 'N/A'}`, 52, y + 36);
 
-  y += 35;
+  doc.setFont('helvetica', 'bold'); doc.text('Security Check-in:', 18, y + 43);
+  doc.setFont('helvetica', 'normal'); doc.text(entry.phase1?.gateEntryDateTime || new Date(entry.entryTime).toLocaleString(), 52, y + 43);
 
+  // Column 2
+  doc.setFont('helvetica', 'bold'); doc.text('Warehouse:', 110, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.text(warehouse ? warehouse.name : entry.warehouseId, 142, y + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Account (Client):', 110, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.text(client ? client.name : entry.clientId, 142, y + 22);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Courier Partner:', 110, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.text(courier ? courier.name : entry.courierId, 142, y + 29);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Aligned Dock:', 110, y + 36);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(37, 99, 235);
+  doc.text(entry.dockNumber || 'Dock 01', 142, y + 36);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Invoice Count:', 110, y + 43);
+  doc.setFont('helvetica', 'normal'); doc.text(`${entry.phase1?.invoiceCount || 1} Invoices Declared`, 142, y + 43);
+
+  y += 54;
+
+  // Phase 2 Dock QC Box
+  doc.setDrawColor(203, 213, 225);
+  doc.setFillColor(254, 252, 232);
+  doc.roundedRect(14, y, pageWidth - 28, 48, 2, 2, 'FD');
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('PHASE 02: UNLOADING & DOCK QC SUMMARY', 18, y + 7);
+
+  const phase2 = entry.phase2;
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Unloading Status:', 18, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.text(phase2 ? 'QC Completed' : 'Pending Dock QC', 52, y + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Total Dockets:', 18, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.text(`${phase2?.totalDocketsCount || (entry.expectedBoxCount ? 1 : 0)} Dockets`, 52, y + 22);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Total Invoices:', 18, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.text(`${phase2?.totalInvoicesCount || 1} Invoices Verified`, 52, y + 29);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Total Boxes (QC):', 18, y + 36);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129);
+  doc.text(`${phase2?.totalBoxesCount || entry.expectedBoxCount} Boxes`, 52, y + 36);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Dock Supervisor:', 18, y + 43);
+  doc.setFont('helvetica', 'normal'); doc.text(phase2?.unloadingInchargeName || 'Unassigned', 52, y + 43);
+
+  // Column 2 - QC Conditions
+  doc.setFont('helvetica', 'bold'); doc.text('Good / Intact:', 110, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(16, 185, 129);
+  doc.text(`${phase2?.goodCount || 0} Boxes`, 142, y + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Damage Boxes:', 110, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(225, 29, 72);
+  doc.text(`${phase2?.damageCount || 0} Boxes`, 142, y + 22);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Open Boxes:', 110, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(217, 119, 6);
+  doc.text(`${phase2?.openBoxesCount || 0} Boxes`, 142, y + 29);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Missing / Other:', 110, y + 36);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(147, 51, 234);
+  doc.text(`${(phase2?.missingBoxesCount || 0) + (phase2?.otherCount || 0)} Boxes`, 142, y + 36);
+
+  y += 54;
+
+  // Phase 3 Handover Box
+  doc.setDrawColor(203, 213, 225);
+  doc.setFillColor(240, 253, 244);
+  doc.roundedRect(14, y, pageWidth - 28, 42, 2, 2, 'FD');
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('PHASE 03: HANDOVER & CUSTODY ACCEPTANCE', 18, y + 7);
+
+  const phase3 = entry.phase3;
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Account Incharge:', 18, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.text(phase3?.accountInchargeName || 'Pending Sign-off', 52, y + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Confirmed Boxes:', 18, y + 22);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129);
+  doc.text(`${phase3?.receivedBoxesConfirmed || 0} Boxes Received`, 52, y + 22);
+
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Variance / Diff:', 18, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.text(`${phase3 ? (phase3.differenceCount === 0 ? '0 (Exact Match)' : `${phase3.differenceCount} Boxes`) : '-'}`, 52, y + 29);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Completed At:', 110, y + 15);
+  doc.setFont('helvetica', 'normal'); doc.text(phase3?.completedAt ? new Date(phase3.completedAt).toLocaleString() : 'Pending', 142, y + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.text('Condition Confirmed:', 110, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.text(phase3?.conditionConfirmed ? 'Yes (Accepted)' : 'Pending', 142, y + 22);
+
+  if (phase3?.shortageComment) {
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(225, 29, 72); doc.text('Shortage Reason:', 18, y + 36);
+    doc.setFont('helvetica', 'normal'); doc.text(phase3.shortageComment.slice(0, 75), 52, y + 36);
+  }
+
+  y += 48;
+
+  // Signatures Area
   doc.setDrawColor(148, 163, 184);
-  doc.roundedRect(14, y, pageWidth - 28, 30, 2, 2, 'S');
+  doc.roundedRect(14, y, pageWidth - 28, 26, 2, 2, 'S');
 
   doc.setFontSize(8);
-  doc.text('Gate Security Sign: _______________________', 18, y + 12);
-  doc.text('Driver Signature: _______________________', 115, y + 12);
-  doc.text('Unloading Dock Supervisor: _______________________', 18, y + 22);
-  doc.text('Date & Time: _______________________', 115, y + 22);
+  doc.setTextColor(51, 65, 85);
+  doc.text(`Security Officer Sign: ${entry.createdByName || 'Security Officer'}`, 18, y + 10);
+  doc.text(`Unloading QC Sign: ${phase2?.unloadingInchargeName || 'Dock Incharge'}`, 110, y + 10);
+  doc.text(`Driver Sign: ${entry.driverName}`, 18, y + 20);
+  doc.text(`Account Incharge Sign: ${phase3?.signerName || 'Account Incharge'}`, 110, y + 20);
 
-  doc.save(`${entry.gatePassNumber}_GatePass.pdf`);
+  doc.save(`${entry.gatePassNumber}_3Phase_GatePass.pdf`);
 }
 
 export function generateWarehouseBatchesSummaryPDF(

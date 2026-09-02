@@ -16,6 +16,9 @@ import {
   AuditorDevice,
   AuditRecord,
   SupabaseConfig,
+  Phase1SecurityData,
+  Phase2UnloadingData,
+  Phase3HandoverData,
 } from './types';
 import { StorageService } from './services/storage';
 import { SyncService } from './services/syncService';
@@ -365,17 +368,37 @@ export default function App() {
     StorageService.saveCurrentWarehouseId(whId);
   };
 
-  // Add Gate Entry
-  const handleAddGateEntry = (entryData: Omit<InwardGateEntry, 'id' | 'gatePassNumber' | 'entryTime'>) => {
+  // Add Gate Entry (Phase 01 Security)
+  const handleAddGateEntry = (
+    entryData: Omit<InwardGateEntry, 'id' | 'gatePassNumber' | 'entryTime'> & { phase1Data?: Phase1SecurityData }
+  ) => {
     const count = gateEntries.length + 1;
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const gatePassNumber = `GP-${dateStr}-${String(count).padStart(3, '0')}`;
+    const gatePassNumber = `GE-${dateStr}-${String(count).padStart(3, '0')}`;
 
+    const { phase1Data, ...rest } = entryData as any;
     const newEntry: InwardGateEntry = {
-      ...entryData,
+      ...rest,
       id: `gate-${Date.now()}`,
       gatePassNumber,
       entryTime: new Date().toISOString(),
+      currentPhase: 'Phase 01 - Vehicle Received',
+      phase1: phase1Data || {
+        gateEntryDateTime: new Date().toLocaleDateString('en-GB') + ' : ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        vehicleNumber: rest.vehicleNumber,
+        vehicleTypeId: rest.vehicleTypeId,
+        courierId: rest.courierId,
+        driverName: rest.driverName,
+        driverMobile: rest.driverMobile,
+        driverLicense: rest.driverLicense || '',
+        clientId: rest.clientId,
+        invoiceCount: 1,
+        alignedDock: rest.dockNumber || 'Dock 01',
+        remarks: rest.remarks,
+        createdById: currentUser.id,
+        createdByName: currentUser.name,
+        createdAt: new Date().toISOString(),
+      },
     };
 
     const updated = [newEntry, ...gateEntries];
@@ -385,9 +408,9 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Registered Vehicle Gate Entry',
+      action: 'Registered Vehicle Gate Entry (Phase 01)',
       module: 'Inward',
-      details: `Issued ${gatePassNumber} for vehicle ${newEntry.vehicleNumber}`,
+      details: `Created Gate Entry ${gatePassNumber} for ${newEntry.vehicleNumber} (${newEntry.driverName})`,
     });
     setLogs(StorageService.getActivityLogs());
   };
@@ -418,6 +441,75 @@ export default function App() {
         action: `Updated Inward Status to ${status}`,
         module: 'Inward',
         details: `${updatedTarget.gatePassNumber || id} updated to ${status} ${dockNumber ? `at ${dockNumber}` : ''}`,
+      });
+    }
+    setLogs(StorageService.getActivityLogs());
+  };
+
+  // Update Gate Entry (Phase 02 Unloading & Dock QC)
+  const handleUpdateGateEntryPhase2 = (gateEntryId: string, phase2Data: Phase2UnloadingData) => {
+    let updatedTarget: InwardGateEntry | undefined;
+    const updated = gateEntries.map(g => {
+      if (g.id === gateEntryId) {
+        updatedTarget = {
+          ...g,
+          dockNumber: phase2Data.dockConfirmed || g.dockNumber,
+          dockAllocatedTime: g.dockAllocatedTime || new Date().toISOString(),
+          unloadingEndTime: new Date().toISOString(),
+          expectedBoxCount: phase2Data.totalBoxesCount,
+          receivedBoxCount: phase2Data.totalBoxesCount,
+          status: 'QC Completed',
+          currentPhase: 'Phase 02 - Unloading & Dock QC',
+          phase2: phase2Data,
+        };
+        return updatedTarget;
+      }
+      return g;
+    });
+
+    setGateEntries(updated);
+
+    if (updatedTarget) {
+      DBService.updateGateEntry(gateEntryId, updatedTarget, updated, {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Completed Dock QC (Phase 02)',
+        module: 'Inward',
+        details: `${updatedTarget.gatePassNumber} Dock QC completed: ${phase2Data.totalDocketsCount} Dockets, ${phase2Data.totalInvoicesCount} Invoices, ${phase2Data.totalBoxesCount} Boxes (${phase2Data.goodCount} Good, ${phase2Data.damageCount} Damaged)`,
+      });
+    }
+    setLogs(StorageService.getActivityLogs());
+  };
+
+  // Update Gate Entry (Phase 03 Handover Taken)
+  const handleUpdateGateEntryPhase3 = (gateEntryId: string, phase3Data: Phase3HandoverData) => {
+    let updatedTarget: InwardGateEntry | undefined;
+    const updated = gateEntries.map(g => {
+      if (g.id === gateEntryId) {
+        updatedTarget = {
+          ...g,
+          receivedBoxCount: phase3Data.receivedBoxesConfirmed,
+          status: 'Handover Completed',
+          currentPhase: 'Phase 03 - Handover Completed',
+          handoverCompletedTime: new Date().toISOString(),
+          phase3: phase3Data,
+        };
+        return updatedTarget;
+      }
+      return g;
+    });
+
+    setGateEntries(updated);
+
+    if (updatedTarget) {
+      DBService.updateGateEntry(gateEntryId, updatedTarget, updated, {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Completed Custody Handover (Phase 03)',
+        module: 'Inward',
+        details: `${updatedTarget.gatePassNumber} Handover completed by ${phase3Data.accountInchargeName}: ${phase3Data.receivedBoxesConfirmed} Boxes received (Diff: ${phase3Data.differenceCount})`,
       });
     }
     setLogs(StorageService.getActivityLogs());
@@ -1144,8 +1236,11 @@ export default function App() {
                 clients={clients}
                 couriers={couriers}
                 vehicleTypes={vehicleTypes}
+                drivers={drivers}
                 onAddGateEntry={handleAddGateEntry}
                 onUpdateGateStatus={handleUpdateGateStatus}
+                onUpdateGateEntryPhase2={handleUpdateGateEntryPhase2}
+                onUpdateGateEntryPhase3={handleUpdateGateEntryPhase3}
                 isOpenCreateModal={isNewGateEntryModalOpen}
                 onCloseCreateModal={() => setIsNewGateEntryModalOpen(!isNewGateEntryModalOpen)}
               />

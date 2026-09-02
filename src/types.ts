@@ -195,13 +195,91 @@ export interface ReturnReason {
   status: 'Active' | 'Inactive' | 'On Hold';
 }
 
+export interface InwardInvoiceItem {
+  id: string;
+  invoiceNumber: string;
+  boxCount: number;
+  qcCondition: 'Good' | 'Damage' | 'Open Boxes' | 'Missing Boxes' | 'Other';
+  otherRemark?: string;
+}
+
+export interface InwardDocket {
+  id: string;
+  docketNumber: string;
+  invoices: InwardInvoiceItem[];
+  notes?: string;
+}
+
+export interface Phase1SecurityData {
+  gateEntryDateTime: string; // DD/MM/YYYY : HH:mm (24-hour auto)
+  vehicleNumber: string;
+  vehicleTypeId: string;
+  vehicleTypeName?: string;
+  courierId?: string;
+  courierName?: string;
+  courierPartner?: string; // Free-text Courier Partner
+  transporterName?: string; // Free-text Transporter
+  driverName: string;
+  driverMobile: string;
+  driverLicense: string;
+  clientId: string; // Account Name from Account Master
+  clientName?: string;
+  invoiceCount: number;
+  boxCount?: number; // Manual box count
+  alignedDock: string;
+  remarks?: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface Phase2UnloadingData {
+  dockConfirmed: string;
+  confirmedInvoiceCount: number;
+  dockets: InwardDocket[];
+  unloadingInchargeId: string;
+  unloadingInchargeName: string;
+  unloadedAt: string;
+  totalDocketsCount: number;
+  totalInvoicesCount: number;
+  totalBoxesCount: number;
+  goodCount: number;
+  damageCount: number;
+  openBoxesCount: number;
+  missingBoxesCount: number;
+  otherCount: number;
+  notes?: string;
+}
+
+export interface Phase3HandoverData {
+  accountInchargeId: string;
+  accountInchargeName: string;
+  totalInvoicesCalculated: number; // auto-calculated from Phase 02
+  totalBoxesCalculated: number; // auto-calculated from Phase 02
+  receivedBoxesConfirmed: number;
+  differenceCount: number; // receivedBoxesConfirmed - totalBoxesCalculated
+  shortageComment?: string; // mandatory if differenceCount !== 0
+  conditionConfirmed: boolean;
+  signatureDataUrl?: string; // digital signature
+  signerName: string;
+  completedAt: string;
+  remarks?: string;
+}
+
+export type InwardWorkflowPhase = 
+  | 'Phase 01 - Vehicle Received'
+  | 'Phase 02 - Unloading & Dock QC'
+  | 'Phase 03 - Handover Completed';
+
 export interface InwardGateEntry {
   id: string;
-  gatePassNumber: string;
+  gatePassNumber: string; // Unique Gate Entry ID
   warehouseId: string;
   companyId: string;
   clientId: string;
-  courierId: string;
+  courierId?: string;
+  courierPartner?: string;
+  transporterName?: string;
   vehicleNumber: string;
   vehicleTypeId: string;
   driverName: string;
@@ -212,12 +290,20 @@ export interface InwardGateEntry {
   expectedBoxCount: number;
   receivedBoxCount: number;
   dockNumber?: string;
-  status: 'Arrived' | 'Gate In' | 'Dock Allocated' | 'Unloading' | 'Verified' | 'Completed';
+  status: 'Arrived' | 'Gate In' | 'Dock Allocated' | 'Unloading' | 'QC Completed' | 'Handover Completed' | 'Completed' | 'Verified';
+  currentPhase?: InwardWorkflowPhase | string;
   entryTime: string;
   dockAllocatedTime?: string;
   unloadingEndTime?: string;
+  handoverCompletedTime?: string;
   remarks?: string;
   createdBy: string;
+  createdByName?: string;
+  
+  // Linked 3-Phase structured data
+  phase1?: Phase1SecurityData;
+  phase2?: Phase2UnloadingData;
+  phase3?: Phase3HandoverData;
 }
 
 export type ReturnRemarkType = 

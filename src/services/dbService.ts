@@ -117,11 +117,17 @@ export function mapDbToGateEntry(row: any): InwardGateEntry {
     receivedBoxCount: row.received_box_count ?? row.receivedBoxCount ?? 0,
     dockNumber: row.dock_number || row.dockNumber,
     status: (row.status || 'Arrived') as any,
+    currentPhase: row.current_phase || row.currentPhase || 'Phase 01 - Vehicle Received',
     entryTime: row.entry_time || row.entryTime || new Date().toISOString(),
     dockAllocatedTime: row.dock_allocated_time || row.dockAllocatedTime,
     unloadingEndTime: row.unloading_end_time || row.unloadingEndTime,
+    handoverCompletedTime: row.handover_completed_time || row.handoverCompletedTime,
     remarks: row.remarks || '',
     createdBy: row.created_by || row.createdBy || 'usr-super',
+    createdByName: row.created_by_name || row.createdByName || 'Security Officer',
+    phase1: row.phase1 || (row.phase_1_data ? JSON.parse(row.phase_1_data) : undefined),
+    phase2: row.phase2 || (row.phase_2_data ? JSON.parse(row.phase_2_data) : undefined),
+    phase3: row.phase3 || (row.phase_3_data ? JSON.parse(row.phase_3_data) : undefined),
   };
 }
 
@@ -144,11 +150,17 @@ export function mapGateEntryToDb(entry: InwardGateEntry): Record<string, any> {
     received_box_count: entry.receivedBoxCount || 0,
     dock_number: entry.dockNumber || null,
     status: entry.status,
+    current_phase: entry.currentPhase || null,
     entry_time: entry.entryTime,
     dock_allocated_time: entry.dockAllocatedTime || null,
     unloading_end_time: entry.unloadingEndTime || null,
+    handover_completed_time: entry.handoverCompletedTime || null,
     remarks: entry.remarks || null,
     created_by: entry.createdBy,
+    created_by_name: entry.createdByName || null,
+    phase_1_data: entry.phase1 ? JSON.stringify(entry.phase1) : null,
+    phase_2_data: entry.phase2 ? JSON.stringify(entry.phase2) : null,
+    phase_3_data: entry.phase3 ? JSON.stringify(entry.phase3) : null,
   };
 }
 
