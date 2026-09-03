@@ -74,7 +74,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
 }) => {
   const [activeWorkflowTab, setActiveWorkflowTab] = useState<'inward' | 'b2b'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('IN_PROGRESS');
   const [accountFilter, setAccountFilter] = useState<string>('ALL');
 
   // Modals state
@@ -97,17 +97,12 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
     !isEntryCompleted(e) && (e.status === 'Handover Pending' || e.status === 'QC Completed' || (!!e.phase2 && !e.phase3));
 
   const isEntryInProgress = (e: InwardGateEntry) =>
-    !isEntryCompleted(e) && !isEntryHandoverPending(e) && (e.status === 'In Progress' || e.status === 'Unloading' || e.status === 'Dock QC');
-
-  const isEntryAtGate = (e: InwardGateEntry) =>
-    !isEntryCompleted(e) && !isEntryHandoverPending(e) && !isEntryInProgress(e);
+    !isEntryCompleted(e) && !isEntryHandoverPending(e);
 
   // Filtered entries based on search and status tabs
   const filteredEntries = warehouseEntries.filter(entry => {
     // Status filtering
-    if (statusFilter === 'AT_GATE') {
-      if (!isEntryAtGate(entry)) return false;
-    } else if (statusFilter === 'IN_PROGRESS') {
+    if (statusFilter === 'IN_PROGRESS') {
       if (!isEntryInProgress(entry)) return false;
     } else if (statusFilter === 'HANDOVER_PENDING') {
       if (!isEntryHandoverPending(entry)) return false;
@@ -146,13 +141,10 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
   });
 
   // Workflow KPI Metrics for the active workflow tab
-  const activeInwardEntries = warehouseEntries.filter(e => !isEntryCompleted(e));
-  const totalInwardActiveCount = activeInwardEntries.length;
-  const atGateCount = warehouseEntries.filter(isEntryAtGate).length;
   const inProgressCount = warehouseEntries.filter(isEntryInProgress).length;
   const handoverPendingCount = warehouseEntries.filter(isEntryHandoverPending).length;
-
   const completedEntries = warehouseEntries.filter(isEntryCompleted);
+  const completedCount = completedEntries.length;
   const totalCompletedBoxes = completedEntries.reduce((sum, e) => {
     return sum + (e.phase3?.receivedBoxesConfirmed ?? e.receivedBoxCount ?? 0);
   }, 0);
@@ -195,7 +187,10 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setActiveWorkflowTab('inward')}
+            onClick={() => {
+              setActiveWorkflowTab('inward');
+              setStatusFilter('IN_PROGRESS');
+            }}
             className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer border ${
               activeWorkflowTab === 'inward'
                 ? 'bg-[#123B5D] text-white border-[#123B5D] shadow-sm dark:bg-blue-600 dark:border-blue-500'
@@ -215,7 +210,10 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveWorkflowTab('b2b')}
+            onClick={() => {
+              setActiveWorkflowTab('b2b');
+              setStatusFilter('IN_PROGRESS');
+            }}
             className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer border ${
               activeWorkflowTab === 'b2b'
                 ? 'bg-purple-700 text-white border-purple-700 shadow-sm dark:bg-purple-600 dark:border-purple-500'
@@ -268,43 +266,19 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
       </div>
 
       {/* Top Workflow Status Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-        {/* Card 1: Total Active Entries */}
-        <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800">
-            <Truck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">
-              {activeWorkflowTab === 'b2b' ? 'Active B2B Returns' : 'Total Inward Entries'}
-            </span>
-            <span className="text-lg font-extrabold text-primary font-mono">{totalInwardActiveCount} Active</span>
-          </div>
-        </div>
-
-        {/* Card 2: At Gate */}
-        <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">At Gate</span>
-            <span className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">{atGateCount} Waiting</span>
-          </div>
-        </div>
-
-        {/* Card 3: In Progress */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        {/* Card 1: In Progress */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800">
             <Package className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">In Progress</span>
-            <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{inProgressCount} In Progress</span>
+            <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{inProgressCount} Active</span>
           </div>
         </div>
 
-        {/* Card 4: Handover Pending */}
+        {/* Card 2: Handover Pending */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-200 dark:border-purple-800">
             <Clock className="w-5 h-5" />
@@ -315,8 +289,19 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
           </div>
         </div>
 
-        {/* Card 5: Total Cartons / Boxes */}
-        <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
+        {/* Card 3: Completed */}
+        <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Completed</span>
+            <span className="text-lg font-extrabold text-primary font-mono">{completedCount} Completed</span>
+          </div>
+        </div>
+
+        {/* Card 4: Total Cartons / Boxes */}
+        <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
             <Layers className="w-5 h-5" />
           </div>
@@ -361,8 +346,6 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
           {/* Workflow Status Filter Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {[
-              { label: 'All Entries', value: 'ALL' },
-              { label: 'At Gate', value: 'AT_GATE' },
               { label: 'In Progress', value: 'IN_PROGRESS' },
               { label: 'Handover Pending', value: 'HANDOVER_PENDING' },
               { label: 'Completed', value: 'COMPLETED' },
@@ -370,7 +353,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
               <button
                 key={tab.value}
                 onClick={() => setStatusFilter(tab.value)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
                   statusFilter === tab.value
                     ? 'bg-[#123B5D] dark:bg-blue-600 text-white border-[#123B5D] dark:border-blue-500 shadow-xs'
                     : 'bg-elevated text-secondary hover:text-primary border-theme hover:bg-elevated/80'
@@ -416,7 +399,6 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                   const isCompleted = isEntryCompleted(entry);
                   const isHandoverPending = isEntryHandoverPending(entry);
                   const isInProgress = isEntryInProgress(entry);
-                  const isAtGate = isEntryAtGate(entry);
 
                   const displayCourier = entry.courierPartner || entry.courierName || courier?.name || 'Courier Partner';
                   const isB2BEntry = entry.entryType === 'B2B Return' || entry.gatePassNumber.startsWith('B2B');
@@ -487,13 +469,9 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                           <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1 w-fit">
                             <Clock className="w-3 h-3" /> Handover Pending
                           </span>
-                        ) : isInProgress ? (
+                        ) : (
                           <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1 w-fit">
                             <Package className="w-3 h-3" /> In Progress
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 w-fit">
-                            <ShieldCheck className="w-3 h-3" /> At Gate
                           </span>
                         )}
                       </td>
@@ -521,8 +499,8 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        {/* Action: Open Dock QC if At Gate or In Progress */}
-                        {(isAtGate || isInProgress) && (
+                        {/* Action: Open Dock QC if In Progress */}
+                        {isInProgress && (
                           <button
                             onClick={() => setPhase2TargetEntry(entry)}
                             className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1"
