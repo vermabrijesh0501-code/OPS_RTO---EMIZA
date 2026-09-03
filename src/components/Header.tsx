@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xl font-black tracking-tight text-white">
-            WMS<span className="text-[#8B5CF6]">-WOP</span>
+            WOP<span className="text-[#8B5CF6]">-Emiza</span>
           </span>
         </div>
 

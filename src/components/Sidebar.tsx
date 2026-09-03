@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             onClick={() => onSelectTab('dashboard')}
             className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#7C3AED] to-[#8B5CF6] text-white flex items-center justify-center font-bold text-lg shadow-md hover:scale-105 transition-transform cursor-pointer"
-            title="WMS-WOP"
+            title="WOP-Emiza"
           >
             W
           </button>

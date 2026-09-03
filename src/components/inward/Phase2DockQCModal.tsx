@@ -338,11 +338,8 @@ export const Phase2DockQCModal: React.FC<Phase2DockQCModalProps> = ({
                   onChange={e => setConfirmedDock(e.target.value)}
                   className="w-full bg-surface text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400"
                 >
-                  {Array.from({ length: activeWarehouse.totalDocks || 16 }, (_, i) => `Dock ${String(i + 1).padStart(2, '0')}`).map(dock => (
-                    <option key={dock} value={dock}>
-                      {dock} {dock === entry.dockNumber ? '(Security Assigned)' : ''}
-                    </option>
-                  ))}
+                  <option value="Dock 01">Dock 01 {entry.dockNumber === 'Dock 01' ? '(Security Assigned)' : ''}</option>
+                  <option value="Dock 02">Dock 02 {entry.dockNumber === 'Dock 02' ? '(Security Assigned)' : ''}</option>
                 </select>
               </div>
 

@@ -603,14 +603,6 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     >
                       <option value="Dock 01">Dock 01</option>
                       <option value="Dock 02">Dock 02</option>
-                      <option value="Dock 03">Dock 03</option>
-                      <option value="Dock 04">Dock 04</option>
-                      <option value="Dock 05">Dock 05</option>
-                      <option value="Dock 06">Dock 06</option>
-                      <option value="Dock 07">Dock 07</option>
-                      <option value="Dock 08">Dock 08</option>
-                      <option value="Dock 09">Dock 09</option>
-                      <option value="Dock 10">Dock 10</option>
                     </select>
                   </div>
                 </div>

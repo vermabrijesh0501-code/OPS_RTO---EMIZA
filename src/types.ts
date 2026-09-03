@@ -101,6 +101,7 @@ export interface User {
   empId?: string;
   name: string;
   email: string;
+  password?: string;
   phone?: string;
   role: UserRole;
   department?: Department | string;
@@ -113,6 +114,19 @@ export interface User {
   authProvider?: 'supabase' | 'local';
   lastLoginAt?: string;
   createdAt?: string;
+}
+
+export interface AuthSessionData {
+  isLoggedIn: boolean;
+  userId?: string;
+  userEmail?: string;
+  userName?: string;
+  userRole?: UserRole;
+  loginDate?: string; // YYYY-MM-DD
+  loginTimestamp?: number;
+  expiresAt?: number;
+  sessionToken?: string;
+  deviceId?: string;
 }
 
 export interface Company {

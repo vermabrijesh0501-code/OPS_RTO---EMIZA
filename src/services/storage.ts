@@ -16,6 +16,7 @@ import {
   AuditRecord,
   SupabaseConfig,
   ActiveDeviceSession,
+  AuthSessionData,
 } from '../types';
 
 import {
@@ -105,28 +106,52 @@ function saveItem<T>(key: string, value: T): void {
 
 export const StorageService = {
   getCompanies: (): Company[] => loadItem(STORAGE_KEYS.COMPANIES, initialCompanies),
-  saveCompanies: (data: Company[]) => saveItem(STORAGE_KEYS.COMPANIES, data),
+  saveCompanies: (data: Company[]) => {
+    saveItem(STORAGE_KEYS.COMPANIES, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'companies', count: data.length });
+  },
 
   getWarehouses: (): Warehouse[] => loadItem(STORAGE_KEYS.WAREHOUSES, initialWarehouses),
-  saveWarehouses: (data: Warehouse[]) => saveItem(STORAGE_KEYS.WAREHOUSES, data),
+  saveWarehouses: (data: Warehouse[]) => {
+    saveItem(STORAGE_KEYS.WAREHOUSES, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'warehouses', count: data.length });
+  },
 
   getClients: (): Client[] => loadItem(STORAGE_KEYS.CLIENTS, initialClients),
-  saveClients: (data: Client[]) => saveItem(STORAGE_KEYS.CLIENTS, data),
+  saveClients: (data: Client[]) => {
+    saveItem(STORAGE_KEYS.CLIENTS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'clients', count: data.length });
+  },
 
   getCouriers: (): Courier[] => loadItem(STORAGE_KEYS.COURIERS, initialCouriers),
-  saveCouriers: (data: Courier[]) => saveItem(STORAGE_KEYS.COURIERS, data),
+  saveCouriers: (data: Courier[]) => {
+    saveItem(STORAGE_KEYS.COURIERS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'couriers', count: data.length });
+  },
 
   getSKUs: (): SKU[] => loadItem(STORAGE_KEYS.SKUS, initialSKUs),
-  saveSKUs: (data: SKU[]) => saveItem(STORAGE_KEYS.SKUS, data),
+  saveSKUs: (data: SKU[]) => {
+    saveItem(STORAGE_KEYS.SKUS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'skus', count: data.length });
+  },
 
   getDrivers: (): Driver[] => loadItem(STORAGE_KEYS.DRIVERS, initialDrivers),
-  saveDrivers: (data: Driver[]) => saveItem(STORAGE_KEYS.DRIVERS, data),
+  saveDrivers: (data: Driver[]) => {
+    saveItem(STORAGE_KEYS.DRIVERS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'drivers', count: data.length });
+  },
 
   getVehicleTypes: (): VehicleType[] => loadItem(STORAGE_KEYS.VEHICLE_TYPES, initialVehicleTypes),
-  saveVehicleTypes: (data: VehicleType[]) => saveItem(STORAGE_KEYS.VEHICLE_TYPES, data),
+  saveVehicleTypes: (data: VehicleType[]) => {
+    saveItem(STORAGE_KEYS.VEHICLE_TYPES, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'vehicle_types', count: data.length });
+  },
 
   getReturnReasons: (): ReturnReason[] => loadItem(STORAGE_KEYS.RETURN_REASONS, initialReturnReasons),
-  saveReturnReasons: (data: ReturnReason[]) => saveItem(STORAGE_KEYS.RETURN_REASONS, data),
+  saveReturnReasons: (data: ReturnReason[]) => {
+    saveItem(STORAGE_KEYS.RETURN_REASONS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'return_reasons', count: data.length });
+  },
 
   getUsers: (): User[] => {
     const loaded = loadItem<User[]>(STORAGE_KEYS.USERS, initialUsers);
@@ -145,10 +170,23 @@ export const StorageService = {
     }
     return merged;
   },
-  saveUsers: (data: User[]) => saveItem(STORAGE_KEYS.USERS, data),
+  saveUsers: (data: User[]) => {
+    saveItem(STORAGE_KEYS.USERS, data);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'users', count: data.length });
+  },
 
-  getCurrentUser: (): User => loadItem(STORAGE_KEYS.CURRENT_USER, initialUsers[0]),
-  saveCurrentUser: (user: User) => saveItem(STORAGE_KEYS.CURRENT_USER, user),
+  getCurrentUser: (): User | null => {
+    const session = loadItem<AuthSessionData>(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false });
+    if (!session.isLoggedIn) return null;
+    return loadItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+  },
+  saveCurrentUser: (user: User | null) => {
+    if (user) {
+      saveItem(STORAGE_KEYS.CURRENT_USER, user);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    }
+  },
 
   getCurrentWarehouseId: (): string => loadItem(STORAGE_KEYS.CURRENT_WH, 'wh-main'),
   saveCurrentWarehouseId: (id: string) => saveItem(STORAGE_KEYS.CURRENT_WH, id),
@@ -277,13 +315,30 @@ export const StorageService = {
   },
   saveSupabaseConfig: (config: SupabaseConfig) => saveItem(STORAGE_KEYS.SUPABASE_CONFIG, config),
 
-  // Authentication Session
-  getAuthSession: (): { isLoggedIn: boolean; userId?: string } =>
-    loadItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: true, userId: 'usr-super' }),
-  saveAuthSession: (session: { isLoggedIn: boolean; userId?: string }) =>
-    saveItem(STORAGE_KEYS.AUTH_SESSION, session),
-  clearAuthSession: () =>
-    saveItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false }),
+  // Authentication Session (Secure, device/date/expiry enforced)
+  getAuthSession: (): AuthSessionData =>
+    loadItem<AuthSessionData>(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false }),
+  saveAuthSession: (session: Partial<AuthSessionData> & { isLoggedIn: boolean; userId?: string }) => {
+    const now = Date.now();
+    const today = new Date().toISOString().slice(0, 10);
+    const sessionObj: AuthSessionData = {
+      isLoggedIn: session.isLoggedIn,
+      userId: session.userId,
+      userEmail: session.userEmail,
+      userName: session.userName,
+      userRole: session.userRole,
+      loginDate: session.loginDate || today,
+      loginTimestamp: session.loginTimestamp || now,
+      expiresAt: session.expiresAt || (now + 12 * 60 * 60 * 1000), // 12-hour active shift session
+      sessionToken: session.sessionToken || `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      deviceId: session.deviceId || SyncService.getDeviceId(),
+    };
+    saveItem(STORAGE_KEYS.AUTH_SESSION, sessionObj);
+  },
+  clearAuthSession: () => {
+    saveItem(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false });
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  },
 
   resetToDefault: () => {
     localStorage.clear();
@@ -293,7 +348,7 @@ export const StorageService = {
 
 
 export function generateSupabaseDDL(): string {
-  return `-- EMIZA-WOP Phase 1 PostgreSQL Database Schema (for Supabase SQL Editor)
+  return `-- WOP-Emiza Phase 1 PostgreSQL Database Schema (for Supabase SQL Editor)
 -- Run this in your Supabase project's SQL Editor to create all 13+ tables & indexes.
 
 -- OPTIONAL: Drop existing tables if re-initializing or fixing column type conflicts (e.g. TEXT vs UUID)

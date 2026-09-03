@@ -1,6 +1,6 @@
 {
-  "name": "WMS-WOP",
-  "description": "Enterprise Warehouse Operations Platform (WMS-WOP) for Inward Gate Entry, RTO/B2C & B2B Returns, Barcode Scanning, Masters, and PDF Manifests.",
+  "name": "WOP-Emiza",
+  "description": "WOP-Emiza Enterprise Warehouse Operations Platform for Inward Gate Entry, RTO/B2C & B2B Returns, Barcode Scanning, Cycle Count Audits, Master Data Management & Live Dispatch.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

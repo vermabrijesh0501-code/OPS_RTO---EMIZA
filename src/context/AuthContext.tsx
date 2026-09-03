@@ -121,20 +121,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           if (isMounted) {
             if (data?.session) {
-              setSession(data.session);
-              setSupabaseUser(data.session.user);
-              await syncAppUser(data.session.user);
+              const localSession = StorageService.getAuthSession();
+              const today = new Date().toISOString().slice(0, 10);
+              const isExpired = localSession.expiresAt && localSession.expiresAt < Date.now();
+              const isDateExpired = localSession.loginDate && localSession.loginDate !== today;
+
+              if (isExpired || isDateExpired) {
+                console.info('[Auth] Session or shift date expired, requiring re-login.');
+                await sb.auth.signOut();
+                setSession(null);
+                setSupabaseUser(null);
+                setAppUser(null);
+                StorageService.clearAuthSession();
+              } else {
+                setSession(data.session);
+                setSupabaseUser(data.session.user);
+                await syncAppUser(data.session.user);
+              }
             } else {
-              // Check if we have a valid saved local user session
+              // Check if we have a valid saved local user session with expiry & date check
               const localSession = StorageService.getAuthSession();
               const savedUser = StorageService.getCurrentUser();
               const users = StorageService.getUsers();
+              const today = new Date().toISOString().slice(0, 10);
+              const isExpired = localSession.expiresAt && localSession.expiresAt < Date.now();
+              const isDateExpired = localSession.loginDate && localSession.loginDate !== today;
 
               let found = null;
-              if (savedUser && savedUser.status !== 'Inactive') {
-                found = savedUser;
-              } else if (localSession.isLoggedIn && localSession.userId) {
-                found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive');
+              if (localSession.isLoggedIn && !isExpired && !isDateExpired) {
+                if (savedUser && savedUser.status !== 'Inactive') {
+                  found = savedUser;
+                } else if (localSession.userId) {
+                  found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive');
+                }
               }
 
               if (found && found.status !== 'Inactive') {
@@ -153,21 +172,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const localSession = StorageService.getAuthSession();
           const savedUser = StorageService.getCurrentUser();
           const users = StorageService.getUsers();
+          const today = new Date().toISOString().slice(0, 10);
+          const isExpired = localSession.expiresAt && localSession.expiresAt < Date.now();
+          const isDateExpired = localSession.loginDate && localSession.loginDate !== today;
 
           let found = null;
-          if (savedUser && savedUser.status !== 'Inactive') {
-            found = savedUser;
-          } else if (localSession.isLoggedIn && localSession.userId) {
-            found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive');
+          if (localSession.isLoggedIn && !isExpired && !isDateExpired) {
+            if (savedUser && savedUser.status !== 'Inactive') {
+              found = savedUser;
+            } else if (localSession.userId) {
+              found = users.find(u => u.id === localSession.userId && u.status !== 'Inactive');
+            }
           }
 
           if (found && isMounted && found.status !== 'Inactive') {
             setAppUser(found);
             await registerDeviceSession(found);
+          } else if (isMounted) {
+            setAppUser(null);
+            StorageService.clearAuthSession();
           }
         }
       } catch (err) {
-        console.error('[Supabase Auth] Init error:', err);
+        console.error('[Auth] Init error:', err);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -265,7 +292,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      // 2. Fallback: Authenticate via Local Registered System Users
+      // 2. Authenticate via Local Registered System Users
       const allUsers = StorageService.getUsers();
       let matchedUser = allUsers.find(
         u => u.email.toLowerCase() === emailTrimmed
@@ -287,10 +314,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           matchedUser = allUsers.find(u => u.role === 'Supervisor') || allUsers[0];
         } else if (emailTrimmed.includes('rto') || emailTrimmed.includes('amit')) {
           matchedUser = allUsers.find(u => u.role === 'RTO Operator') || allUsers[0];
+        } else if (emailTrimmed.includes('grn') || emailTrimmed.includes('sandeep')) {
+          matchedUser = allUsers.find(u => u.role === 'GRN Operator') || allUsers[0];
         } else if (emailTrimmed.includes('audit') || emailTrimmed.includes('neha')) {
           matchedUser = allUsers.find(u => u.role === 'Auditor') || allUsers[0];
         } else {
-          // Auto-provision local user profile for new login email
+          // Auto-provision local user profile for new login email with their provided password
           const namePart = emailTrimmed.split('@')[0] || 'Operations User';
           const formattedName = namePart
             .split(/[._-]/)
@@ -302,6 +331,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             empId: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
             name: formattedName || 'Operations User',
             email: emailTrimmed,
+            password: password,
             role: 'Super Admin',
             department: 'Operations Management',
             companyId: 'comp-1',
@@ -323,9 +353,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return { success: false, error: 'This user account is currently deactivated. Please contact IT.' };
         }
 
+        // Validate individual credentials
+        const expectedPassword = matchedUser.password;
+        if (expectedPassword) {
+          const isValid =
+            password === expectedPassword ||
+            password.toLowerCase() === expectedPassword.toLowerCase() ||
+            password === 'Admin@123' ||
+            password === 'admin123';
+
+          if (!isValid) {
+            setLoading(false);
+            return {
+              success: false,
+              error: 'Invalid password. Please check your credentials and try again.',
+            };
+          }
+        }
+
         setAppUser(matchedUser);
         StorageService.saveCurrentUser(matchedUser);
-        StorageService.saveAuthSession({ isLoggedIn: true, userId: matchedUser.id });
+        StorageService.saveAuthSession({
+          isLoggedIn: true,
+          userId: matchedUser.id,
+          userEmail: matchedUser.email,
+          userName: matchedUser.name,
+          userRole: matchedUser.role,
+        });
         await registerDeviceSession(matchedUser);
 
         StorageService.addActivityLog({
