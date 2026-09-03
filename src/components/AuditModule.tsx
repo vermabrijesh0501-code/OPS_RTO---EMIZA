@@ -542,29 +542,14 @@ export const AuditModule: React.FC<AuditModuleProps> = ({
                   <label className="text-[11px] font-bold text-secondary block mb-1">
                     Audited Quantity:
                   </label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setQuantityInput(q => Math.max(1, q - 1))}
-                      className="px-3 py-2 rounded-xl bg-elevated hover:bg-elevated/80 border border-theme text-primary font-bold text-xs cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantityInput}
-                      onChange={e => setQuantityInput(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full bg-elevated border border-theme rounded-xl px-3 py-2 text-xs font-mono font-extrabold text-center text-primary focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setQuantityInput(q => q + 1)}
-                      className="px-3 py-2 rounded-xl bg-elevated hover:bg-elevated/80 border border-theme text-primary font-bold text-xs cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantityInput}
+                    onChange={e => setQuantityInput(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-elevated border border-theme rounded-xl px-3 py-2 text-xs font-mono font-extrabold text-primary focus:border-[#123B5D] dark:focus:border-blue-500 focus:outline-none"
+                    placeholder="Enter quantity"
+                  />
                 </div>
               </div>
 

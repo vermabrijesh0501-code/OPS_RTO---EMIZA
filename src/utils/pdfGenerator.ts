@@ -366,31 +366,70 @@ export function generateBatchPDF(
   }
 
   // Save PDF with clean filename
-  doc.save(`${batch.batchNumber}_ReturnManifest.pdf`);
+  triggerDirectDownload(doc, `${batch.batchNumber}_ReturnManifest.pdf`);
 }
 
-export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehouse, client?: Client, courier?: Courier) {
+// Utility for guaranteed instant direct download without popups/preview blockers
+function triggerDirectDownload(doc: jsPDF, filename: string) {
+  try {
+    doc.save(filename);
+  } catch (err) {
+    try {
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = blobUrl;
+      downloadAnchor.download = filename;
+      downloadAnchor.style.display = 'none';
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      document.body.removeChild(downloadAnchor);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    } catch (fallbackErr) {
+      console.error('Instant direct download error:', fallbackErr);
+    }
+  }
+}
+
+export function generateGatePassPDF(
+  entry: InwardGateEntry,
+  warehouse?: Warehouse,
+  client?: Client,
+  courier?: Courier,
+  isB2BReturn?: boolean
+) {
+  const isB2B = isB2BReturn || entry.entryType === 'B2B Return' || entry.gatePassNumber.startsWith('B2B');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, pageWidth, 28, 'F');
-  doc.setFillColor(37, 99, 235);
+  doc.setFillColor(isB2B ? 147 : 37, isB2B ? 51 : 99, isB2B ? 234 : 235);
   doc.rect(0, 28, pageWidth, 1.5, 'F');
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
-  doc.text('EMIZA INWARD GATE ENTRY & HANDOVER PASS', 14, 13);
+  doc.text(
+    isB2B ? 'EMIZA B2B STORE RETURN GATE ENTRY & HANDOVER PASS' : 'EMIZA INWARD GATE ENTRY & HANDOVER PASS',
+    14,
+    13
+  );
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(203, 213, 225);
-  doc.text(`3-PHASE LINKED INWARD WORKFLOW MANIFEST | GATE ENTRY ID: ${entry.gatePassNumber}`, 14, 21);
+  doc.text(
+    isB2B
+      ? `B2B RETURN WORKFLOW MANIFEST | GATE ENTRY ID: ${entry.gatePassNumber}`
+      : `INWARD WORKFLOW MANIFEST | GATE ENTRY ID: ${entry.gatePassNumber}`,
+    14,
+    21
+  );
 
   let y = 35;
 
-  // Phase 1 Security Box
+  // Security Box
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(14, y, pageWidth - 28, 48, 2, 2, 'FD');
@@ -398,7 +437,13 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('PHASE 01: VEHICLE ARRIVAL & SECURITY CHECK-IN', 18, y + 7);
+  doc.text(
+    isB2B
+      ? 'VEHICLE ARRIVAL & SECURITY CHECK-IN (B2B RETURN)'
+      : 'VEHICLE ARRIVAL & SECURITY CHECK-IN',
+    18,
+    y + 7
+  );
 
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
@@ -422,22 +467,22 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.setFont('helvetica', 'bold'); doc.text('Warehouse:', 110, y + 15);
   doc.setFont('helvetica', 'normal'); doc.text(warehouse ? warehouse.name : entry.warehouseId, 142, y + 15);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Account (Client):', 110, y + 22);
+  doc.setFont('helvetica', 'bold'); doc.text(isB2B ? 'B2B Client / Store:' : 'Account (Client):', 110, y + 22);
   doc.setFont('helvetica', 'normal'); doc.text(client ? client.name : entry.clientId, 142, y + 22);
 
   doc.setFont('helvetica', 'bold'); doc.text('Courier Partner:', 110, y + 29);
-  doc.setFont('helvetica', 'normal'); doc.text(courier ? courier.name : entry.courierId, 142, y + 29);
+  doc.setFont('helvetica', 'normal'); doc.text(entry.courierPartner || courier?.name || entry.courierId || 'Courier', 142, y + 29);
 
   doc.setFont('helvetica', 'bold'); doc.text('Aligned Dock:', 110, y + 36);
   doc.setFont('helvetica', 'bold'); doc.setTextColor(37, 99, 235);
   doc.text(entry.dockNumber || 'Dock 01', 142, y + 36);
 
-  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text('Invoice Count:', 110, y + 43);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(71, 85, 105); doc.text(isB2B ? 'Debit Notes/Inv:' : 'Invoice Count:', 110, y + 43);
   doc.setFont('helvetica', 'normal'); doc.text(`${entry.phase1?.invoiceCount || 1} Invoices Declared`, 142, y + 43);
 
   y += 54;
 
-  // Phase 2 Dock QC Box
+  // Dock QC Box
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(254, 252, 232);
   doc.roundedRect(14, y, pageWidth - 28, 48, 2, 2, 'FD');
@@ -445,7 +490,13 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('PHASE 02: UNLOADING & DOCK QC SUMMARY', 18, y + 7);
+  doc.text(
+    isB2B
+      ? 'B2B UNLOADING & DOCK QC SUMMARY'
+      : 'UNLOADING & DOCK QC SUMMARY',
+    18,
+    y + 7
+  );
 
   const phase2 = entry.phase2;
   doc.setFontSize(8.5);
@@ -454,13 +505,13 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.setFont('helvetica', 'bold'); doc.text('Unloading Status:', 18, y + 15);
   doc.setFont('helvetica', 'normal'); doc.text(phase2 ? 'QC Completed' : 'Pending Dock QC', 52, y + 15);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Total Dockets:', 18, y + 22);
+  doc.setFont('helvetica', 'bold'); doc.text(isB2B ? 'Total Dockets / DN:' : 'Total Dockets:', 18, y + 22);
   doc.setFont('helvetica', 'normal'); doc.text(`${phase2?.totalDocketsCount || (entry.expectedBoxCount ? 1 : 0)} Dockets`, 52, y + 22);
 
   doc.setFont('helvetica', 'bold'); doc.text('Total Invoices:', 18, y + 29);
   doc.setFont('helvetica', 'normal'); doc.text(`${phase2?.totalInvoicesCount || 1} Invoices Verified`, 52, y + 29);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Total Boxes (QC):', 18, y + 36);
+  doc.setFont('helvetica', 'bold'); doc.text(isB2B ? 'Total Cartons (QC):' : 'Total Boxes (QC):', 18, y + 36);
   doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129);
   doc.text(`${phase2?.totalBoxesCount || entry.expectedBoxCount} Boxes`, 52, y + 36);
 
@@ -486,7 +537,7 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
 
   y += 54;
 
-  // Phase 3 Handover Box
+  // Handover Box
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(240, 253, 244);
   doc.roundedRect(14, y, pageWidth - 28, 42, 2, 2, 'FD');
@@ -494,13 +545,19 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('PHASE 03: HANDOVER & CUSTODY ACCEPTANCE', 18, y + 7);
+  doc.text(
+    isB2B
+      ? 'B2B HANDOVER & CUSTODY ACCEPTANCE'
+      : 'HANDOVER & CUSTODY ACCEPTANCE',
+    18,
+    y + 7
+  );
 
   const phase3 = entry.phase3;
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
 
-  doc.setFont('helvetica', 'bold'); doc.text('Account Incharge:', 18, y + 15);
+  doc.setFont('helvetica', 'bold'); doc.text(isB2B ? 'B2B Account Lead:' : 'Account Incharge:', 18, y + 15);
   doc.setFont('helvetica', 'normal'); doc.text(phase3?.accountInchargeName || 'Pending Sign-off', 52, y + 15);
 
   doc.setFont('helvetica', 'bold'); doc.text('Confirmed Boxes:', 18, y + 22);
@@ -529,12 +586,16 @@ export function generateGatePassPDF(entry: InwardGateEntry, warehouse?: Warehous
 
   doc.setFontSize(8);
   doc.setTextColor(51, 65, 85);
-  doc.text(`Security Officer Sign: ${entry.createdByName || 'Security Officer'}`, 18, y + 10);
-  doc.text(`Unloading QC Sign: ${phase2?.unloadingInchargeName || 'Dock Incharge'}`, 110, y + 10);
-  doc.text(`Driver Sign: ${entry.driverName}`, 18, y + 20);
-  doc.text(`Account Incharge Sign: ${phase3?.signerName || 'Account Incharge'}`, 110, y + 20);
+  doc.text(`Security Officer: ${entry.createdByName || 'Security Officer'}`, 18, y + 10);
+  doc.text(`Unloading QC: ${phase2?.unloadingInchargeName || 'Dock Incharge'}`, 110, y + 10);
+  doc.text(`Driver: ${entry.driverName}`, 18, y + 20);
+  doc.text(`Account Sign-off: ${phase3?.signerName || 'Account Lead'}`, 110, y + 20);
 
-  doc.save(`${entry.gatePassNumber}_3Phase_GatePass.pdf`);
+  const pdfName = isB2B
+    ? `${entry.gatePassNumber}_B2B_Return_GatePass.pdf`
+    : `${entry.gatePassNumber}_GatePass.pdf`;
+
+  triggerDirectDownload(doc, pdfName);
 }
 
 export function generateWarehouseBatchesSummaryPDF(
@@ -703,5 +764,5 @@ export function generateWarehouseBatchesSummaryPDF(
     );
   }
 
-  doc.save(`${warehouse.code}_Batches_Summary.pdf`);
+  triggerDirectDownload(doc, `${warehouse.code}_Batches_Summary.pdf`);
 }

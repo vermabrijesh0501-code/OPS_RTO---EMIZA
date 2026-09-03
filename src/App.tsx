@@ -29,7 +29,6 @@ import { Sidebar, ActiveTab } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { InwardModule } from './components/InwardModule';
 import { ReturnsModule } from './components/ReturnsModule';
-import { B2BReturnsModule } from './components/B2BReturnsModule';
 import { AuditModule } from './components/AuditModule';
 import { MastersModule } from './components/MastersModule';
 import { ReportsModule } from './components/ReportsModule';
@@ -368,13 +367,15 @@ export default function App() {
     StorageService.saveCurrentWarehouseId(whId);
   };
 
-  // Add Gate Entry (Phase 01 Security)
+  // Add Gate Entry (Phase 01 Security - Inward / B2B Return)
   const handleAddGateEntry = (
     entryData: Omit<InwardGateEntry, 'id' | 'gatePassNumber' | 'entryTime'> & { phase1Data?: Phase1SecurityData }
   ) => {
+    const isB2B = entryData.entryType === 'B2B Return';
     const count = gateEntries.length + 1;
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const gatePassNumber = `GE-${dateStr}-${String(count).padStart(3, '0')}`;
+    const prefix = isB2B ? 'B2B' : 'GE';
+    const gatePassNumber = `${prefix}-${dateStr}-${String(count).padStart(3, '0')}`;
 
     const { phase1Data, ...rest } = entryData as any;
     const newEntry: InwardGateEntry = {
@@ -382,7 +383,8 @@ export default function App() {
       id: `gate-${Date.now()}`,
       gatePassNumber,
       entryTime: new Date().toISOString(),
-      currentPhase: 'Phase 01 - Vehicle Received',
+      entryType: isB2B ? 'B2B Return' : 'Inward',
+      currentPhase: isB2B ? 'Phase 01 - B2B Vehicle Received' : 'Phase 01 - Vehicle Received',
       phase1: phase1Data || {
         gateEntryDateTime: new Date().toLocaleDateString('en-GB') + ' : ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         vehicleNumber: rest.vehicleNumber,
@@ -408,8 +410,8 @@ export default function App() {
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'Registered Vehicle Gate Entry (Phase 01)',
-      module: 'Inward',
+      action: isB2B ? 'Registered B2B Return Gate Entry (Phase 01)' : 'Registered Vehicle Gate Entry (Phase 01)',
+      module: isB2B ? 'B2B' : 'Inward',
       details: `Created Gate Entry ${gatePassNumber} for ${newEntry.vehicleNumber} (${newEntry.driverName})`,
     });
     setLogs(StorageService.getActivityLogs());
@@ -1228,7 +1230,7 @@ export default function App() {
               )
             )}
 
-            {(viewTab === 'inward' || viewTab === 'grn') && (
+            {(viewTab === 'inward' || viewTab === 'grn' || viewTab === 'returns_b2b') && (
               <InwardModule
                 currentUser={currentUser}
                 activeWarehouse={activeWarehouse}
@@ -1243,6 +1245,7 @@ export default function App() {
                 onUpdateGateEntryPhase3={handleUpdateGateEntryPhase3}
                 isOpenCreateModal={isNewGateEntryModalOpen}
                 onCloseCreateModal={() => setIsNewGateEntryModalOpen(!isNewGateEntryModalOpen)}
+                initialTab={viewTab === 'returns_b2b' ? 'b2b' : 'inward'}
               />
             )}
 
@@ -1261,18 +1264,6 @@ export default function App() {
                 onCloseBatch={handleCloseBatch}
                 isOpenCreateModal={isNewBatchModalOpen}
                 onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}
-              />
-            )}
-
-            {viewTab === 'returns_b2b' && (
-              <B2BReturnsModule
-                currentUser={currentUser}
-                activeWarehouse={activeWarehouse}
-                batches={batches}
-                scannedItems={scannedItems}
-                clients={clients}
-                couriers={couriers}
-                onOpenNewBatchModal={() => setIsNewBatchModalOpen(true)}
               />
             )}
 

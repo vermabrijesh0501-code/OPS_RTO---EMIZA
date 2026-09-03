@@ -290,7 +290,7 @@ export interface InwardGateEntry {
   expectedBoxCount: number;
   receivedBoxCount: number;
   dockNumber?: string;
-  status: 'Arrived' | 'Gate In' | 'Dock Allocated' | 'Unloading' | 'QC Completed' | 'Handover Completed' | 'Completed' | 'Verified';
+  status: 'Arrived' | 'Gate In' | 'At Gate' | 'Dock Allocated' | 'In Progress' | 'Unloading' | 'Dock QC' | 'QC Completed' | 'Handover Pending' | 'Handover Completed' | 'Completed' | 'Verified';
   currentPhase?: InwardWorkflowPhase | string;
   entryTime: string;
   dockAllocatedTime?: string;
@@ -304,6 +304,7 @@ export interface InwardGateEntry {
   phase1?: Phase1SecurityData;
   phase2?: Phase2UnloadingData;
   phase3?: Phase3HandoverData;
+  entryType?: 'Inward' | 'B2B Return';
 }
 
 export type ReturnRemarkType = 

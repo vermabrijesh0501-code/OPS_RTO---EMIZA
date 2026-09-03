@@ -34,6 +34,7 @@ interface Phase1SecurityModalProps {
   couriers: Courier[];
   vehicleTypes: VehicleType[];
   drivers?: Driver[];
+  isB2B?: boolean;
   onSubmitPhase1: (entry: Omit<InwardGateEntry, 'id' | 'gatePassNumber' | 'entryTime'> & { phase1Data: Phase1SecurityData }) => void;
 }
 
@@ -46,6 +47,7 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
   couriers,
   vehicleTypes,
   drivers = [],
+  isB2B = false,
   onSubmitPhase1,
 }) => {
   // Auto Date & Time in DD/MM/YYYY : HH:mm (24-hour format)
@@ -198,6 +200,7 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
       receivedBoxCount: 0,
       dockNumber: alignedDock,
       status: 'Gate In',
+      entryType: isB2B ? 'B2B Return' : 'Inward',
       currentPhase: 'At Gate',
       remarks: remarks.trim() || undefined,
       createdBy: currentUser.id,
@@ -212,17 +215,19 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
     <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
       <div className="bg-surface border border-theme rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-[#123B5D] to-[#1E4E79] text-white flex items-center justify-between">
+        <div className={`px-6 py-4 ${isB2B ? 'bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950' : 'bg-gradient-to-r from-[#123B5D] to-[#1E4E79]'} text-white flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
               <ShieldCheck className="w-5 h-5 text-emerald-300" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-extrabold text-white">
-                New Inward Gate Entry
+                {isB2B ? 'New B2B Return / RTV Entry' : 'New Inward Gate Entry'}
               </h2>
               <p className="text-xs text-slate-200 mt-0.5">
-                Vehicle check-in and arrival registration at <strong className="text-white">{activeWarehouse.name}</strong>
+                {isB2B
+                  ? <>Vehicle check-in & B2B return arrival registration at <strong className="text-white">{activeWarehouse.name}</strong></>
+                  : <>Vehicle check-in and arrival registration at <strong className="text-white">{activeWarehouse.name}</strong></>}
               </p>
             </div>
           </div>
@@ -295,10 +300,10 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
                 <select
                   value={vehicleTypeId}
                   onChange={e => setVehicleTypeId(e.target.value)}
-                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-blue-500 font-semibold"
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-blue-500 font-semibold [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
                 >
                   {vehicleTypes.map(vt => (
-                    <option key={vt.id} value={vt.id}>
+                    <option key={vt.id} value={vt.id} className="bg-[#1E293B] text-[#F8FAFC]">
                       {vt.typeName} ({vt.capacityTons} Tons)
                     </option>
                   ))}
@@ -359,11 +364,11 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
                   <select
                     onChange={handleDriverSelect}
                     defaultValue=""
-                    className="bg-elevated text-secondary py-1 px-2 rounded-lg border border-theme text-[11px]"
+                    className="bg-elevated text-secondary py-1 px-2 rounded-lg border border-theme text-[11px] [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
                   >
-                    <option value="" disabled>Select Driver Master</option>
+                    <option value="" disabled className="bg-[#1E293B] text-slate-400">Select Driver Master</option>
                     {drivers.map(d => (
-                      <option key={d.id} value={d.id}>{d.name} ({d.mobile})</option>
+                      <option key={d.id} value={d.id} className="bg-[#1E293B] text-[#F8FAFC]">{d.name} ({d.mobile})</option>
                     ))}
                   </select>
                 </div>
@@ -475,10 +480,10 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
                   }}
                   className={`w-full bg-elevated text-primary p-2.5 rounded-xl border ${
                     formErrors.clientId ? 'border-rose-500 ring-1 ring-rose-500/30' : 'border-theme'
-                  } focus:outline-none focus:border-blue-500 font-bold`}
+                  } focus:outline-none focus:border-blue-500 font-bold [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]`}
                 >
                   {clients.map(c => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="bg-[#1E293B] text-[#F8FAFC]">
                       {c.name} ({c.code})
                     </option>
                   ))}
@@ -544,10 +549,10 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
                 <select
                   value={alignedDock}
                   onChange={e => setAlignedDock(e.target.value)}
-                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-blue-500 font-bold text-amber-600 dark:text-amber-400"
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-blue-500 font-bold text-amber-600 dark:text-amber-400 [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
                 >
                   {Array.from({ length: activeWarehouse.totalDocks || 16 }, (_, i) => `Dock ${String(i + 1).padStart(2, '0')}`).map(dock => (
-                    <option key={dock} value={dock}>
+                    <option key={dock} value={dock} className="bg-[#1E293B] text-[#F8FAFC]">
                       {dock} (Direct Bay)
                     </option>
                   ))}

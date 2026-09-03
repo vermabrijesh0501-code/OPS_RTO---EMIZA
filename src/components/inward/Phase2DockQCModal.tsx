@@ -627,7 +627,7 @@ export const Phase2DockQCModal: React.FC<Phase2DockQCModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold shadow-md transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Complete Unloading & Dock QC (Phase 02)</span>
+              <span>Complete Unloading & Dock QC</span>
             </button>
           </div>
         </form>

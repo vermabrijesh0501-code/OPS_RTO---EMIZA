@@ -55,19 +55,20 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
   const courier = couriers.find(cr => cr.id === entry.courierId);
   const vehicleType = vehicleTypes.find(vt => vt.id === entry.vehicleTypeId);
 
+  const isB2B = entry.entryType === 'B2B Return' || entry.gatePassNumber.startsWith('B2B');
   const isPhase1Done = !!entry.phase1 || !!entry.gatePassNumber;
   const isPhase2Done = !!entry.phase2;
   const isPhase3Done = !!entry.phase3 || entry.status === 'Handover Completed' || entry.status === 'Completed';
 
   const handleDownloadPDF = () => {
-    generateGatePassPDF(entry, warehouse, client, courier);
+    generateGatePassPDF(entry, warehouse, client, courier, isB2B);
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
       <div className="bg-surface border border-theme rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-[#123B5D] via-[#1E4E79] to-[#123B5D] text-white flex items-center justify-between">
+        <div className={`px-6 py-4 ${isB2B ? 'bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900' : 'bg-gradient-to-r from-[#123B5D] via-[#1E4E79] to-[#123B5D]'} text-white flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
               <Truck className="w-5 h-5 text-blue-200" />
@@ -82,7 +83,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-extrabold text-white mt-0.5">
-                Inward Gate Entry 3-Phase Linked Record
+                {isB2B ? 'B2B Return Gate Entry Details' : 'Inward Gate Entry Details'}
               </h2>
             </div>
           </div>
@@ -105,7 +106,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
           </div>
         </div>
 
-        {/* 3-Phase Interactive Linked Workflow Stepper Bar */}
+        {/* Interactive Linked Workflow Stepper Bar */}
         <div className="px-6 py-3.5 bg-elevated/80 border-b border-theme">
           <div className="flex items-center justify-between gap-2 max-w-2xl mx-auto">
             {/* Step 1 */}
@@ -116,8 +117,8 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                 {isPhase1Done ? <Check className="w-4 h-4" /> : '1'}
               </div>
               <div>
-                <span className="text-[11px] font-bold text-primary block">Phase 01</span>
-                <span className="text-[10px] text-secondary">Security Check-In</span>
+                <span className="text-[11px] font-bold text-primary block">Security Check-In</span>
+                <span className="text-[10px] text-secondary">Arrival Recorded</span>
               </div>
             </div>
 
@@ -131,8 +132,8 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                 {isPhase2Done ? <Check className="w-4 h-4" /> : '2'}
               </div>
               <div>
-                <span className="text-[11px] font-bold text-primary block">Phase 02</span>
-                <span className="text-[10px] text-secondary">Unloading & Dock QC</span>
+                <span className="text-[11px] font-bold text-primary block">Dock QC</span>
+                <span className="text-[10px] text-secondary">Unloading & Verification</span>
               </div>
             </div>
 
@@ -146,8 +147,8 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                 {isPhase3Done ? <Check className="w-4 h-4" /> : '3'}
               </div>
               <div>
-                <span className="text-[11px] font-bold text-primary block">Phase 03</span>
-                <span className="text-[10px] text-secondary">Handover Completed</span>
+                <span className="text-[11px] font-bold text-primary block">Handover</span>
+                <span className="text-[10px] text-secondary">Custody Sign-off</span>
               </div>
             </div>
           </div>
@@ -155,13 +156,13 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
-          {/* Phase 01 Card */}
+          {/* Security Card */}
           <div className="p-4 rounded-xl bg-elevated border border-theme space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-theme">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <h3 className="font-extrabold text-primary text-xs uppercase tracking-wider">
-                  Phase 01 — Vehicle Received / Security Check-In
+                  Vehicle Arrival & Security Check-In
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-muted">
@@ -212,13 +213,13 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
             )}
           </div>
 
-          {/* Phase 02 Card */}
+          {/* Dock QC Card */}
           <div className="p-4 rounded-xl bg-elevated border border-theme space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-theme">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-amber-500" />
                 <h3 className="font-extrabold text-primary text-xs uppercase tracking-wider">
-                  Phase 02 — Unloading & Dock QC Details
+                  Unloading & Dock QC Details
                 </h3>
               </div>
               {isPhase2Done ? (
@@ -281,7 +282,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                               <div>
                                 <span className="font-mono font-bold text-primary block">{inv.invoiceNumber}</span>
                                 {inv.qcCondition === 'Other' && inv.otherRemark && (
-                                  <span className="text-[10px] text-muted block italic">Remark: {inv.otherRemark}</span>
+                                   <span className="text-[10px] text-muted block italic">Remark: {inv.otherRemark}</span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
@@ -304,7 +305,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
               </div>
             ) : (
               <div className="py-4 text-center text-muted">
-                <p>Phase 02 Unloading & Dock QC has not been recorded yet.</p>
+                <p>Unloading & Dock QC has not been recorded yet.</p>
                 {onOpenPhase2 && (
                   <button
                     type="button"
@@ -314,7 +315,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                     }}
                     className="mt-2 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs cursor-pointer"
                   >
-                    <span>Proceed to Phase 02 (Dock QC)</span>
+                    <span>Proceed to Dock QC</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -322,13 +323,13 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
             )}
           </div>
 
-          {/* Phase 03 Card */}
+          {/* Custody Handover Card */}
           <div className="p-4 rounded-xl bg-elevated border border-theme space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-theme">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <h3 className="font-extrabold text-primary text-xs uppercase tracking-wider">
-                  Phase 03 — Handover Taken & Sign-off
+                  Custody Handover & Sign-off
                 </h3>
               </div>
               {isPhase3Done ? (
@@ -389,7 +390,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
               </div>
             ) : (
               <div className="py-4 text-center text-muted">
-                <p>Phase 03 Handover has not been completed yet.</p>
+                <p>Custody Handover has not been completed yet.</p>
                 {isPhase2Done && onOpenPhase3 && (
                   <button
                     type="button"
@@ -399,7 +400,7 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
                     }}
                     className="mt-2 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs cursor-pointer"
                   >
-                    <span>Proceed to Phase 03 (Handover Taken)</span>
+                    <span>Proceed to Custody Handover</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -413,13 +414,23 @@ export const GateEntryDetailsModal: React.FC<GateEntryDetailsModalProps> = ({
           <div className="text-[11px] text-muted">
             Warehouse: <strong className="text-primary">{warehouse.name} ({warehouse.code})</strong>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-surface hover:bg-surface/80 text-primary font-bold border border-theme transition-colors cursor-pointer"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl bg-surface hover:bg-surface/80 text-primary font-bold border border-theme transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

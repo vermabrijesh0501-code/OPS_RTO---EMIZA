@@ -203,14 +203,9 @@ export const Phase3HandoverModal: React.FC<Phase3HandoverModalProps> = ({
               <CheckCircle2 className="w-5 h-5 text-emerald-200" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-white/20 text-white border border-white/30">
-                  Phase 03
-                </span>
-                <h2 className="text-base sm:text-lg font-extrabold text-white">
-                  Handover Taken & Final Inward Verification
-                </h2>
-              </div>
+              <h2 className="text-base sm:text-lg font-extrabold text-white">
+                Handover & Custodial Verification
+              </h2>
               <p className="text-xs text-emerald-100 mt-0.5">
                 Account Incharge custodial verification & digital sign-off for <strong className="text-white font-mono">{entry.gatePassNumber}</strong>
               </p>
@@ -225,7 +220,7 @@ export const Phase3HandoverModal: React.FC<Phase3HandoverModalProps> = ({
           </button>
         </div>
 
-        {/* Linked 3-Phase Verification Strip */}
+        {/* Linked Verification Strip */}
         <div className="px-6 py-3 bg-elevated/70 border-b border-theme grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div>
             <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Gate Entry ID</span>
@@ -442,7 +437,7 @@ export const Phase3HandoverModal: React.FC<Phase3HandoverModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-md transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Complete Handover (Phase 03)</span>
+              <span>Complete Custody Handover</span>
             </button>
           </div>
         </form>

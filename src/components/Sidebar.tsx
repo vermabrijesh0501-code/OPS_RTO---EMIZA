@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'inward' as ActiveTab,
-      label: 'Inward Gate Entry',
+      label: 'Vehicle Gate Entry',
       icon: Truck,
       badge: pendingGateEntriesCount > 0 ? String(pendingGateEntriesCount) : null,
       badgeBg: '#F59E0B',
@@ -77,12 +77,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: RotateCcw,
       badge: openBatchCount > 0 ? String(openBatchCount) : null,
       badgeBg: '#8B5CF6',
-    },
-    {
-      id: 'returns_b2b' as ActiveTab,
-      label: 'B2B Returns',
-      icon: Boxes,
-      badge: null,
     },
     {
       id: 'inventory' as ActiveTab,

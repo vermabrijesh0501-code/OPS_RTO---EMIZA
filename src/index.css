@@ -4,6 +4,12 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 }
 
+@font-face {
+  font-family: 'Aptos Narrow';
+  src: local('Aptos Narrow'), local('AptosNarrow'), local('Aptos');
+  font-display: swap;
+}
+
 :root, html, body, .dark {
   --bg-page: #0F172A;
   --bg-app: #0F172A;
@@ -45,10 +51,30 @@ html {
 body {
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Aptos Narrow', 'Aptos', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Global Select & Option Dark Theme Styling */
+select {
+  background-color: #152238 !important;
+  color: #F8FAFC !important;
+}
+
+select option,
+select optgroup {
+  background-color: #1E293B !important;
+  color: #F8FAFC !important;
+  font-weight: 500;
+  padding: 8px 12px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
 }
 
 .font-mono, .tracking-number, .awb-number, .batch-code {
@@ -127,6 +153,20 @@ h1, h2, h3, h4,
 .dashboard-title {
   color: #FFFFFF;
   font-weight: 700;
+}
+
+/* Remove number input spinner arrows (stepper / auto increment-decrement) globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 
 

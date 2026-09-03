@@ -53,6 +53,7 @@ interface InwardModuleProps {
   onUpdateGateEntryPhase3?: (id: string, phase3Data: Phase3HandoverData) => void;
   isOpenCreateModal: boolean;
   onCloseCreateModal: () => void;
+  initialTab?: 'inward' | 'b2b';
 }
 
 export const InwardModule: React.FC<InwardModuleProps> = ({
@@ -69,9 +70,11 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
   onUpdateGateEntryPhase3,
   isOpenCreateModal,
   onCloseCreateModal,
+  initialTab = 'inward',
 }) => {
+  const [activeWorkflowTab, setActiveWorkflowTab] = useState<'inward' | 'b2b'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
-  const [phaseFilter, setPhaseFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [accountFilter, setAccountFilter] = useState<string>('ALL');
 
   // Modals state
@@ -79,22 +82,37 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
   const [phase3TargetEntry, setPhase3TargetEntry] = useState<InwardGateEntry | null>(null);
   const [detailsTargetEntry, setDetailsTargetEntry] = useState<InwardGateEntry | null>(null);
 
-  // Filter gate entries for current warehouse
-  const warehouseEntries = gateEntries.filter(e => e.warehouseId === activeWarehouse.id);
+  // Filter gate entries for current warehouse and workflow tab
+  const warehouseEntries = gateEntries.filter(e => {
+    if (e.warehouseId !== activeWarehouse.id) return false;
+    const isB2BEntry = e.entryType === 'B2B Return' || e.gatePassNumber.startsWith('B2B');
+    return activeWorkflowTab === 'b2b' ? isB2BEntry : !isB2BEntry;
+  });
 
-  // Filtered entries based on search and phase tabs
+  // Status helper functions
+  const isEntryCompleted = (e: InwardGateEntry) =>
+    e.status === 'Completed' || e.status === 'Handover Completed' || !!e.phase3;
+
+  const isEntryHandoverPending = (e: InwardGateEntry) =>
+    !isEntryCompleted(e) && (e.status === 'Handover Pending' || e.status === 'QC Completed' || (!!e.phase2 && !e.phase3));
+
+  const isEntryInProgress = (e: InwardGateEntry) =>
+    !isEntryCompleted(e) && !isEntryHandoverPending(e) && (e.status === 'In Progress' || e.status === 'Unloading' || e.status === 'Dock QC');
+
+  const isEntryAtGate = (e: InwardGateEntry) =>
+    !isEntryCompleted(e) && !isEntryHandoverPending(e) && !isEntryInProgress(e);
+
+  // Filtered entries based on search and status tabs
   const filteredEntries = warehouseEntries.filter(entry => {
-    // Phase filtering
-    if (phaseFilter === 'PHASE_1') {
-      if (entry.status === 'Handover Completed' || entry.status === 'Completed' || entry.phase2 || entry.status === 'QC Completed') return false;
-    } else if (phaseFilter === 'PHASE_2') {
-      if (entry.status === 'Handover Completed' || entry.status === 'Completed' || entry.phase3) return false;
-      if (!entry.phase2 && entry.status !== 'Gate In' && entry.status !== 'Dock Allocated' && entry.status !== 'Unloading') return false;
-    } else if (phaseFilter === 'PHASE_3_PENDING') {
-      if (entry.status === 'Handover Completed' || entry.status === 'Completed' || entry.phase3) return false;
-      if (!entry.phase2 && entry.status !== 'QC Completed') return false;
-    } else if (phaseFilter === 'COMPLETED') {
-      if (entry.status !== 'Handover Completed' && entry.status !== 'Completed' && !entry.phase3) return false;
+    // Status filtering
+    if (statusFilter === 'AT_GATE') {
+      if (!isEntryAtGate(entry)) return false;
+    } else if (statusFilter === 'IN_PROGRESS') {
+      if (!isEntryInProgress(entry)) return false;
+    } else if (statusFilter === 'HANDOVER_PENDING') {
+      if (!isEntryHandoverPending(entry)) return false;
+    } else if (statusFilter === 'COMPLETED') {
+      if (!isEntryCompleted(entry)) return false;
     }
 
     // Account filtering
@@ -120,21 +138,32 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
       entry.driverMobile.includes(q) ||
       (client && client.name.toLowerCase().includes(q)) ||
       (courier && courier.name.toLowerCase().includes(q)) ||
+      (entry.courierPartner && entry.courierPartner.toLowerCase().includes(q)) ||
+      (entry.transporterName && entry.transporterName.toLowerCase().includes(q)) ||
       (entry.dockNumber && entry.dockNumber.toLowerCase().includes(q)) ||
       hasDocketMatch
     );
   });
 
-  // KPI Metrics
-  const totalEntriesCount = warehouseEntries.length;
-  const phase1Count = warehouseEntries.filter(e => !e.phase2 && e.status !== 'Handover Completed' && e.status !== 'Completed').length;
-  const phase2Count = warehouseEntries.filter(e => (!e.phase3 && (e.phase2 || e.status === 'QC Completed' || e.status === 'Unloading'))).length;
-  const phase3CompletedCount = warehouseEntries.filter(e => e.phase3 || e.status === 'Handover Completed' || e.status === 'Completed').length;
-  const totalBoxesSum = warehouseEntries.reduce((sum, e) => {
-    if (e.phase3) return sum + (e.phase3.receivedBoxesConfirmed || 0);
-    if (e.phase2) return sum + (e.phase2.totalBoxesCount || 0);
-    return sum + (e.expectedBoxCount || 0);
+  // Workflow KPI Metrics for the active workflow tab
+  const activeInwardEntries = warehouseEntries.filter(e => !isEntryCompleted(e));
+  const totalInwardActiveCount = activeInwardEntries.length;
+  const atGateCount = warehouseEntries.filter(isEntryAtGate).length;
+  const inProgressCount = warehouseEntries.filter(isEntryInProgress).length;
+  const handoverPendingCount = warehouseEntries.filter(isEntryHandoverPending).length;
+
+  const completedEntries = warehouseEntries.filter(isEntryCompleted);
+  const totalCompletedBoxes = completedEntries.reduce((sum, e) => {
+    return sum + (e.phase3?.receivedBoxesConfirmed ?? e.receivedBoxCount ?? 0);
   }, 0);
+
+  // Tab counts for badges
+  const totalInwardCount = gateEntries.filter(
+    e => e.warehouseId === activeWarehouse.id && !(e.entryType === 'B2B Return' || e.gatePassNumber.startsWith('B2B'))
+  ).length;
+  const totalB2BCount = gateEntries.filter(
+    e => e.warehouseId === activeWarehouse.id && (e.entryType === 'B2B Return' || e.gatePassNumber.startsWith('B2B'))
+  ).length;
 
   // Submit Phase 1
   const handlePhase1Submit = (entryData: any) => {
@@ -146,7 +175,6 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
     if (onUpdateGateEntryPhase2) {
       onUpdateGateEntryPhase2(gateEntryId, phase2Data);
     } else {
-      // Fallback
       onUpdateGateStatus(gateEntryId, 'QC Completed', phase2Data.dockConfirmed);
     }
   };
@@ -156,89 +184,145 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
     if (onUpdateGateEntryPhase3) {
       onUpdateGateEntryPhase3(gateEntryId, phase3Data);
     } else {
-      // Fallback
       onUpdateGateStatus(gateEntryId, 'Handover Completed');
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Workflow Navigation Tabs: Inward Gate Entry vs B2B Return / RTV */}
+      <div className="flex items-center justify-between border-b border-theme pb-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveWorkflowTab('inward')}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer border ${
+              activeWorkflowTab === 'inward'
+                ? 'bg-[#123B5D] text-white border-[#123B5D] shadow-sm dark:bg-blue-600 dark:border-blue-500'
+                : 'bg-surface text-secondary hover:text-primary hover:bg-elevated border-theme'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            <span>Inward Gate Entry</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeWorkflowTab === 'inward'
+                ? 'bg-white/20 text-white'
+                : 'bg-elevated text-secondary border border-theme'
+            }`}>
+              {totalInwardCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveWorkflowTab('b2b')}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer border ${
+              activeWorkflowTab === 'b2b'
+                ? 'bg-purple-700 text-white border-purple-700 shadow-sm dark:bg-purple-600 dark:border-purple-500'
+                : 'bg-surface text-secondary hover:text-primary hover:bg-elevated border-theme'
+            }`}
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>B2B Return / RTV</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeWorkflowTab === 'b2b'
+                ? 'bg-white/20 text-white'
+                : 'bg-elevated text-secondary border border-theme'
+            }`}>
+              {totalB2BCount}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <Truck className="w-4 h-4" />
+            <div className={`w-8 h-8 rounded-xl ${activeWorkflowTab === 'b2b' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'} flex items-center justify-center font-bold`}>
+              {activeWorkflowTab === 'b2b' ? <RotateCcw className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
             </div>
             <h1 className="text-xl font-extrabold text-primary">
-              Inward Gate Entry & 3-Phase Workflow
+              {activeWorkflowTab === 'b2b' ? 'B2B Return / RTV Gate Entry' : 'Inward Gate Entry'}
             </h1>
           </div>
           <p className="text-xs text-secondary mt-1">
-            Linked 1 Vehicle = 1 Gate Entry ID workflow across <strong>Security Check-In</strong>, <strong>Dock QC</strong>, and <strong>Account Handover</strong> at <strong className="text-primary">{activeWarehouse.name}</strong>.
+            {activeWorkflowTab === 'b2b'
+              ? `Manage B2B store return & RTV vehicle check-in, dock QC verification, and custodial handover at ${activeWarehouse.name}.`
+              : `Manage vehicle check-in, dock unloading & QC verification, and account handover at ${activeWarehouse.name}.`}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={onCloseCreateModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#123B5D] hover:bg-[#0D2E49] dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${
+              activeWorkflowTab === 'b2b'
+                ? 'bg-purple-700 hover:bg-purple-800 dark:bg-purple-600 dark:hover:bg-purple-700'
+                : 'bg-[#123B5D] hover:bg-[#0D2E49] dark:bg-blue-600 dark:hover:bg-blue-700'
+            } text-white font-extrabold text-xs shadow-md transition-all cursor-pointer`}
           >
-            <Plus className="w-4 h-4" />
-            <span>+ New Gate Entry (Phase 01)</span>
+            <span>{activeWorkflowTab === 'b2b' ? '+ New B2B Return Entry' : '+ New Inward Entry'}</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Metrics Ribbon */}
+      {/* Top Workflow Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+        {/* Card 1: Total Active Entries */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800">
             <Truck className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Total Inward Entries</span>
-            <span className="text-lg font-extrabold text-primary font-mono">{totalEntriesCount} Vehicles</span>
+            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">
+              {activeWorkflowTab === 'b2b' ? 'Active B2B Returns' : 'Total Inward Entries'}
+            </span>
+            <span className="text-lg font-extrabold text-primary font-mono">{totalInwardActiveCount} Active</span>
           </div>
         </div>
 
+        {/* Card 2: At Gate */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Phase 01 (Security)</span>
-            <span className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">{phase1Count} At Gate</span>
+            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">At Gate</span>
+            <span className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">{atGateCount} Waiting</span>
           </div>
         </div>
 
+        {/* Card 3: In Progress */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800">
             <Package className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Phase 02 (Dock QC)</span>
-            <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{phase2Count} In Progress</span>
+            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">In Progress</span>
+            <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{inProgressCount} In Progress</span>
           </div>
         </div>
 
+        {/* Card 4: Handover Pending */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-200 dark:border-purple-800">
+            <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Phase 03 (Completed)</span>
-            <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{phase3CompletedCount} Handover Done</span>
+            <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Handover Pending</span>
+            <span className="text-lg font-extrabold text-purple-600 dark:text-purple-400 font-mono">{handoverPendingCount} Pending</span>
           </div>
         </div>
 
+        {/* Card 5: Total Cartons / Boxes */}
         <div className="p-4 rounded-xl bg-surface border border-theme shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-200 dark:border-purple-800">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
             <Layers className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[10px] text-muted block uppercase font-bold tracking-wider">Total Cartons / Boxes</span>
-            <span className="text-lg font-extrabold text-primary font-mono">{totalBoxesSum} Received</span>
+            <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{totalCompletedBoxes} Received</span>
           </div>
         </div>
       </div>
@@ -250,14 +334,14 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
           <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search Gate Entry ID, Vehicle No, Driver, Docket No, Invoice..."
+            placeholder={activeWorkflowTab === 'b2b' ? "Search B2B Entry ID, Store, Vehicle No, Driver, Courier, Docket, Invoice..." : "Search Gate Entry ID, Vehicle No, Driver, Courier, Docket, Invoice..."}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-elevated border border-theme text-xs text-primary placeholder:text-muted rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-blue-500 font-medium"
           />
         </div>
 
-        {/* Dynamic Account Filter + Phase Tabs */}
+        {/* Dynamic Account Filter + Status Tabs */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Account Filter */}
           <div className="flex items-center gap-1.5 bg-elevated border border-theme px-3 py-1.5 rounded-xl text-xs">
@@ -265,29 +349,29 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
             <select
               value={accountFilter}
               onChange={e => setAccountFilter(e.target.value)}
-              className="bg-transparent text-primary font-bold text-xs focus:outline-none cursor-pointer"
+              className="bg-transparent text-primary font-bold text-xs focus:outline-none cursor-pointer [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC] [&>option]:py-1.5"
             >
-              <option value="ALL">All Accounts</option>
+              <option value="ALL" className="bg-[#1E293B] text-[#F8FAFC]">All Accounts</option>
               {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id} className="bg-[#1E293B] text-[#F8FAFC]">{c.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Phase Filter Tabs */}
+          {/* Workflow Status Filter Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {[
-              { label: 'All Phases', value: 'ALL' },
-              { label: 'Phase 01: Security', value: 'PHASE_1' },
-              { label: 'Phase 02: Dock QC', value: 'PHASE_2' },
-              { label: 'Phase 03: Pending', value: 'PHASE_3_PENDING' },
-              { label: 'Handover Completed', value: 'COMPLETED' },
+              { label: 'All Entries', value: 'ALL' },
+              { label: 'At Gate', value: 'AT_GATE' },
+              { label: 'In Progress', value: 'IN_PROGRESS' },
+              { label: 'Handover Pending', value: 'HANDOVER_PENDING' },
+              { label: 'Completed', value: 'COMPLETED' },
             ].map(tab => (
               <button
                 key={tab.value}
-                onClick={() => setPhaseFilter(tab.value)}
+                onClick={() => setStatusFilter(tab.value)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
-                  phaseFilter === tab.value
+                  statusFilter === tab.value
                     ? 'bg-[#123B5D] dark:bg-blue-600 text-white border-[#123B5D] dark:border-blue-500 shadow-xs'
                     : 'bg-elevated text-secondary hover:text-primary border-theme hover:bg-elevated/80'
                 }`}
@@ -299,7 +383,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         </div>
       </div>
 
-      {/* Main Linked Workflow Entries Table */}
+      {/* Main Gate Entries Workflow Table */}
       <div className="bg-surface border border-theme rounded-xl overflow-hidden shadow-xs transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -307,10 +391,10 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
               <tr className="border-b border-theme bg-elevated/60 text-secondary text-[11px] font-extrabold uppercase tracking-wider">
                 <th className="py-3.5 px-4">Gate Entry ID & Time</th>
                 <th className="py-3.5 px-4">Vehicle & Driver</th>
-                <th className="py-3.5 px-4">Account (Client) & Courier</th>
+                <th className="py-3.5 px-4">Account & Courier / Transporter</th>
                 <th className="py-3.5 px-4">Dock & Volume</th>
-                <th className="py-3.5 px-4">Linked Phase Status</th>
-                <th className="py-3.5 px-4">Phase QC Breakdown</th>
+                <th className="py-3.5 px-4">Workflow Status</th>
+                <th className="py-3.5 px-4">QC Breakdown</th>
                 <th className="py-3.5 px-4 text-right">Workflow Actions</th>
               </tr>
             </thead>
@@ -318,7 +402,9 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
               {filteredEntries.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-muted font-mono text-xs">
-                    No inward gate entries match the selected filters.
+                    {activeWorkflowTab === 'b2b'
+                      ? 'No B2B return gate entries match the selected filters.'
+                      : 'No inward gate entries match the selected filters.'}
                   </td>
                 </tr>
               ) : (
@@ -327,15 +413,19 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                   const courier = couriers.find(cr => cr.id === entry.courierId);
                   const vehicleType = vehicleTypes.find(vt => vt.id === entry.vehicleTypeId);
 
-                  const isPhase1Only = !entry.phase2 && entry.status !== 'Handover Completed' && entry.status !== 'Completed';
-                  const isPhase2Done = !!entry.phase2;
-                  const isPhase3Done = !!entry.phase3 || entry.status === 'Handover Completed' || entry.status === 'Completed';
+                  const isCompleted = isEntryCompleted(entry);
+                  const isHandoverPending = isEntryHandoverPending(entry);
+                  const isInProgress = isEntryInProgress(entry);
+                  const isAtGate = isEntryAtGate(entry);
+
+                  const displayCourier = entry.courierPartner || entry.courierName || courier?.name || 'Courier Partner';
+                  const isB2BEntry = entry.entryType === 'B2B Return' || entry.gatePassNumber.startsWith('B2B');
 
                   return (
                     <tr key={entry.id} className="hover:bg-elevated/40 transition-colors">
                       {/* Gate Entry ID */}
                       <td className="py-3.5 px-4">
-                        <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-xs">
+                        <div className={`font-mono font-extrabold ${isB2BEntry ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'} text-xs`}>
                           {entry.gatePassNumber}
                         </div>
                         <div className="text-[10px] text-muted font-mono mt-0.5 flex items-center gap-1">
@@ -357,14 +447,17 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                         </div>
                       </td>
 
-                      {/* Account & Courier */}
+                      {/* Account & Courier / Transporter */}
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-primary flex items-center gap-1">
                           <Building2 className="w-3 h-3 text-emerald-500 shrink-0" />
                           <span>{client ? client.name : 'Account'}</span>
                         </div>
                         <div className="text-[11px] text-secondary mt-0.5">
-                          {courier ? courier.name : 'Courier Partner'}
+                          <span>{displayCourier}</span>
+                          {entry.transporterName && (
+                            <span className="text-muted text-[10px] block">Transporter: {entry.transporterName}</span>
+                          )}
                         </div>
                       </td>
 
@@ -374,23 +467,33 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
                           {entry.dockNumber || 'Dock 01'}
                         </div>
                         <div className="text-[11px] text-secondary font-mono mt-0.5">
-                          {entry.phase2 ? `${entry.phase2.totalBoxesCount} Boxes` : `${entry.expectedBoxCount || 0} Declared`}
+                          {entry.phase3 ? (
+                            <span className="text-emerald-600 font-bold">{entry.phase3.receivedBoxesConfirmed} Boxes Received</span>
+                          ) : entry.phase2 ? (
+                            <span>{entry.phase2.totalBoxesCount} Boxes Verified</span>
+                          ) : (
+                            <span>{entry.expectedBoxCount || 0} Declared</span>
+                          )}
                         </div>
                       </td>
 
-                      {/* Linked Phase Status */}
+                      {/* Workflow Status */}
                       <td className="py-3.5 px-4">
-                        {isPhase3Done ? (
+                        {isCompleted ? (
                           <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 w-fit">
-                            <CheckCircle2 className="w-3 h-3" /> Phase 03: Completed
+                            <CheckCircle2 className="w-3 h-3" /> Completed
                           </span>
-                        ) : isPhase2Done ? (
+                        ) : isHandoverPending ? (
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1 w-fit">
+                            <Clock className="w-3 h-3" /> Handover Pending
+                          </span>
+                        ) : isInProgress ? (
                           <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1 w-fit">
-                            <Package className="w-3 h-3" /> Phase 02: QC Done
+                            <Package className="w-3 h-3" /> In Progress
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 w-fit">
-                            <ShieldCheck className="w-3 h-3" /> Phase 01: Security Done
+                            <ShieldCheck className="w-3 h-3" /> At Gate
                           </span>
                         )}
                       </td>
@@ -418,42 +521,42 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        {/* Phase Action: Open Phase 2 if Phase 1 */}
-                        {isPhase1Only && (
+                        {/* Action: Open Dock QC if At Gate or In Progress */}
+                        {(isAtGate || isInProgress) && (
                           <button
                             onClick={() => setPhase2TargetEntry(entry)}
                             className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1"
                           >
-                            <span>Phase 02: Dock QC</span>
+                            <span>Dock QC</span>
                             <ArrowRight className="w-3 h-3" />
                           </button>
                         )}
 
-                        {/* Phase Action: Open Phase 3 if Phase 2 is completed but Phase 3 is pending */}
-                        {isPhase2Done && !isPhase3Done && (
+                        {/* Action: Open Handover if Dock QC completed and handover is pending */}
+                        {isHandoverPending && (
                           <button
                             onClick={() => setPhase3TargetEntry(entry)}
                             className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1"
                           >
-                            <span>Phase 03: Handover</span>
+                            <span>Account Handover</span>
                             <ArrowRight className="w-3 h-3" />
                           </button>
                         )}
 
-                        {/* View Full Timeline Modal */}
+                        {/* View Full Record Modal */}
                         <button
                           onClick={() => setDetailsTargetEntry(entry)}
                           className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary border border-theme inline-flex items-center justify-center transition-colors cursor-pointer"
-                          title="View 3-Phase Linked Record"
+                          title="View Gate Entry Details"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Download 3-Phase PDF Pass */}
+                        {/* Download Gate Pass PDF */}
                         <button
-                          onClick={() => generateGatePassPDF(entry, activeWarehouse, client, courier)}
+                          onClick={() => generateGatePassPDF(entry, activeWarehouse, client, courier, isB2BEntry)}
                           className="p-1.5 rounded-lg bg-elevated hover:bg-elevated/80 text-secondary border border-theme inline-flex items-center justify-center transition-colors cursor-pointer"
-                          title="Download 3-Phase Gate Pass PDF"
+                          title="Download Gate Pass PDF"
                         >
                           <Download className="w-3.5 h-3.5" />
                         </button>
@@ -467,7 +570,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         </div>
       </div>
 
-      {/* Phase 01 Modal (Security Check-In) */}
+      {/* Security Check-In Modal */}
       <Phase1SecurityModal
         isOpen={isOpenCreateModal}
         onClose={onCloseCreateModal}
@@ -478,9 +581,10 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         vehicleTypes={vehicleTypes}
         drivers={drivers}
         onSubmitPhase1={handlePhase1Submit}
+        isB2B={activeWorkflowTab === 'b2b'}
       />
 
-      {/* Phase 02 Modal (Unloading & Dock QC) */}
+      {/* Dock QC Modal */}
       <Phase2DockQCModal
         isOpen={!!phase2TargetEntry}
         entry={phase2TargetEntry}
@@ -492,7 +596,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         onSubmitPhase2={handlePhase2Submit}
       />
 
-      {/* Phase 03 Modal (Handover Taken) */}
+      {/* Account Handover Modal */}
       <Phase3HandoverModal
         isOpen={!!phase3TargetEntry}
         entry={phase3TargetEntry}
@@ -503,7 +607,7 @@ export const InwardModule: React.FC<InwardModuleProps> = ({
         onSubmitPhase3={handlePhase3Submit}
       />
 
-      {/* 3-Phase Comprehensive Details Modal */}
+      {/* Gate Entry Details Modal */}
       <GateEntryDetailsModal
         isOpen={!!detailsTargetEntry}
         entry={detailsTargetEntry}
