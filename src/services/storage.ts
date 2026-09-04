@@ -154,24 +154,27 @@ export const StorageService = {
   },
 
   getUsers: (): User[] => {
-    const loaded = loadItem<User[]>(STORAGE_KEYS.USERS, initialUsers);
-    // Sanitize any passwords out of loaded data
-    const sanitizedLoaded = loaded.map(({ password: _, ...rest }) => rest as User);
-    // Ensure all standard initial users are present
-    const existingEmails = new Set(sanitizedLoaded.map(u => u.email.toLowerCase()));
-    let hasAdditions = false;
-    const merged = [...sanitizedLoaded];
-    for (const initU of initialUsers) {
-      if (!existingEmails.has(initU.email.toLowerCase())) {
-        const { password: _, ...cleanInit } = initU;
-        merged.push(cleanInit as User);
-        hasAdditions = true;
+    const raw = (() => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.USERS);
+        if (stored !== null) {
+          // Key exists: the list was intentionally customized/synced — never
+          // resurrect seed users here (that caused deleted users to reappear
+          // and diverge across devices).
+          return JSON.parse(stored);
+        }
+      } catch {
+        // fall through to seeding
       }
+      return null;
+    })();
+    if (Array.isArray(raw)) {
+      return raw.map(({ password: _, ...rest }) => rest as User);
     }
-    if (hasAdditions) {
-      saveItem(STORAGE_KEYS.USERS, merged);
-    }
-    return merged;
+    // First run only: seed standard users
+    const seeded = initialUsers.map(({ password: _, ...rest }) => rest as User);
+    saveItem(STORAGE_KEYS.USERS, seeded);
+    return seeded;
   },
   saveUsers: (data: User[]) => {
     // Strictly strip password from all records to guarantee zero password exposure in storage
@@ -341,6 +344,33 @@ export const StorageService = {
       if (Array.isArray(remoteStore.auditorDevices)) saveItem(STORAGE_KEYS.AUDITOR_DEVICES, remoteStore.auditorDevices);
     } catch (e) {
       console.warn('[StorageService] Error applying remote store:', e);
+    }
+  },
+
+  // Silently persist a masters list received via realtime sync (no re-broadcast).
+  // Keeps each device's offline/localStorage fallback identical to the central data.
+  applyMasterUpdate: (category: string, records: any[]) => {
+    if (!category || !Array.isArray(records)) return;
+    const keyMap: Record<string, string> = {
+      companies: STORAGE_KEYS.COMPANIES,
+      warehouses: STORAGE_KEYS.WAREHOUSES,
+      clients: STORAGE_KEYS.CLIENTS,
+      couriers: STORAGE_KEYS.COURIERS,
+      skus: STORAGE_KEYS.SKUS,
+      drivers: STORAGE_KEYS.DRIVERS,
+      vehicle_types: STORAGE_KEYS.VEHICLE_TYPES,
+      return_reasons: STORAGE_KEYS.RETURN_REASONS,
+      users: STORAGE_KEYS.USERS,
+    };
+    const key = keyMap[category];
+    if (!key) return;
+    try {
+      const sanitized = category === 'users'
+        ? records.map(({ password: _, ...rest }) => rest)
+        : records;
+      saveItem(key, sanitized as any);
+    } catch (e) {
+      console.warn('[StorageService] Error applying master update:', e);
     }
   },
 

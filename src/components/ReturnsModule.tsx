@@ -102,6 +102,19 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const [newBatchDock, setNewBatchDock] = useState<string>('Dock 01');
   const [newBatchNotes, setNewBatchNotes] = useState('');
 
+  // Keep form selections valid when master lists change in realtime
+  // (e.g. a courier added on another device, or one deleted here).
+  useEffect(() => {
+    if (couriers.length > 0 && !couriers.some(c => c.id === newBatchCourier)) {
+      setNewBatchCourier(couriers[0].id);
+    }
+  }, [couriers]);
+  useEffect(() => {
+    if (clients.length > 0 && !clients.some(c => c.id === newBatchClient)) {
+      setNewBatchClient(clients[0].id);
+    }
+  }, [clients]);
+
   // SCANNER GUN & AWB SCAN STATE
   const [barcodeInput, setBarcodeInput] = useState('');
   const [selectedRemark, setSelectedRemark] = useState<ReturnRemarkType>('Good');

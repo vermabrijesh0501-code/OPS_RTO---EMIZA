@@ -365,6 +365,11 @@ export default function App() {
             setReturnReasons(StorageService.getReturnReasons());
             setUsers(StorageService.getUsers());
           }
+          // Persist silently so this device's local/offline fallback stays
+          // identical to the central master data (no re-broadcast loop).
+          if (category && Array.isArray(allRecords)) {
+            StorageService.applyMasterUpdate(category, allRecords);
+          }
           break;
         }
 
