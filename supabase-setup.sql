@@ -124,6 +124,92 @@ drop policy if exists "authenticated read activity" on public.activity_logs;
 create policy "authenticated read activity"
   on public.activity_logs for select to authenticated using (true);
 
+-- 5. MASTER RECORDS (cloud source of truth for ALL master categories —
+--    companies, warehouses, clients, couriers, skus, drivers, vehicle_types,
+--    return_reasons, users). One row per record; `data` is the full
+--    camelCase record (JSONB) incl. its `_updatedAt` LWW stamp.
+create table if not exists public.master_records (
+  category text not null,
+  rec_id text not null,
+  data jsonb,
+  updated_at timestamptz default now(),
+  primary key (category, rec_id)
+);
+
+create index if not exists idx_master_records_category on public.master_records (category);
+
+alter table public.master_records enable row level security;
+
+drop policy if exists "master records select" on public.master_records;
+create policy "master records select"
+  on public.master_records for select
+  to authenticated
+  using (true);
+
+drop policy if exists "master records insert" on public.master_records;
+create policy "master records insert"
+  on public.master_records for insert
+  to authenticated
+  with check (true);
+
+drop policy if exists "master records update" on public.master_records;
+create policy "master records update"
+  on public.master_records for update
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "master records delete" on public.master_records;
+create policy "master records delete"
+  on public.master_records for delete
+  to authenticated
+  using (true);
+
+-- Realtime: include master_records in the default publication so
+-- postgres_changes (used by masterSync.subscribeMasterChanges) fires.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'master_records'
+     ) then
+    alter publication supabase_realtime add table public.master_records;
+  end if;
+end
+$$;
+
+-- ---------------------------------------------------------------------------
+-- ONE-TIME CLEANUP: Remove ALL demo accounts from this Supabase project.
+-- Run this block ONCE in SQL Editor. Safe to re-run (only matches demo
+-- domains; verma.brijesh0501@gmail.com is never touched).
+--   • auth.users       — the actual demo logins (user_profiles cascades)
+--   • active_devices   — demo device sessions (referenced by email string)
+--   • activity_logs    — demo audit rows (referenced by user_id)
+--   • master_records   — cloud copies of demo users in the "users" master
+--     (without this, the app would re-pull them from the cloud on login)
+-- ---------------------------------------------------------------------------
+delete from auth.users
+ where email ilike '%@emiza.com' or email ilike '%@emizainc.com';
+
+delete from public.active_devices
+ where user_email ilike '%@emiza.com' or user_email ilike '%@emizainc.com';
+
+delete from public.activity_logs
+ where user_id in (
+   'usr-super','usr-super-emiza','usr-wh-mgr','usr-sec','usr-sup',
+   'usr-rto-op','usr-grn-op','usr-auditor');
+
+delete from public.master_records
+ where category = 'users'
+   and (data->>'email' ilike '%@emiza.com' or data->>'email' ilike '%@emizainc.com');
+
+-- Verify (should return 0 rows):
+select email from auth.users
+ where email ilike '%@emiza.com' or email ilike '%@emizainc.com';
+
 -- Done! Now:
 -- 1. Supabase Dashboard → Authentication → Sign In / Up → turn OFF "Confirm email"
 --    (so the Super Admin bootstrap gets a session immediately)

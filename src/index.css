@@ -57,24 +57,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Global Select & Option Dark Theme Styling */
+/* Global Select dark theme — force the NATIVE dropdown popup dark via
+   color-scheme (inherited from :root). Do NOT add per-option background
+   overrides here: `select option { background-color }` causes black-on-black
+   dropdown popups in Chromium. */
 select {
+  color-scheme: dark;
   background-color: #152238 !important;
   color: #F8FAFC !important;
-}
-
-select option,
-select optgroup {
-  background-color: #1E293B !important;
-  color: #F8FAFC !important;
-  font-weight: 500;
-  padding: 8px 12px;
-}
-
-select option:checked,
-select option:hover {
-  background-color: #334155 !important;
-  color: #FFFFFF !important;
 }
 
 .font-mono, .tracking-number, .awb-number, .batch-code {

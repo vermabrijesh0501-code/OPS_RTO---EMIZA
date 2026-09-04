@@ -153,24 +153,28 @@ function waitFor(state, pred, timeoutMs = 3000, label = '') {
   report('K) /api/sync/version returns lastUpdated', ver.status === 200 && typeof ver.json?.lastUpdated === 'string');
 
   // TEST H: REST heartbeat registers a WS-less device for presence
+  // (run-scoped device ids — the server keeps REST-only devices in memory for
+  // 90s, so fixed ids make re-runs flaky: no "join" broadcast on repeat)
+  const restOnlyId = `test-device-restonly-${ts}`;
+  const restOnlyId2 = `test-device-restonly2-${ts}`;
   const hbReg = await httpJson('/api/sync/heartbeat', 'POST', {
-    deviceId: 'test-device-restonly',
+    deviceId: restOnlyId,
     deviceType: 'Mobile / Scanner',
     deviceName: 'Android (Mobile App)',
     userName: 'Rest Only User',
     userRole: 'RTO Operator',
     warehouseId: 'wh-main',
   });
-  const restDevice = hbReg.json?.activeDevices?.find(d => d.id === 'test-device-restonly');
+  const restDevice = hbReg.json?.activeDevices?.find(d => d.id === restOnlyId);
   report('L) REST heartbeat registers WS-less device (presence)', hbReg.status === 200 && !!restDevice,
     restDevice ? `visible as ${restDevice.deviceType}` : 'not found');
 
   // TEST I: WS device receives DEVICES_UPDATED when REST-only device registers
   desktop.messages.length = 0;
   await httpJson('/api/sync/heartbeat', 'POST', {
-    deviceId: 'test-device-restonly2', deviceType: 'Mobile / Scanner', userName: 'Second REST', userRole: 'Auditor',
+    deviceId: restOnlyId2, deviceType: 'Mobile / Scanner', userName: 'Second REST', userRole: 'Auditor',
   });
-  const dSawRest = await waitFor(desktop, m => m.type === 'DEVICES_UPDATED' && m.payload?.some?.(d => d.id === 'test-device-restonly2'));
+  const dSawRest = await waitFor(desktop, m => m.type === 'DEVICES_UPDATED' && m.payload?.some?.(d => d.id === restOnlyId2));
   report('M) WS devices notified when REST-only device joins', !!dSawRest);
 
   // PING/PONG keepalive

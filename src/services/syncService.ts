@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
+import { pollIntervalMs } from './masterSync';
 
 export type SyncEventType =
   | 'SYNC_ALL'
@@ -56,6 +57,10 @@ export interface SyncStatus {
   currentDeviceId: string;
   deviceType: 'Desktop' | 'Mobile / Scanner' | 'Tablet';
   deviceName: string;
+  /** false once /api/sync/* is judged absent (static hosting) */
+  serverApiAvailable: boolean;
+  /** health of the Supabase realtime channel (the static-hosting sync path) */
+  supabaseRealtimeState: 'none' | 'subscribed' | 'failed';
 }
 
 type SyncCallback = (msg: SyncMessage) => void;
@@ -86,6 +91,12 @@ class RealtimeSyncManager {
   private connectedDevices: ConnectedDeviceInfo[] = [];
   private lastSyncedAt: string = new Date().toISOString();
   private isOnline: boolean = true;
+
+  // --- Backoff / status tracking ---
+  private wsFailures: number = 0;
+  private pollFailures: number = 0;
+  private serverApiAvailable: boolean = true;
+  private supabaseRealtimeState: 'none' | 'subscribed' | 'failed' = 'none';
 
   constructor() {
     this.currentDeviceId = this.getOrCreateDeviceId();
@@ -165,6 +176,9 @@ class RealtimeSyncManager {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
+        // Healthy connection — reset backoff & server-API state.
+        this.wsFailures = 0;
+        this.serverApiAvailable = true;
         this.connectionStatus = 'connected';
         this.lastSyncedAt = new Date().toISOString();
         this.sendDeviceRegistration();
@@ -242,52 +256,100 @@ class RealtimeSyncManager {
 
   private scheduleReconnect() {
     clearTimeout(this.wsReconnectTimer);
+    if (!this.isOnline) return;
+    this.wsFailures += 1;
+    // Linear backoff capped at 30s (2.5s, 5s, 7.5s, ... 30s)
+    const delay = Math.min(2500 * this.wsFailures, 30000);
     this.wsReconnectTimer = setTimeout(() => {
       if (this.isOnline) {
         this.connectWebSocket();
       }
-    }, 2500);
+    }, delay);
   }
 
-  // --- REST Polling Fallback (keeps realtime sync alive when WebSocket is blocked,
-  // e.g. mobile networks/proxies that kill WS) ---
+  // --- REST Polling Fallback (keeps realtime sync alive when WebSocket is
+  // blocked, e.g. mobile networks/proxies that kill WS).
+  // The interval is backoff-driven via pollIntervalMs(pollFailures): fast while
+  // healthy, slower as failures accumulate, and null (stop entirely) once the
+  // /api/sync/* endpoints are judged absent — i.e. static hosting with no sync
+  // server, where Supabase realtime is the only shared backend. ---
   private startPollFallback() {
     if (typeof window === 'undefined') return;
-    clearInterval(this.pollTimer);
-    this.pollTimer = setInterval(async () => {
+    clearTimeout(this.pollTimer);
+    this.schedulePollTick();
+  }
+
+  private schedulePollTick() {
+    const interval = pollIntervalMs(this.pollFailures);
+    if (interval === null) {
+      // Endpoint absent (static host — no /api/sync/*) — stop hammering.
+      this.serverApiAvailable = false;
+      this.emitStatusChange();
+      return;
+    }
+    this.pollTimer = setTimeout(async () => {
       // Only needed when the WebSocket is not healthy
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
-
-      try {
-        // 1. Presence heartbeat via REST so other devices still see this device
-        fetch('/api/sync/heartbeat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            deviceId: this.currentDeviceId,
-            deviceType: this.deviceType,
-            deviceName: this.deviceName,
-            userName: this.userName,
-            userRole: this.userRole,
-            warehouseId: this.warehouseId,
-          }),
-        }).catch(() => {});
-
-        // 2. Cheap version check — full sync only when the server store changed
-        const res = await fetch('/api/sync/version');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json?.lastUpdated && json.lastUpdated !== this.lastSeenStoreVersion) {
-          const isFirstRun = this.lastSeenStoreVersion === '';
-          this.lastSeenStoreVersion = json.lastUpdated;
-          if (!isFirstRun) {
-            await this.forceSyncNow();
-          }
-        }
-      } catch {
-        // offline — retry on next tick
+      if (!(this.ws && this.ws.readyState === WebSocket.OPEN)) {
+        await this.runPollOnce();
       }
-    }, 3000);
+      this.schedulePollTick();
+    }, interval);
+  }
+
+  private async runPollOnce() {
+    try {
+      // 1. Presence heartbeat via REST so other devices still see this device
+      fetch('/api/sync/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: this.currentDeviceId,
+          deviceType: this.deviceType,
+          deviceName: this.deviceName,
+          userName: this.userName,
+          userRole: this.userRole,
+          warehouseId: this.warehouseId,
+        }),
+      }).catch(() => {});
+
+      // 2. Cheap version check — full sync only when the server store changed.
+      //    Non-JSON responses (a static host 404s with HTML) count as failures.
+      const res = await fetch('/api/sync/version');
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        json = null;
+      }
+      if (!res.ok || !json || typeof json.lastUpdated !== 'string') {
+        this.pollFailures += 1;
+        if (this.pollFailures >= 3 && this.serverApiAvailable) {
+          this.serverApiAvailable = false;
+          this.emitStatusChange();
+        }
+        return;
+      }
+      // Healthy response — recover backoff / API-availability state.
+      if (this.pollFailures > 0 || !this.serverApiAvailable) {
+        this.pollFailures = 0;
+        this.serverApiAvailable = true;
+        this.emitStatusChange();
+      }
+      if (json.lastUpdated !== this.lastSeenStoreVersion) {
+        const isFirstRun = this.lastSeenStoreVersion === '';
+        this.lastSeenStoreVersion = json.lastUpdated;
+        if (!isFirstRun) {
+          await this.forceSyncNow();
+        }
+      }
+    } catch {
+      // offline — retry on next tick
+      this.pollFailures += 1;
+      if (this.pollFailures >= 3 && this.serverApiAvailable) {
+        this.serverApiAvailable = false;
+        this.emitStatusChange();
+      }
+    }
   }
 
   private sendDeviceRegistration() {
@@ -363,6 +425,7 @@ class RealtimeSyncManager {
 
     window.addEventListener('online', () => {
       this.isOnline = true;
+      this.wsFailures = 0; // network back — start reconnect backoff fresh
       this.connectWebSocket();
       this.initSupabaseRealtime();
       this.forceSyncNow();
@@ -404,7 +467,16 @@ class RealtimeSyncManager {
             this.notifySubscribers(payload);
           }
         })
-        .subscribe();
+        .subscribe((status: string) => {
+          // Track the realtime subscription health (v1 uppercase / v2 lowercase)
+          const s = String(status || '').toUpperCase();
+          if (s === 'SUBSCRIBED') {
+            this.supabaseRealtimeState = 'subscribed';
+          } else if (s === 'CHANNEL_ERROR' || s === 'ERRORED' || s === 'TIMED_OUT' || s === 'CLOSED') {
+            this.supabaseRealtimeState = 'failed';
+          }
+          this.emitStatusChange();
+        });
     } catch (e) {
       console.warn('[SyncService] Supabase Realtime subscription error:', e);
     }
@@ -515,8 +587,14 @@ class RealtimeSyncManager {
   // --- Status & Subscription Management ---
   public getSyncStatus(): SyncStatus {
     const activeCount = this.connectedDevices.length > 0 ? this.connectedDevices.length : 1;
+    // On static hosting there is no WS server — a healthy Supabase realtime
+    // subscription IS the connected sync path. Without this the UI gets stuck
+    // on "Syncing…" forever even though master data is syncing through the cloud.
+    const wsOpen = !!this.ws && this.ws.readyState === WebSocket.OPEN;
+    const status: SyncStatus['status'] =
+      wsOpen || this.supabaseRealtimeState === 'subscribed' ? 'connected' : this.connectionStatus;
     return {
-      status: this.connectionStatus,
+      status,
       connectedDevicesCount: activeCount,
       connectedDevices: this.connectedDevices,
       lastSyncedAt: this.lastSyncedAt,
@@ -524,6 +602,8 @@ class RealtimeSyncManager {
       currentDeviceId: this.currentDeviceId,
       deviceType: this.deviceType,
       deviceName: this.deviceName,
+      serverApiAvailable: this.serverApiAvailable,
+      supabaseRealtimeState: this.supabaseRealtimeState,
     };
   }
 
