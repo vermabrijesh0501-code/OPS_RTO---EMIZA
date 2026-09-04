@@ -3,11 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, RefreshCw, Warehouse, Sun, Moon, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { ConnectionDiagnostics } from './auth/ConnectionDiagnostics';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn } = useAuth();
+  const { signIn, isConfigured } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [email, setEmail] = useState('');
@@ -117,7 +118,28 @@ export const LoginPage: React.FC = () => {
               <p className="text-slate-400 text-xs sm:text-sm mt-1.5">
                 Enter your registered credentials to access your terminal
               </p>
+              <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${isConfigured ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {isConfigured ? 'Supabase connected — use verma.brijesh0501@gmail.com' : 'Demo Mode (no Supabase)'}
+              </div>
             </div>
+
+            {/* Demo Mode Helper (shown only when Supabase is not configured) */}
+            {!isConfigured && (
+              <div className="mb-5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300/90 text-xs flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold text-amber-300">Demo Mode</span> — Supabase is not connected. Sign in with any demo account below and{' '}
+                  <span className="font-semibold">any password (4+ chars)</span>:
+                  <ul className="mt-1.5 space-y-0.5 font-mono text-[11px] text-amber-200/80">
+                    <li>brijesh.verma@emizainc.com &middot; Super Admin</li>
+                    <li>vikram.m@emiza.com &middot; Warehouse Manager</li>
+                    <li>pooja.d@emiza.com &middot; Supervisor</li>
+                    <li>neha.s@emiza.com &middot; Auditor</li>
+                  </ul>
+                </div>
+              </div>
+            )}
 
             {/* Error Message Box */}
             {errorMessage && (
@@ -215,6 +237,8 @@ export const LoginPage: React.FC = () => {
                 WOP-Emiza Supply Chain Operations &bull; Authorized Personnel Only
               </p>
             </div>
+
+            <ConnectionDiagnostics />
           </div>
         </div>
 

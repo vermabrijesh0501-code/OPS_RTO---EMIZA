@@ -14,6 +14,7 @@ import {
 } from '../services/supabase';
 import { User, UserRole, ActiveDeviceSession } from '../types';
 import { StorageService } from '../services/storage';
+import { initialUsers } from '../mockData';
 import { ROLE_DEFAULT_PERMISSIONS, isSuperAdmin, has_permission } from '../utils/rbac';
 import { SyncService } from '../services/syncService';
 
@@ -42,6 +43,49 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Map raw Supabase auth errors to clear, actionable messages
+function mapAuthError(err: any, attemptedEmail: string): string {
+  const msg: string = err?.message || '';
+  const code = err?.code || '';
+
+  // Demo emails only work in Demo Mode (no Supabase)
+  const demoEmails = [
+    'brijesh.verma@emizainc.com',
+    'brijesh.verma@emiza.com',
+    'vikram.m@emiza.com',
+    'rajesh.security@emiza.com',
+    'pooja.d@emiza.com',
+    'amit.p@emiza.com',
+    'sandeep.y@emiza.com',
+    'neha.s@emiza.com',
+  ];
+  if (demoEmails.includes(attemptedEmail)) {
+    return `Supabase mode is active — internal demo accounts don't work here. Sign in with verma.brijesh0501@gmail.com (auto-creates as Super Admin), then create team accounts via User Management.`;
+  }
+  if (code === 'email_not_confirmed' || /not confirmed/i.test(msg)) {
+    return 'Email not confirmed: In the Supabase Dashboard go to Authentication → Sign In / Up and turn OFF "Confirm email", then try again.';
+  }
+  if (/already registered|already exists/i.test(msg)) {
+    return 'This account already exists with a different password. Try your other password, or reset it from the Supabase Dashboard (Authentication → Users).';
+  }
+  if (/at least 6/i.test(msg)) {
+    return 'Password must be at least 6 characters long.';
+  }
+  if (/signups not allowed/i.test(msg)) {
+    return 'Sign-ups are disabled in your Supabase project. Enable them in Authentication → Sign In / Up.';
+  }
+  if (/provider.*(disabled|not enabled)|(disabled|not enabled).*provider/i.test(msg) || code === 'email_provider_disabled') {
+    return 'The Email provider is turned OFF in your Supabase project. Fix: Supabase Dashboard → Authentication → Sign In / Up → Providers tab → Email → switch ON → Save. Then try again.';
+  }
+  if (/failed to fetch|network|load failed/i.test(msg)) {
+    return 'Cannot reach Supabase. Check your internet connection (or ad-blocker/VPN) and try again.';
+  }
+  if (/rate limit/i.test(msg)) {
+    return 'Too many attempts. Wait a minute and try again.';
+  }
+  return msg || 'Invalid email or password. Please verify your credentials.';
+}
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -135,12 +179,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const sb = getSupabase();
         if (!sb) {
-          // Without Supabase configured, require login
+          // Demo/Local Workspace Mode (no Supabase): restore a previously saved
+          // local demo user so refreshes keep the session.
           if (isMounted) {
-            setSession(null);
-            setSupabaseUser(null);
-            setAppUser(null);
-            StorageService.clearAuthSession();
+            const saved = StorageService.getCurrentUser();
+            if (saved && saved.status === 'Active') {
+              setSession(null);
+              setSupabaseUser(null);
+              setAppUser(saved);
+            } else {
+              setSession(null);
+              setSupabaseUser(null);
+              setAppUser(null);
+              StorageService.clearAuthSession();
+            }
             setLoading(false);
           }
           return;
@@ -282,11 +334,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const sb = getSupabase();
 
       if (!sb) {
-        setLoading(false);
-        return {
-          success: false,
-          error: 'Supabase credentials are not configured in this environment.',
+        // DEMO MODE: Supabase is not configured in this environment.
+        // Authenticate against the built-in demo users so the app is explorable.
+        const match = initialUsers.find(u => u.email.toLowerCase() === emailTrimmed);
+
+        if (!match) {
+          setLoading(false);
+          return {
+            success: false,
+            error: 'Demo Mode: No demo account with this email. Try brijesh.verma@emizainc.com (any password with 4+ characters).',
+          };
+        }
+
+        if (!password || password.length < 4) {
+          setLoading(false);
+          return {
+            success: false,
+            error: 'Demo Mode: Enter any password with at least 4 characters.',
+          };
+        }
+
+        if (match.status !== 'Active') {
+          setLoading(false);
+          return {
+            success: false,
+            error: 'Access Denied: This demo account is inactive. Contact the Super Administrator.',
+          };
+        }
+
+        const demoUser: User = {
+          ...match,
+          mustChangePassword: false,
+          lastLoginAt: new Date().toISOString(),
         };
+
+        setSession(null);
+        setSupabaseUser(null);
+        setAppUser(demoUser);
+        StorageService.saveCurrentUser(demoUser);
+        StorageService.saveAuthSession({ isLoggedIn: true, userId: demoUser.id });
+        await registerDeviceSession(demoUser);
+
+        StorageService.addActivityLog({
+          userId: demoUser.id,
+          userName: demoUser.name,
+          userRole: demoUser.role,
+          action: 'User Signed In',
+          module: 'Auth',
+          details: `Signed in as ${demoUser.role} via Demo/Local Mode (${demoUser.email})`,
+        });
+
+        setLoading(false);
+        return { success: true };
       }
 
       // 1. Attempt standard Supabase Auth signInWithPassword
@@ -326,15 +425,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             data = retryRes.data;
             error = retryRes.error;
           }
+        } else if (signUpRes.error) {
+          // Bootstrap failed (e.g. Email provider disabled, signups blocked, rate limit)
+          setLoading(false);
+          return {
+            success: false,
+            error: `Super Admin first-time setup failed: ${mapAuthError(signUpRes.error, emailTrimmed)}`,
+          };
         }
       }
 
       if (error) {
         setLoading(false);
-        return {
-          success: false,
-          error: error.message || 'Invalid email or password. Please verify your credentials.',
-        };
+        return { success: false, error: mapAuthError(error, emailTrimmed) };
       }
 
       if (!data.session || !data.user) {

@@ -574,8 +574,13 @@ async function startServer() {
   // Vite middleware for development vs static build for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
       appType: 'spa',
+      server: {
+        middlewareMode: true,
+        // Attach HMR websocket to the main HTTP server (single port),
+        // so no separate HMR port (24678) is exposed.
+        hmr: { server },
+      },
     });
     app.use(vite.middlewares);
   } else {
