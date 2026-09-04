@@ -181,6 +181,46 @@ begin
 end
 $$;
 
+-- ---------------------------------------------------------------------------
+-- OPTIONAL: Remove the old internal DEMO accounts from Supabase Auth.
+-- Run this block ONCE if you want the demo users (brijesh.verma@emiza.com,
+-- vikram.m@emiza.com, etc.) gone. Only verma.brijesh0501@gmail.com is kept.
+-- Deleting from auth.users cascades to user_profiles (on delete cascade).
+-- It is safe to re-run; it only deletes rows that still match.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  demo_email text;
+begin
+  foreach demo_email in array array[
+    'brijesh.verma@emizainc.com',
+    'brijesh.verma@emiza.com',
+    'vikram.m@emiza.com',
+    'rajesh.security@emiza.com',
+    'pooja.d@emiza.com',
+    'amit.p@emiza.com',
+    'sandeep.y@emiza.com',
+    'neha.s@emiza.com'
+  ]
+  loop
+    delete from auth.users where lower(email) = lower(demo_email);
+  end loop;
+end
+$$;
+
+-- Also clear any device / audit / permission rows that pointed at demo users
+-- (these tables reference users by email string, not by foreign key).
+delete from public.active_devices
+ where lower(user_email) in (
+   'brijesh.verma@emizainc.com','brijesh.verma@emiza.com','vikram.m@emiza.com',
+   'rajesh.security@emiza.com','pooja.d@emiza.com','amit.p@emiza.com',
+   'sandeep.y@emiza.com','neha.s@emiza.com');
+
+delete from public.activity_logs
+ where user_id in (
+   'usr-super','usr-super-emiza','usr-wh-mgr','usr-sec','usr-sup',
+   'usr-rto-op','usr-grn-op','usr-auditor');
+
 -- Done! Now:
 -- 1. Supabase Dashboard → Authentication → Sign In / Up → turn OFF "Confirm email"
 --    (so the Super Admin bootstrap gets a session immediately)

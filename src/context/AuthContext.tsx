@@ -14,7 +14,6 @@ import {
 } from '../services/supabase';
 import { User, UserRole, ActiveDeviceSession } from '../types';
 import { StorageService } from '../services/storage';
-import { initialUsers } from '../mockData';
 import { ROLE_DEFAULT_PERMISSIONS, isSuperAdmin, has_permission } from '../utils/rbac';
 import { SyncService } from '../services/syncService';
 
@@ -45,24 +44,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Map raw Supabase auth errors to clear, actionable messages
-function mapAuthError(err: any, attemptedEmail: string): string {
+function mapAuthError(err: any): string {
   const msg: string = err?.message || '';
   const code = err?.code || '';
 
-  // Demo emails only work in Demo Mode (no Supabase)
-  const demoEmails = [
-    'brijesh.verma@emizainc.com',
-    'brijesh.verma@emiza.com',
-    'vikram.m@emiza.com',
-    'rajesh.security@emiza.com',
-    'pooja.d@emiza.com',
-    'amit.p@emiza.com',
-    'sandeep.y@emiza.com',
-    'neha.s@emiza.com',
-  ];
-  if (demoEmails.includes(attemptedEmail)) {
-    return `Supabase mode is active — internal demo accounts don't work here. Sign in with verma.brijesh0501@gmail.com (auto-creates as Super Admin), then create team accounts via User Management.`;
-  }
   if (code === 'email_not_confirmed' || /not confirmed/i.test(msg)) {
     return 'Email not confirmed: In the Supabase Dashboard go to Authentication → Sign In / Up and turn OFF "Confirm email", then try again.';
   }
@@ -179,20 +164,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const sb = getSupabase();
         if (!sb) {
-          // Demo/Local Workspace Mode (no Supabase): restore a previously saved
-          // local demo user so refreshes keep the session.
+          // Supabase not configured in this build -> nothing to restore.
+          // (Demo/local login removed; the app is Supabase-Auth only.)
           if (isMounted) {
-            const saved = StorageService.getCurrentUser();
-            if (saved && saved.status === 'Active') {
-              setSession(null);
-              setSupabaseUser(null);
-              setAppUser(saved);
-            } else {
-              setSession(null);
-              setSupabaseUser(null);
-              setAppUser(null);
-              StorageService.clearAuthSession();
-            }
+            setSession(null);
+            setSupabaseUser(null);
+            setAppUser(null);
+            StorageService.clearAuthSession();
             setLoading(false);
           }
           return;
@@ -334,58 +312,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const sb = getSupabase();
 
       if (!sb) {
-        // DEMO MODE: Supabase is not configured in this environment.
-        // Authenticate against the built-in demo users so the app is explorable.
-        const match = initialUsers.find(u => u.email.toLowerCase() === emailTrimmed);
-
-        if (!match) {
-          setLoading(false);
-          return {
-            success: false,
-            error: 'Demo Mode: No demo account with this email. Try brijesh.verma@emizainc.com (any password with 4+ characters).',
-          };
-        }
-
-        if (!password || password.length < 4) {
-          setLoading(false);
-          return {
-            success: false,
-            error: 'Demo Mode: Enter any password with at least 4 characters.',
-          };
-        }
-
-        if (match.status !== 'Active') {
-          setLoading(false);
-          return {
-            success: false,
-            error: 'Access Denied: This demo account is inactive. Contact the Super Administrator.',
-          };
-        }
-
-        const demoUser: User = {
-          ...match,
-          mustChangePassword: false,
-          lastLoginAt: new Date().toISOString(),
-        };
-
-        setSession(null);
-        setSupabaseUser(null);
-        setAppUser(demoUser);
-        StorageService.saveCurrentUser(demoUser);
-        StorageService.saveAuthSession({ isLoggedIn: true, userId: demoUser.id });
-        await registerDeviceSession(demoUser);
-
-        StorageService.addActivityLog({
-          userId: demoUser.id,
-          userName: demoUser.name,
-          userRole: demoUser.role,
-          action: 'User Signed In',
-          module: 'Auth',
-          details: `Signed in as ${demoUser.role} via Demo/Local Mode (${demoUser.email})`,
-        });
-
         setLoading(false);
-        return { success: true };
+        return {
+          success: false,
+          error:
+            'Supabase is not configured for this build. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see .env / your deploy environment), then rebuild.',
+        };
       }
 
       // 1. Attempt standard Supabase Auth signInWithPassword
@@ -430,14 +362,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setLoading(false);
           return {
             success: false,
-            error: `Super Admin first-time setup failed: ${mapAuthError(signUpRes.error, emailTrimmed)}`,
+            error: `Super Admin first-time setup failed: ${mapAuthError(signUpRes.error)}`,
           };
         }
       }
 
       if (error) {
         setLoading(false);
-        return { success: false, error: mapAuthError(error, emailTrimmed) };
+        return { success: false, error: mapAuthError(error) };
       }
 
       if (!data.session || !data.user) {
