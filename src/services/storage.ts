@@ -39,6 +39,7 @@ import {
   initialActiveDevices,
 } from '../mockData';
 import { SyncService } from './syncService';
+import { queueMasterPush } from './masterSync';
 
 const STORAGE_KEYS = {
   COMPANIES: 'emiza_companies_v3',
@@ -108,48 +109,56 @@ export const StorageService = {
   getCompanies: (): Company[] => loadItem(STORAGE_KEYS.COMPANIES, initialCompanies),
   saveCompanies: (data: Company[]) => {
     saveItem(STORAGE_KEYS.COMPANIES, data);
+    queueMasterPush('companies', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'companies', allRecords: data, count: data.length });
   },
 
   getWarehouses: (): Warehouse[] => loadItem(STORAGE_KEYS.WAREHOUSES, initialWarehouses),
   saveWarehouses: (data: Warehouse[]) => {
     saveItem(STORAGE_KEYS.WAREHOUSES, data);
+    queueMasterPush('warehouses', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'warehouses', allRecords: data, count: data.length });
   },
 
   getClients: (): Client[] => loadItem(STORAGE_KEYS.CLIENTS, initialClients),
   saveClients: (data: Client[]) => {
     saveItem(STORAGE_KEYS.CLIENTS, data);
+    queueMasterPush('clients', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'clients', allRecords: data, count: data.length });
   },
 
   getCouriers: (): Courier[] => loadItem(STORAGE_KEYS.COURIERS, initialCouriers),
   saveCouriers: (data: Courier[]) => {
     saveItem(STORAGE_KEYS.COURIERS, data);
+    queueMasterPush('couriers', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'couriers', allRecords: data, count: data.length });
   },
 
   getSKUs: (): SKU[] => loadItem(STORAGE_KEYS.SKUS, initialSKUs),
   saveSKUs: (data: SKU[]) => {
     saveItem(STORAGE_KEYS.SKUS, data);
+    queueMasterPush('skus', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'skus', allRecords: data, count: data.length });
   },
 
   getDrivers: (): Driver[] => loadItem(STORAGE_KEYS.DRIVERS, initialDrivers),
   saveDrivers: (data: Driver[]) => {
     saveItem(STORAGE_KEYS.DRIVERS, data);
+    queueMasterPush('drivers', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'drivers', allRecords: data, count: data.length });
   },
 
   getVehicleTypes: (): VehicleType[] => loadItem(STORAGE_KEYS.VEHICLE_TYPES, initialVehicleTypes),
   saveVehicleTypes: (data: VehicleType[]) => {
     saveItem(STORAGE_KEYS.VEHICLE_TYPES, data);
+    queueMasterPush('vehicle_types', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'vehicle_types', allRecords: data, count: data.length });
   },
 
   getReturnReasons: (): ReturnReason[] => loadItem(STORAGE_KEYS.RETURN_REASONS, initialReturnReasons),
   saveReturnReasons: (data: ReturnReason[]) => {
     saveItem(STORAGE_KEYS.RETURN_REASONS, data);
+    queueMasterPush('return_reasons', data);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'return_reasons', allRecords: data, count: data.length });
   },
 
@@ -180,6 +189,7 @@ export const StorageService = {
     // Strictly strip password from all records to guarantee zero password exposure in storage
     const sanitized = data.map(({ password: _, ...rest }) => rest as User);
     saveItem(STORAGE_KEYS.USERS, sanitized);
+    queueMasterPush('users', sanitized);
     SyncService.broadcast('MASTERS_UPDATED', { category: 'users', allRecords: sanitized, count: sanitized.length });
   },
   updateUser: (id: string, updates: Partial<User>) => {

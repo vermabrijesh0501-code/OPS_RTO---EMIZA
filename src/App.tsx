@@ -24,6 +24,15 @@ import { StorageService } from './services/storage';
 import { SyncService } from './services/syncService';
 import { startRealtimeSync } from './services/realtimeSync';
 import { DBService } from './services/dbService';
+import {
+  pullAndMergeMasters,
+  subscribeMasterChanges,
+  applyMasterChange,
+  categoryKey,
+  queueMasterPush,
+  MASTER_CATEGORIES,
+} from './services/masterSync';
+import { isSupabaseConfigured } from './services/supabase';
 import { Header } from './components/Header';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { LoginPage } from './components/LoginPage';
@@ -216,6 +225,65 @@ export default function App() {
   useEffect(() => {
     const cleanup = startRealtimeSync();
     return cleanup;
+  }, []);
+
+  // Cloud master-data sync (Supabase `master_records` is the shared backend —
+  // on static hosting there is no /api/sync/* server, so master records must
+  // sync through the cloud):
+  //   1. initial pull + LWW merge into local lists -> setState
+  //   2. cloud backfill: push our merged local lists (catch a fresh cloud up
+  //      with this device's unpushed local records)
+  //   3. live subscription: apply single-record changes from other devices
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    let cancelled = false;
+
+    pullAndMergeMasters().then(merged => {
+      if (cancelled || !merged) return;
+      if (merged.companies) setCompanies(merged.companies);
+      if (merged.warehouses) setWarehouses(merged.warehouses);
+      if (merged.clients) setClients(merged.clients);
+      if (merged.couriers) setCouriers(merged.couriers);
+      if (merged.skus) setSKUs(merged.skus);
+      if (merged.drivers) setDrivers(merged.drivers);
+      if (merged.vehicleTypes) setVehicleTypes(merged.vehicleTypes);
+      if (merged.returnReasons) setReturnReasons(merged.returnReasons);
+      if (merged.users) setUsers(merged.users);
+      // Cloud backfill: push the (merged) local lists so the cloud catches up.
+      for (const cat of MASTER_CATEGORIES) {
+        const key = categoryKey(cat);
+        if (key && merged[key] && merged[key].length > 0) {
+          queueMasterPush(cat, merged[key]);
+        }
+      }
+    }).catch(() => {});
+
+    const unsub = subscribeMasterChanges((category, recId, data, event) => {
+      if (cancelled) return;
+      const apply = (setter: (fn: (prev: any[]) => any[]) => void) => {
+        setter(prev => {
+          const next = applyMasterChange(prev, recId, data, event);
+          StorageService.applyMasterUpdate(category, next);
+          return next;
+        });
+      };
+      switch (category) {
+        case 'companies': apply(setCompanies); break;
+        case 'warehouses': apply(setWarehouses); break;
+        case 'clients': apply(setClients); break;
+        case 'couriers': apply(setCouriers); break;
+        case 'skus': apply(setSKUs); break;
+        case 'drivers': apply(setDrivers); break;
+        case 'vehicle_types': apply(setVehicleTypes); break;
+        case 'return_reasons': apply(setReturnReasons); break;
+        case 'users': apply(setUsers); break;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
 
  // Self-heal master drift: if any batch references a courier/client that this
