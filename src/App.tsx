@@ -221,20 +221,37 @@ export default function App() {
  // Self-heal master drift: if any batch references a courier/client that this
   // device doesn't know about, pull the full central state — the master was
   // likely created/changed on another device and this list is stale.
+  // HARD GUARDS: max 3 attempts, 60s cooldown, and give up permanently for a
+  // missing id once two syncs couldn't resolve it (e.g. master was deleted) —
+  // otherwise a batch referencing a dead courier id causes an infinite
+  // force-sync loop that freezes the page ("Page Unresponsive").
   const mastersHealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mastersHealState = useRef<{ attempts: number; lastAt: number; givenUp: Set<string> }>({ attempts: 0, lastAt: 0, givenUp: new Set() });
   useEffect(() => {
     if (!batches.length) return;
-    const missing = batches.some(b =>
-      (b.courierId && !couriers.some(c => c.id === b.courierId)) ||
-      (b.clientId && !clients.some(c => c.id === b.clientId))
-    );
-    if (!missing) return;
+    const unknownIds: string[] = [];
+    for (const b of batches) {
+      if (b.courierId && !couriers.some(c => c.id === b.courierId) && !b.courierName) unknownIds.push(`courier:${b.courierId}`);
+      if (b.clientId && !clients.some(c => c.id === b.clientId) && !b.clientName) unknownIds.push(`client:${b.clientId}`);
+    }
+    const missing = unknownIds.filter(id => !mastersHealState.current.givenUp.has(id));
+    if (missing.length === 0) return;
+    const now = Date.now();
+    if (now - mastersHealState.current.lastAt < 60000) return; // cooldown
+    if (mastersHealState.current.attempts >= 3) {
+      // Server state didn't resolve these ids after 3 tries — they no longer
+      // exist centrally. Give up (snapshots keep old batches displayable).
+      missing.forEach(id => mastersHealState.current.givenUp.add(id));
+      mastersHealState.current.attempts = 0;
+      return;
+    }
+    mastersHealState.current.lastAt = now;
+    mastersHealState.current.attempts += 1;
     if (mastersHealTimer.current) clearTimeout(mastersHealTimer.current);
     mastersHealTimer.current = setTimeout(async () => {
       const ok = await SyncService.forceSyncNow();
       if (ok) console.info('[App] Masters self-heal sync triggered (batch referenced unknown master record)');
-    }, 1200);
-    return () => { if (mastersHealTimer.current) clearTimeout(mastersHealTimer.current); };
+    }, 1500);
   }, [batches, couriers, clients]);
 
   // Real-time Cross-Device Synchronization Subscriber
