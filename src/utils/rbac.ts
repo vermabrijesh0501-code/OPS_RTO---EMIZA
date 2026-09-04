@@ -42,6 +42,16 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, Partial<Record<ModuleId,
     reports: { view: true, create: false, edit: false, delete: false, scan: false, export: true, approve: false, closeBatch: false },
     supabase_hub: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
   },
+  'Security': {
+    dashboard: { view: true, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    inward: { view: true, create: true, edit: true, delete: false, scan: true, export: true, approve: false, closeBatch: false },
+    returns_rto: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    returns_b2b: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    audit: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    masters: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    reports: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+    supabase_hub: { view: false, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
+  },
   'Security Officer': {
     dashboard: { view: true, create: false, edit: false, delete: false, scan: false, export: false, approve: false, closeBatch: false },
     inward: { view: true, create: true, edit: true, delete: false, scan: true, export: true, approve: false, closeBatch: false },
@@ -104,6 +114,37 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, Partial<Record<ModuleId,
   },
 };
 
+// Check if user is the designated Super Admin
+export const isSuperAdmin = (user: User | null | undefined): boolean => {
+  if (!user) return false;
+  const email = (user.email || '').trim().toLowerCase();
+  return email === 'verma.brijesh0501@gmail.com' || user.role === 'Super Admin';
+};
+
+/**
+ * Checks role-based page/action permission using the canonical PostgreSQL RPC pattern.
+ * Requirements:
+ * - Super Admin (Verma.brijesh0501@gmail.com) gets full access.
+ * - Block login/access when is_active = false.
+ */
+export const has_permission = (
+  user: User | null | undefined,
+  requestedPermission: string,
+  action: keyof ModulePermission = 'view'
+): boolean => {
+  if (!user) return false;
+
+  // Block access when is_active = false / status is Inactive
+  if (user.status === 'Inactive') return false;
+
+  // Super Admin (Verma.brijesh0501@gmail.com) gets full access to all pages and actions
+  if (isSuperAdmin(user)) return true;
+
+  // Map requestedPermission to module id if it's a module permission
+  const moduleId = requestedPermission.toLowerCase() as ModuleId;
+  return hasModulePermission(user, moduleId, action);
+};
+
 // Check if user has permission for a specific module and action
 export const hasModulePermission = (
   user: User | null | undefined,
@@ -111,7 +152,12 @@ export const hasModulePermission = (
   action: keyof ModulePermission = 'view'
 ): boolean => {
   if (!user) return false;
-  if (user.role === 'Super Admin') return true;
+
+  // Block access if user is inactive
+  if (user.status === 'Inactive') return false;
+
+  // Super Admin gets unrestricted access
+  if (isSuperAdmin(user)) return true;
 
   // Map alias module IDs to canonical permission keys
   let canonicalId: ModuleId = moduleId;

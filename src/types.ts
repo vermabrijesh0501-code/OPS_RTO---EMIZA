@@ -3,6 +3,7 @@ export type UserRole =
   | 'Admin'
   | 'Warehouse Manager'
   | 'Supervisor'
+  | 'Security'
   | 'Security Officer'
   | 'RTO Operator'
   | 'GRN Operator'
@@ -111,6 +112,8 @@ export interface User {
   assignedClientIds: string[];
   permissions?: Partial<Record<ModuleId, ModulePermission>>;
   status: 'Active' | 'Inactive';
+  mustChangePassword?: boolean;
+  tempPasswordSetAt?: string;
   authProvider?: 'supabase' | 'local';
   lastLoginAt?: string;
   createdAt?: string;

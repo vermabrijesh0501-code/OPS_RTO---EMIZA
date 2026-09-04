@@ -33,11 +33,13 @@ import { AuditModule } from './components/AuditModule';
 import { MastersModule } from './components/MastersModule';
 import { ReportsModule } from './components/ReportsModule';
 import { SettingsModule } from './components/SettingsModule';
+import { UserManagementPage } from './components/UserManagementPage';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
 import { MobileDashboard } from './components/MobileDashboard';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
+import { ForcedPasswordChangeModal } from './components/auth/ForcedPasswordChangeModal';
 import { useAuth } from './context/AuthContext';
 import { getAccessibleModules } from './utils/rbac';
 
@@ -105,7 +107,7 @@ export const pathToTab = (pathname: string): ActiveTab => {
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { appUser, signOut, switchUserRole: authSwitchUserRole } = useAuth();
+  const { appUser, signOut, updatePassword } = useAuth();
 
   // Navigation & View State derived from URL
   const [activeTab, setActiveTabState] = useState<ActiveTab>(() => pathToTab(location.pathname));
@@ -157,15 +159,45 @@ export default function App() {
     }
   }, [location.pathname]);
 
-  // Fetch initial cloud state from Supabase if connected
+  // Fetch initial cloud/server state
   useEffect(() => {
-    DBService.fetchAllData().then(data => {
-      if (data.batches && data.batches.length > 0) setBatches(data.batches);
-      if (data.scannedItems && data.scannedItems.length > 0) setScannedItems(data.scannedItems);
-      if (data.gateEntries && data.gateEntries.length > 0) setGateEntries(data.gateEntries);
-      if (data.logs && data.logs.length > 0) setLogs(data.logs);
-    });
+    fetch('/api/sync/state')
+      .then(res => res.json())
+      .then(json => {
+        if (json?.data) {
+          StorageService.applyRemoteStore(json.data);
+          if (Array.isArray(json.data.batches)) setBatches(json.data.batches);
+          if (Array.isArray(json.data.scannedItems)) setScannedItems(json.data.scannedItems);
+          if (Array.isArray(json.data.gateEntries)) setGateEntries(json.data.gateEntries);
+          if (Array.isArray(json.data.companies)) setCompanies(json.data.companies);
+          if (Array.isArray(json.data.warehouses)) setWarehouses(json.data.warehouses);
+          if (Array.isArray(json.data.clients)) setClients(json.data.clients);
+          if (Array.isArray(json.data.couriers)) setCouriers(json.data.couriers);
+          if (Array.isArray(json.data.skus)) setSKUs(json.data.skus);
+          if (Array.isArray(json.data.drivers)) setDrivers(json.data.drivers);
+          if (Array.isArray(json.data.vehicleTypes)) setVehicleTypes(json.data.vehicleTypes);
+          if (Array.isArray(json.data.returnReasons)) setReturnReasons(json.data.returnReasons);
+          if (Array.isArray(json.data.users)) setUsers(json.data.users);
+          if (Array.isArray(json.data.activityLogs)) setLogs(json.data.activityLogs);
+          if (Array.isArray(json.data.auditRecords)) setAuditRecords(json.data.auditRecords);
+        }
+      })
+      .catch(() => {
+        DBService.fetchAllData().then(data => {
+          if (data.batches && data.batches.length > 0) setBatches(data.batches);
+          if (data.scannedItems && data.scannedItems.length > 0) setScannedItems(data.scannedItems);
+          if (data.gateEntries && data.gateEntries.length > 0) setGateEntries(data.gateEntries);
+          if (data.logs && data.logs.length > 0) setLogs(data.logs);
+        });
+      });
   }, []);
+
+  // Keep device registration updated on user or warehouse change
+  useEffect(() => {
+    if (currentUser) {
+      SyncService.updateUserInfo(currentUser.name, currentUser.role, activeWarehouseId);
+    }
+  }, [currentUser, activeWarehouseId]);
 
   // Real-time Supabase postgres synchronization
   useEffect(() => {
@@ -192,7 +224,7 @@ export default function App() {
         StorageService.saveGateEntries(payload.allGateEntries);
       }
       if (payload?.log) {
-        setLogs(prev => [payload.log, ...prev.filter(l => l.id !== payload.log.id)].slice(0, 100));
+        setLogs(prev => [payload.log, ...prev.filter(l => l.id !== payload.log.id)].slice(0, 150));
       }
 
       switch (type) {
@@ -299,9 +331,65 @@ export default function App() {
           break;
         }
 
-        case 'AUDIT_RECORD_ADDED':
-          setAuditRecords(StorageService.getAuditRecords());
+        case 'GATE_ENTRY_DELETED': {
+          if (payload?.id) {
+            setGateEntries(prev => {
+              const next = prev.filter(g => g.id !== payload.id);
+              StorageService.saveGateEntries(next);
+              return next;
+            });
+          }
           break;
+        }
+
+        case 'MASTERS_UPDATED': {
+          const category = payload?.category;
+          const allRecords = payload?.allRecords;
+          if (category === 'companies' && allRecords) setCompanies(allRecords);
+          else if (category === 'warehouses' && allRecords) setWarehouses(allRecords);
+          else if (category === 'clients' && allRecords) setClients(allRecords);
+          else if (category === 'couriers' && allRecords) setCouriers(allRecords);
+          else if (category === 'skus' && allRecords) setSKUs(allRecords);
+          else if (category === 'drivers' && allRecords) setDrivers(allRecords);
+          else if (category === 'vehicle_types' && allRecords) setVehicleTypes(allRecords);
+          else if (category === 'return_reasons' && allRecords) setReturnReasons(allRecords);
+          else if (category === 'users' && allRecords) setUsers(allRecords);
+          else {
+            setCompanies(StorageService.getCompanies());
+            setWarehouses(StorageService.getWarehouses());
+            setClients(StorageService.getClients());
+            setCouriers(StorageService.getCouriers());
+            setSKUs(StorageService.getSKUs());
+            setDrivers(StorageService.getDrivers());
+            setVehicleTypes(StorageService.getVehicleTypes());
+            setReturnReasons(StorageService.getReturnReasons());
+            setUsers(StorageService.getUsers());
+          }
+          break;
+        }
+
+        case 'ACTIVITY_LOG_ADDED': {
+          if (payload?.allLogs) {
+            setLogs(payload.allLogs);
+          } else if (payload?.log) {
+            setLogs(prev => [payload.log, ...prev.filter(l => l.id !== payload.log.id)].slice(0, 150));
+          } else {
+            setLogs(StorageService.getActivityLogs());
+          }
+          break;
+        }
+
+        case 'AUDIT_RECORD_ADDED':
+        case 'AUDIT_RECORD_DELETED': {
+          if (payload?.allAuditRecords) {
+            setAuditRecords(payload.allAuditRecords);
+          } else if (payload?.record) {
+            setAuditRecords(prev => [payload.record, ...prev.filter(r => r.id !== payload.record.id)]);
+          } else {
+            setAuditRecords(StorageService.getAuditRecords());
+          }
+          break;
+        }
 
         case 'USER_UPDATED':
         case 'DEVICE_SESSION_UPDATED':
@@ -310,14 +398,33 @@ export default function App() {
           break;
 
         case 'SYNC_ALL':
-        case 'STORAGE_SYNC':
-          DBService.fetchAllData().then(data => {
-            if (data.batches) setBatches(data.batches);
-            if (data.scannedItems) setScannedItems(data.scannedItems);
-            if (data.gateEntries) setGateEntries(data.gateEntries);
-            if (data.logs) setLogs(data.logs);
-          });
+        case 'STORAGE_SYNC': {
+          if (payload && typeof payload === 'object') {
+            StorageService.applyRemoteStore(payload);
+            if (Array.isArray(payload.batches)) setBatches(payload.batches);
+            if (Array.isArray(payload.scannedItems)) setScannedItems(payload.scannedItems);
+            if (Array.isArray(payload.gateEntries)) setGateEntries(payload.gateEntries);
+            if (Array.isArray(payload.companies)) setCompanies(payload.companies);
+            if (Array.isArray(payload.warehouses)) setWarehouses(payload.warehouses);
+            if (Array.isArray(payload.clients)) setClients(payload.clients);
+            if (Array.isArray(payload.couriers)) setCouriers(payload.couriers);
+            if (Array.isArray(payload.skus)) setSKUs(payload.skus);
+            if (Array.isArray(payload.drivers)) setDrivers(payload.drivers);
+            if (Array.isArray(payload.vehicleTypes)) setVehicleTypes(payload.vehicleTypes);
+            if (Array.isArray(payload.returnReasons)) setReturnReasons(payload.returnReasons);
+            if (Array.isArray(payload.users)) setUsers(payload.users);
+            if (Array.isArray(payload.activityLogs)) setLogs(payload.activityLogs);
+            if (Array.isArray(payload.auditRecords)) setAuditRecords(payload.auditRecords);
+          } else {
+            DBService.fetchAllData().then(data => {
+              if (data.batches) setBatches(data.batches);
+              if (data.scannedItems) setScannedItems(data.scannedItems);
+              if (data.gateEntries) setGateEntries(data.gateEntries);
+              if (data.logs) setLogs(data.logs);
+            });
+          }
           break;
+        }
 
         default:
           break;
@@ -355,10 +462,11 @@ export default function App() {
 
   const activeWarehouse = warehouses.find(w => w.id === activeWarehouseId) || warehouses[0];
 
-  // Role Switcher Persona Helper
-  const handleSwitchUserRole = (role: UserRole) => {
-    authSwitchUserRole(role);
-    setLogs(StorageService.getActivityLogs());
+  // Role Switcher Persona Helper - Opens User Management for Super Admin
+  const handleSwitchUserRole = (_role: UserRole) => {
+    if (currentUser?.role === 'Super Admin') {
+      handleSelectTab('user_management');
+    }
   };
 
   // Select Operating Warehouse
@@ -1281,11 +1389,14 @@ export default function App() {
               />
             )}
 
+            {viewTab === 'user_management' && (
+              <UserManagementPage onNavigateTab={handleSelectTab} />
+            )}
+
             {(viewTab === 'masters' ||
               viewTab === 'clients' ||
               viewTab === 'couriers' ||
-              viewTab === 'locations' ||
-              viewTab === 'user_management') && (
+              viewTab === 'locations') && (
               <MastersModule
                 companies={companies}
                 warehouses={warehouses}
@@ -1379,8 +1490,16 @@ export default function App() {
   );
 
   return (
-    <Routes>
-      {/* 1. Public Route: Login Page */}
+    <>
+      {currentUser && currentUser.mustChangePassword && (
+        <ForcedPasswordChangeModal
+          user={currentUser}
+          onPasswordChanged={updatePassword}
+          onSignOut={signOut}
+        />
+      )}
+      <Routes>
+        {/* 1. Public Route: Login Page */}
       <Route
         path="/login"
         element={
@@ -1575,5 +1694,6 @@ export default function App() {
         element={<Navigate to="/dashboard" replace />}
       />
     </Routes>
+    </>
   );
 }

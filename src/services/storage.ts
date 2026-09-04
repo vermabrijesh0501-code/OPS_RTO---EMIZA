@@ -108,60 +108,63 @@ export const StorageService = {
   getCompanies: (): Company[] => loadItem(STORAGE_KEYS.COMPANIES, initialCompanies),
   saveCompanies: (data: Company[]) => {
     saveItem(STORAGE_KEYS.COMPANIES, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'companies', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'companies', allRecords: data, count: data.length });
   },
 
   getWarehouses: (): Warehouse[] => loadItem(STORAGE_KEYS.WAREHOUSES, initialWarehouses),
   saveWarehouses: (data: Warehouse[]) => {
     saveItem(STORAGE_KEYS.WAREHOUSES, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'warehouses', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'warehouses', allRecords: data, count: data.length });
   },
 
   getClients: (): Client[] => loadItem(STORAGE_KEYS.CLIENTS, initialClients),
   saveClients: (data: Client[]) => {
     saveItem(STORAGE_KEYS.CLIENTS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'clients', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'clients', allRecords: data, count: data.length });
   },
 
   getCouriers: (): Courier[] => loadItem(STORAGE_KEYS.COURIERS, initialCouriers),
   saveCouriers: (data: Courier[]) => {
     saveItem(STORAGE_KEYS.COURIERS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'couriers', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'couriers', allRecords: data, count: data.length });
   },
 
   getSKUs: (): SKU[] => loadItem(STORAGE_KEYS.SKUS, initialSKUs),
   saveSKUs: (data: SKU[]) => {
     saveItem(STORAGE_KEYS.SKUS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'skus', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'skus', allRecords: data, count: data.length });
   },
 
   getDrivers: (): Driver[] => loadItem(STORAGE_KEYS.DRIVERS, initialDrivers),
   saveDrivers: (data: Driver[]) => {
     saveItem(STORAGE_KEYS.DRIVERS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'drivers', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'drivers', allRecords: data, count: data.length });
   },
 
   getVehicleTypes: (): VehicleType[] => loadItem(STORAGE_KEYS.VEHICLE_TYPES, initialVehicleTypes),
   saveVehicleTypes: (data: VehicleType[]) => {
     saveItem(STORAGE_KEYS.VEHICLE_TYPES, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'vehicle_types', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'vehicle_types', allRecords: data, count: data.length });
   },
 
   getReturnReasons: (): ReturnReason[] => loadItem(STORAGE_KEYS.RETURN_REASONS, initialReturnReasons),
   saveReturnReasons: (data: ReturnReason[]) => {
     saveItem(STORAGE_KEYS.RETURN_REASONS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'return_reasons', count: data.length });
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'return_reasons', allRecords: data, count: data.length });
   },
 
   getUsers: (): User[] => {
     const loaded = loadItem<User[]>(STORAGE_KEYS.USERS, initialUsers);
+    // Sanitize any passwords out of loaded data
+    const sanitizedLoaded = loaded.map(({ password: _, ...rest }) => rest as User);
     // Ensure all standard initial users are present
-    const existingEmails = new Set(loaded.map(u => u.email.toLowerCase()));
+    const existingEmails = new Set(sanitizedLoaded.map(u => u.email.toLowerCase()));
     let hasAdditions = false;
-    const merged = [...loaded];
+    const merged = [...sanitizedLoaded];
     for (const initU of initialUsers) {
       if (!existingEmails.has(initU.email.toLowerCase())) {
-        merged.push(initU);
+        const { password: _, ...cleanInit } = initU;
+        merged.push(cleanInit as User);
         hasAdditions = true;
       }
     }
@@ -171,18 +174,30 @@ export const StorageService = {
     return merged;
   },
   saveUsers: (data: User[]) => {
-    saveItem(STORAGE_KEYS.USERS, data);
-    SyncService.broadcast('MASTERS_UPDATED', { category: 'users', count: data.length });
+    // Strictly strip password from all records to guarantee zero password exposure in storage
+    const sanitized = data.map(({ password: _, ...rest }) => rest as User);
+    saveItem(STORAGE_KEYS.USERS, sanitized);
+    SyncService.broadcast('MASTERS_UPDATED', { category: 'users', allRecords: sanitized, count: sanitized.length });
+  },
+  updateUser: (id: string, updates: Partial<User>) => {
+    const users = StorageService.getUsers();
+    const { password: _, ...safeUpdates } = updates as any;
+    const updated = users.map(u => (u.id === id || u.email.toLowerCase() === id.toLowerCase() ? { ...u, ...safeUpdates } : u));
+    StorageService.saveUsers(updated);
   },
 
   getCurrentUser: (): User | null => {
     const session = loadItem<AuthSessionData>(STORAGE_KEYS.AUTH_SESSION, { isLoggedIn: false });
     if (!session.isLoggedIn) return null;
-    return loadItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    const rawUser = loadItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    if (!rawUser) return null;
+    const { password: _, ...cleanUser } = rawUser;
+    return cleanUser as User;
   },
   saveCurrentUser: (user: User | null) => {
     if (user) {
-      saveItem(STORAGE_KEYS.CURRENT_USER, user);
+      const { password: _, ...cleanUser } = user;
+      saveItem(STORAGE_KEYS.CURRENT_USER, cleanUser);
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     }
@@ -194,19 +209,19 @@ export const StorageService = {
   getGateEntries: (): InwardGateEntry[] => loadItem(STORAGE_KEYS.GATE_ENTRIES, initialInwardGateEntries),
   saveGateEntries: (data: InwardGateEntry[]) => {
     saveItem(STORAGE_KEYS.GATE_ENTRIES, data);
-    SyncService.broadcast('GATE_ENTRY_UPDATED', { count: data.length });
+    SyncService.broadcast('GATE_ENTRY_UPDATED', { allGateEntries: data, count: data.length });
   },
 
   getReturnBatches: (): ReturnBatch[] => loadItem(STORAGE_KEYS.RETURN_BATCHES, initialReturnBatches),
   saveReturnBatches: (data: ReturnBatch[]) => {
     saveItem(STORAGE_KEYS.RETURN_BATCHES, data);
-    SyncService.broadcast('BATCH_UPDATED', { count: data.length });
+    SyncService.broadcast('BATCH_UPDATED', { allBatches: data, count: data.length });
   },
 
   getScannedItems: (): ScannedReturnItem[] => loadItem(STORAGE_KEYS.SCANNED_ITEMS, initialScannedItems),
   saveScannedItems: (data: ScannedReturnItem[]) => {
     saveItem(STORAGE_KEYS.SCANNED_ITEMS, data);
-    SyncService.broadcast('ITEM_SCANNED', { count: data.length });
+    SyncService.broadcast('ITEM_UPDATED', { allScannedItems: data, count: data.length });
   },
 
   getActiveDevices: (): ActiveDeviceSession[] => loadItem(STORAGE_KEYS.ACTIVE_DEVICES, initialActiveDevices),
@@ -274,7 +289,10 @@ export const StorageService = {
   saveActiveAuditorId: (id: string) => saveItem(STORAGE_KEYS.ACTIVE_AUDITOR_ID, id),
 
   getAuditRecords: (): AuditRecord[] => loadItem(STORAGE_KEYS.AUDIT_RECORDS, initialAuditRecords),
-  saveAuditRecords: (data: AuditRecord[]) => saveItem(STORAGE_KEYS.AUDIT_RECORDS, data),
+  saveAuditRecords: (data: AuditRecord[]) => {
+    saveItem(STORAGE_KEYS.AUDIT_RECORDS, data);
+    SyncService.broadcast('AUDIT_RECORD_ADDED', { allAuditRecords: data });
+  },
   addAuditRecord: (record: Omit<AuditRecord, 'id' | 'scannedAt'>): AuditRecord => {
     const current = StorageService.getAuditRecords();
     const newRecord: AuditRecord = {
@@ -283,7 +301,8 @@ export const StorageService = {
       scannedAt: new Date().toISOString(),
     };
     const updated = [newRecord, ...current];
-    StorageService.saveAuditRecords(updated);
+    saveItem(STORAGE_KEYS.AUDIT_RECORDS, updated);
+    SyncService.broadcast('AUDIT_RECORD_ADDED', { record: newRecord, allAuditRecords: updated });
     return newRecord;
   },
 
@@ -295,10 +314,34 @@ export const StorageService = {
       id: `act-${Date.now()}`,
       timestamp: new Date().toISOString(),
     };
-    const updated = [newLog, ...logs].slice(0, 100);
+    const updated = [newLog, ...logs].slice(0, 150);
     saveItem(STORAGE_KEYS.LOGS, updated);
-    SyncService.broadcast('SYNC_ALL', { log: newLog });
+    SyncService.broadcast('ACTIVITY_LOG_ADDED', { log: newLog, allLogs: updated });
     return newLog;
+  },
+
+  // Apply full authoritative remote server store to local cache
+  applyRemoteStore: (remoteStore: any) => {
+    if (!remoteStore || typeof remoteStore !== 'object') return;
+    try {
+      if (Array.isArray(remoteStore.gateEntries)) saveItem(STORAGE_KEYS.GATE_ENTRIES, remoteStore.gateEntries);
+      if (Array.isArray(remoteStore.batches)) saveItem(STORAGE_KEYS.RETURN_BATCHES, remoteStore.batches);
+      if (Array.isArray(remoteStore.scannedItems)) saveItem(STORAGE_KEYS.SCANNED_ITEMS, remoteStore.scannedItems);
+      if (Array.isArray(remoteStore.companies)) saveItem(STORAGE_KEYS.COMPANIES, remoteStore.companies);
+      if (Array.isArray(remoteStore.warehouses)) saveItem(STORAGE_KEYS.WAREHOUSES, remoteStore.warehouses);
+      if (Array.isArray(remoteStore.clients)) saveItem(STORAGE_KEYS.CLIENTS, remoteStore.clients);
+      if (Array.isArray(remoteStore.couriers)) saveItem(STORAGE_KEYS.COURIERS, remoteStore.couriers);
+      if (Array.isArray(remoteStore.skus)) saveItem(STORAGE_KEYS.SKUS, remoteStore.skus);
+      if (Array.isArray(remoteStore.drivers)) saveItem(STORAGE_KEYS.DRIVERS, remoteStore.drivers);
+      if (Array.isArray(remoteStore.vehicleTypes)) saveItem(STORAGE_KEYS.VEHICLE_TYPES, remoteStore.vehicleTypes);
+      if (Array.isArray(remoteStore.returnReasons)) saveItem(STORAGE_KEYS.RETURN_REASONS, remoteStore.returnReasons);
+      if (Array.isArray(remoteStore.users)) saveItem(STORAGE_KEYS.USERS, remoteStore.users);
+      if (Array.isArray(remoteStore.activityLogs)) saveItem(STORAGE_KEYS.LOGS, remoteStore.activityLogs);
+      if (Array.isArray(remoteStore.auditRecords)) saveItem(STORAGE_KEYS.AUDIT_RECORDS, remoteStore.auditRecords);
+      if (Array.isArray(remoteStore.auditorDevices)) saveItem(STORAGE_KEYS.AUDITOR_DEVICES, remoteStore.auditorDevices);
+    } catch (e) {
+      console.warn('[StorageService] Error applying remote store:', e);
+    }
   },
 
   getSupabaseConfig: (): SupabaseConfig => {

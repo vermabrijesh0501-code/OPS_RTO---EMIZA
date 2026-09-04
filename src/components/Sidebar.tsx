@@ -9,9 +9,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Users,
 } from 'lucide-react';
 import { User, ModuleId } from '../types';
-import { hasModulePermission } from '../utils/rbac';
+import { hasModulePermission, isSuperAdmin } from '../utils/rbac';
 
 export type ActiveTab =
   | 'dashboard'
@@ -87,10 +88,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'masters' as ActiveTab,
-      label: 'Master Data & Users',
+      label: 'Master Data & Inventory',
       icon: Layers,
       badge: null,
     },
+    ...(isSuperAdmin(currentUser)
+      ? [
+          {
+            id: 'user_management' as ActiveTab,
+            label: 'User & Role Management',
+            icon: Users,
+            badge: null,
+            badgeBg: '#8B5CF6',
+          },
+        ]
+      : []),
     {
       id: 'reports' as ActiveTab,
       label: 'Reports & Manifests',
@@ -109,10 +121,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (activeTab === itemId) return true;
     if (activeTab === 'inward' && itemId === 'grn') return false;
     if (activeTab === 'audit' && itemId === 'inventory') return true;
+    if (activeTab === 'user_management' && itemId === 'user_management') return true;
     if (
       activeTab === 'masters' &&
-      (itemId === 'user_management' ||
-        itemId === 'clients' ||
+      (itemId === 'clients' ||
         itemId === 'couriers' ||
         itemId === 'locations')
     )
@@ -121,9 +133,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return false;
   };
 
-  const visibleItems = navItems.filter((item) =>
-    hasModulePermission(currentUser, item.id as ModuleId, 'view')
-  );
+  const visibleItems = navItems.filter((item) => {
+    if (item.id === 'user_management') {
+      return isSuperAdmin(currentUser);
+    }
+    return hasModulePermission(currentUser, item.id as ModuleId, 'view');
+  });
 
   return (
     <>

@@ -10,12 +10,14 @@ export const LoginPage: React.FC = () => {
   const { signIn } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [email, setEmail] = useState('verma.brijesh0501@gmail.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    (location.state as any)?.error || null
+  );
 
   const completeLogin = () => {
     const origin = (location.state as any)?.from?.pathname || '/dashboard';

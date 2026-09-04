@@ -6,9 +6,13 @@ import {
   ChevronDown,
   Shield,
   CheckCircle2,
+  Wifi,
+  Smartphone,
 } from 'lucide-react';
 import { User, UserRole, Warehouse } from '../types';
 import { ActiveTab } from './Sidebar';
+import { SyncService, SyncStatus } from '../services/syncService';
+import { SyncStatusModal } from './SyncStatusModal';
 
 interface HeaderProps {
   currentUser: User;
@@ -38,6 +42,15 @@ export const Header: React.FC<HeaderProps> = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isWarehouseMenuOpen, setIsWarehouseMenuOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncService.getSyncStatus());
+
+  useEffect(() => {
+    const unsub = SyncService.onSyncStatusChange((status) => {
+      setSyncStatus(status);
+    });
+    return unsub;
+  }, []);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const roleMenuRef = useRef<HTMLDivElement>(null);
@@ -153,8 +166,43 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Right: Search, Role Badge, Profile Avatar */}
-      <div className="flex items-center gap-3 shrink-0">
+      {/* Right: Sync Status, Search, Role Badge, Profile Avatar */}
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* Live Sync Status Pill */}
+        <button
+          type="button"
+          onClick={() => setIsSyncModalOpen(true)}
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-98 ${
+            syncStatus.status === 'connected'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800/60'
+              : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800/60'
+          }`}
+          title="Click to view connected devices & synchronization status"
+        >
+          <span className="relative flex h-2 w-2">
+            {syncStatus.status === 'connected' && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                syncStatus.status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            ></span>
+          </span>
+          <span className="hidden sm:inline font-medium">
+            {syncStatus.status === 'connected' ? 'Live Sync' : 'Syncing...'}
+          </span>
+          <span
+            className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+              syncStatus.status === 'connected'
+                ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                : 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300'
+            }`}
+          >
+            {syncStatus.connectedDevicesCount} {syncStatus.connectedDevicesCount === 1 ? 'Device' : 'Devices'}
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={onOpenUniversalSearch}
@@ -249,6 +297,11 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      <SyncStatusModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
     </header>
   );
 };

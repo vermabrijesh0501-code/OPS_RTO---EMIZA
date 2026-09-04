@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RotateCcw,
@@ -14,8 +14,11 @@ import {
   Boxes,
   Layers,
   Sparkles,
+  Wifi,
 } from 'lucide-react';
 import { Client, ReturnBatch, InwardGateEntry } from '../types';
+import { SyncService, SyncStatus } from '../services/syncService';
+import { SyncStatusModal } from './SyncStatusModal';
 
 interface MobileDashboardProps {
   clients?: Client[];
@@ -33,6 +36,12 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('Tue, Sep 1, 2026');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncService.getSyncStatus());
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+
+  useEffect(() => {
+    return SyncService.onSyncStatusChange((s) => setSyncStatus(s));
+  }, []);
 
   // Quick Stats Calculations
   const activeBatches = batches.filter(b => b.status === 'In Progress' || b.status === 'Open').length;
@@ -60,7 +69,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
   return (
     <div className="min-h-screen bg-primary text-primary p-3 sm:p-4 pb-24 font-sans select-none theme-transition">
       {/* Top Header */}
-      <div className="flex items-center justify-between mb-4 pt-1">
+      <div className="flex items-center justify-between mb-4 pt-1 gap-2">
         <div>
           <span className="text-[10px] uppercase font-mono tracking-widest text-[var(--accent-cyan)] font-bold">
             BHIWANDI HUB 01 • OPERATIONS
@@ -69,6 +78,33 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
             Warehouse Operations Dashboard
           </h1>
         </div>
+
+        {/* Live Sync Status Badge */}
+        <button
+          type="button"
+          onClick={() => setIsSyncModalOpen(true)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all shrink-0 cursor-pointer ${
+            syncStatus.status === 'connected'
+              ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+              : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+          }`}
+          title="Click to view live device sync status"
+        >
+          <span className="relative flex h-2 w-2">
+            {syncStatus.status === 'connected' && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                syncStatus.status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            ></span>
+          </span>
+          <span>{syncStatus.status === 'connected' ? 'Live Sync' : 'Syncing'}</span>
+          <span className="font-mono text-[10px] bg-white/15 px-1 py-0.2 rounded-sm">
+            {syncStatus.connectedDevicesCount}
+          </span>
+        </button>
       </div>
 
       {/* 4 Prominent Quick Action Buttons */}
@@ -271,6 +307,14 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
           SHIFT ACTIVE
         </span>
       </div>
+
+      <SyncStatusModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        batchesCount={batches.length}
+        scannedItemsCount={totalScanned}
+        gateEntriesCount={inwardEntries.length}
+      />
     </div>
   );
 };

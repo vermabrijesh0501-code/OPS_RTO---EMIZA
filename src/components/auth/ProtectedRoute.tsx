@@ -54,6 +54,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Authenticated: Render protected child routes
+  // 3. Deactivated / Inactive Account Block
+  if (appUser && (appUser.status === 'Inactive' || (appUser as any).is_active === false)) {
+    return (
+      <Navigate
+        to="/login"
+        state={{
+          error: 'Your account has been deactivated by an Administrator. Please contact Verma.brijesh0501@gmail.com for access.',
+        }}
+        replace
+      />
+    );
+  }
+
+  // 4. Authenticated & Active: Render protected child routes
   return <>{children}</>;
 };

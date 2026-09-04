@@ -1,0 +1,636 @@
+{
+  "gateEntries": [],
+  "batches": [],
+  "scannedItems": [],
+  "companies": [
+    {
+      "id": "comp-1",
+      "name": "EMIZA Supply Chain Services Pvt Ltd",
+      "code": "EMIZA-HQ",
+      "gstin": "27AAAAA0000A1Z5",
+      "address": "Bhiwandi Logistics Hub, Building 4, Thane, Maharashtra 421302",
+      "status": "Active"
+    }
+  ],
+  "warehouses": [
+    {
+      "id": "wh-main",
+      "companyId": "comp-1",
+      "code": "WH-BHW-01",
+      "name": "Bhiwandi WH",
+      "city": "Bhiwandi / Mumbai Hub",
+      "address": "Bldg A3, Indospace Park, National Highway 3, Bhiwandi, MH 421302",
+      "totalDocks": 16,
+      "contactPerson": "Brijesh Verma",
+      "phone": "+91 98201 12345",
+      "status": "Active"
+    }
+  ],
+  "clients": [
+    {
+      "id": "cli-bellavita",
+      "companyId": "comp-1",
+      "code": "CLI-BV",
+      "name": "Idam _Bellavita",
+      "email": "ops@bellavitaorganic.com",
+      "phone": "+91 93117 32425",
+      "category": "Fragrance & Cosmetics",
+      "status": "Active"
+    },
+    {
+      "id": "cli-kekka",
+      "companyId": "comp-1",
+      "code": "CLI-KEK",
+      "name": "Kekka ( Gem & Pei )",
+      "email": "ops@kekkafashion.com",
+      "phone": "+91 98200 44321",
+      "category": "Apparel & Footwear",
+      "status": "Active"
+    },
+    {
+      "id": "cli-mama",
+      "companyId": "comp-1",
+      "code": "CLI-MME",
+      "name": "Honasa Consumer (Mamaearth)",
+      "email": "warehouse.ops@mamaearth.in",
+      "phone": "+91 124 400 2300",
+      "category": "Personal Care",
+      "status": "Active"
+    },
+    {
+      "id": "cli-cai",
+      "companyId": "comp-1",
+      "code": "CLI-CAI",
+      "name": "Cai Store",
+      "email": "logistics@caistore.in",
+      "phone": "+91 22 4970 1122",
+      "category": "Footwear & Accessories",
+      "status": "Active"
+    },
+    {
+      "id": "cli-eridani",
+      "companyId": "comp-1",
+      "code": "CLI-ERI",
+      "name": "Eridani",
+      "email": "ops@eridani.com",
+      "phone": "+91 22 2800 5566",
+      "category": "Luxury Fashion",
+      "status": "Active"
+    }
+  ],
+  "couriers": [
+    {
+      "id": "cou-1788452680001",
+      "code": "DTDC",
+      "name": "DTDC Express Ltd",
+      "trackingFormatPattern": "D+9 DIGITS",
+      "contactNumber": "080-2536-5032",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cou-1788452679125",
+      "code": "AMAZON_SHIP",
+      "name": "Amazon Shipping India",
+      "trackingFormatPattern": "TBA+12 DIGITS",
+      "contactNumber": "1800-3000-9009",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cou-1788452676549",
+      "code": "EKART",
+      "name": "Ekart Logistics",
+      "trackingFormatPattern": "FMPC+10 DIGITS",
+      "contactNumber": "1800-208-9898",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cour-delhivery",
+      "code": "DELHIVERY",
+      "name": "Delhivery Surface & Express",
+      "trackingFormatPattern": "14 DIGITS / DELH...",
+      "contactNumber": "1800-103-6354",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cour-bluedart",
+      "code": "BLUEDART",
+      "name": "Blue Dart Express Ltd",
+      "trackingFormatPattern": "11 DIGITS (e.g. 78201923841)",
+      "contactNumber": "1860-233-1234",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cour-xpressbees",
+      "code": "XPRESSBEES",
+      "name": "XpressBees Logistics",
+      "trackingFormatPattern": "XB+12 DIGITS",
+      "contactNumber": "020-4911-6100",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cour-shadowfax",
+      "code": "SHADOWFAX",
+      "name": "Shadowfax Technologies",
+      "trackingFormatPattern": "SFX+10 DIGITS",
+      "contactNumber": "080-6818-8000",
+      "apiSupported": true,
+      "status": "Active"
+    },
+    {
+      "id": "cour-ecom",
+      "code": "ECOM_EXP",
+      "name": "Ecom Express Ltd",
+      "trackingFormatPattern": "ECOM+9 DIGITS",
+      "contactNumber": "0120-6868200",
+      "apiSupported": true,
+      "status": "Active"
+    }
+  ],
+  "skus": [
+    {
+      "id": "sku-bv-1",
+      "clientId": "cli-bellavita",
+      "skuCode": "BV-WHITE-OUD-100",
+      "eanBarcode": "8906105610014",
+      "name": "Bella Vita Luxury White Oud Perfume 100ml",
+      "category": "Perfume",
+      "unitPrice": 899,
+      "weightGrams": 350,
+      "status": "Active"
+    },
+    {
+      "id": "sku-bv-2",
+      "clientId": "cli-bellavita",
+      "skuCode": "BV-SKAI-AQUATIC-100",
+      "eanBarcode": "8906105610021",
+      "name": "Bella Vita Skai Aquatic Eau De Cologne 100ml",
+      "category": "Perfume",
+      "unitPrice": 799,
+      "weightGrams": 350,
+      "status": "Active"
+    },
+    {
+      "id": "sku-bv-3",
+      "clientId": "cli-bellavita",
+      "skuCode": "BV-CEO-MAN-100",
+      "eanBarcode": "8906105610038",
+      "name": "Bella Vita CEO Man Luxury Perfume 100ml",
+      "category": "Perfume",
+      "unitPrice": 899,
+      "weightGrams": 350,
+      "status": "Active"
+    },
+    {
+      "id": "sku-bv-4",
+      "clientId": "cli-bellavita",
+      "skuCode": "BV-EYELIFT-20G",
+      "eanBarcode": "8906105610052",
+      "name": "Bella Vita Organic EyeLift Under Eye Cream Gel 20g",
+      "category": "Skin Care",
+      "unitPrice": 349,
+      "weightGrams": 45,
+      "status": "Active"
+    },
+    {
+      "id": "sku-1",
+      "clientId": "cli-nykaa",
+      "skuCode": "NYK-LIP-RED-01",
+      "eanBarcode": "8901020304011",
+      "name": "Matte Liquid Lipstick - Ruby Red 5ml",
+      "category": "Makeup",
+      "unitPrice": 499,
+      "weightGrams": 45,
+      "status": "Active"
+    },
+    {
+      "id": "sku-2",
+      "clientId": "cli-mama",
+      "skuCode": "MME-ONION-SHAM-250",
+      "eanBarcode": "8904030506022",
+      "name": "Onion Hair Fall Control Shampoo 250ml",
+      "category": "Hair Care",
+      "unitPrice": 349,
+      "weightGrams": 290,
+      "status": "Active"
+    },
+    {
+      "id": "sku-3",
+      "clientId": "cli-boat",
+      "skuCode": "BOAT-Airdopes-141-BLK",
+      "eanBarcode": "8906040708033",
+      "name": "Airdopes 141 TWS Earbuds - Bold Black",
+      "category": "Audio",
+      "unitPrice": 1299,
+      "weightGrams": 150,
+      "status": "Active"
+    },
+    {
+      "id": "sku-4",
+      "clientId": "cli-sugar",
+      "skuCode": "SUG-FOUND-WARM-02",
+      "eanBarcode": "8908050901044",
+      "name": "Ace Of Face Foundation Stick - Warm Sand",
+      "category": "Cosmetics",
+      "unitPrice": 999,
+      "weightGrams": 80,
+      "status": "Active"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "drv-1",
+      "name": "Suresh Kumar Yadav",
+      "mobile": "+91 98765 43210",
+      "licenseNumber": "MH04 20180012345",
+      "transporterName": "Om Logistics Transporters",
+      "status": "Active"
+    },
+    {
+      "id": "drv-2",
+      "name": "Sunil Sharma",
+      "mobile": "+91 97654 32109",
+      "licenseNumber": "DL01 20200054321",
+      "transporterName": "Bella Vita Direct Fleet",
+      "status": "Active"
+    }
+  ],
+  "vehicleTypes": [
+    {
+      "id": "vt-1",
+      "typeName": "32ft Multi-Axle Container",
+      "capacityTons": 15,
+      "status": "Active"
+    },
+    {
+      "id": "vt-2",
+      "typeName": "24ft Container",
+      "capacityTons": 9,
+      "status": "Active"
+    },
+    {
+      "id": "vt-3",
+      "typeName": "14ft Eicher Truck",
+      "capacityTons": 4,
+      "status": "Active"
+    },
+    {
+      "id": "vt-4",
+      "typeName": "Tata Ace / Bolero Pickup",
+      "capacityTons": 1.5,
+      "status": "Active"
+    }
+  ],
+  "returnReasons": [
+    {
+      "id": "rr-1",
+      "code": "GOOD",
+      "label": "Good",
+      "category": "Both",
+      "requirePhoto": false,
+      "status": "Active"
+    },
+    {
+      "id": "rr-2",
+      "code": "DAMAGE",
+      "label": "Damage",
+      "category": "Both",
+      "requirePhoto": true,
+      "status": "Active"
+    },
+    {
+      "id": "rr-3",
+      "code": "OPEN_BOX",
+      "label": "Open Box",
+      "category": "RTO",
+      "requirePhoto": true,
+      "status": "Active"
+    },
+    {
+      "id": "rr-4",
+      "code": "WRONG_PROD",
+      "label": "Wrong Product",
+      "category": "Both",
+      "requirePhoto": true,
+      "status": "Active"
+    },
+    {
+      "id": "rr-5",
+      "code": "SHORT_QTY",
+      "label": "Short Qty",
+      "category": "Both",
+      "requirePhoto": false,
+      "status": "Active"
+    },
+    {
+      "id": "rr-6",
+      "code": "MISSING_PROD",
+      "label": "Missing Product",
+      "category": "Both",
+      "requirePhoto": true,
+      "status": "Active"
+    },
+    {
+      "id": "rr-7",
+      "code": "OTHERS",
+      "label": "Others",
+      "category": "Both",
+      "requirePhoto": false,
+      "status": "Active"
+    }
+  ],
+  "users": [
+    {
+      "id": "usr-super",
+      "empId": "EMP-1001",
+      "name": "Brijesh Verma",
+      "email": "brijesh.verma@emizainc.com",
+      "password": "Admin@123",
+      "phone": "+91 98765 43210",
+      "role": "Super Admin",
+      "department": "Central Admin",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main",
+        "wh-gurgaon",
+        "wh-bangalore"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-mama",
+        "cli-boat",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:30:00Z",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "usr-super-gmail",
+      "empId": "EMP-1001G",
+      "name": "Brijesh Verma (Gmail)",
+      "email": "verma.brijesh0501@gmail.com",
+      "password": "Admin@123",
+      "phone": "+91 98765 43210",
+      "role": "Super Admin",
+      "department": "Central Admin",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main",
+        "wh-gurgaon",
+        "wh-bangalore"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-mama",
+        "cli-boat",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:30:00Z",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "usr-super-emiza",
+      "empId": "EMP-1001E",
+      "name": "Brijesh Verma",
+      "email": "brijesh.verma@emiza.com",
+      "password": "Admin@123",
+      "phone": "+91 98765 43210",
+      "role": "Super Admin",
+      "department": "Central Admin",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main",
+        "wh-gurgaon",
+        "wh-bangalore"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-mama",
+        "cli-boat",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:30:00Z",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "usr-wh-mgr",
+      "empId": "EMP-1002",
+      "name": "Vikram Mehta",
+      "email": "vikram.m@emiza.com",
+      "password": "Manager@123",
+      "phone": "+91 98220 11223",
+      "role": "Warehouse Manager",
+      "department": "Operations Management",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-boat",
+        "cli-mama",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T07:15:00Z",
+      "createdAt": "2026-01-10T00:00:00Z"
+    },
+    {
+      "id": "usr-sec",
+      "empId": "EMP-1003",
+      "name": "Rajesh Singh",
+      "email": "rajesh.security@emiza.com",
+      "password": "Security@123",
+      "phone": "+91 98110 55443",
+      "role": "Security Officer",
+      "department": "Gate Security",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-boat",
+        "cli-mama",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T06:45:00Z",
+      "createdAt": "2026-02-01T00:00:00Z"
+    },
+    {
+      "id": "usr-sup",
+      "empId": "EMP-1004",
+      "name": "Pooja Deshmukh",
+      "email": "pooja.d@emiza.com",
+      "password": "Super@123",
+      "phone": "+91 98330 99887",
+      "role": "Supervisor",
+      "department": "Operations Management",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-mama",
+        "cli-boat",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:00:00Z",
+      "createdAt": "2026-02-15T00:00:00Z"
+    },
+    {
+      "id": "usr-rto-op",
+      "empId": "EMP-1005",
+      "name": "Amit Patel",
+      "email": "amit.p@emiza.com",
+      "password": "Rto@123",
+      "phone": "+91 98440 66778",
+      "role": "RTO Operator",
+      "department": "RTO & Returns",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:12:00Z",
+      "createdAt": "2026-03-01T00:00:00Z"
+    },
+    {
+      "id": "usr-grn-op",
+      "empId": "EMP-1006",
+      "name": "Sandeep Yadav",
+      "email": "sandeep.y@emiza.com",
+      "password": "Grn@123",
+      "phone": "+91 98550 44332",
+      "role": "GRN Operator",
+      "department": "GRN & Inward",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-boat",
+        "cli-sugar",
+        "cli-mama"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T07:50:00Z",
+      "createdAt": "2026-03-15T00:00:00Z"
+    },
+    {
+      "id": "usr-auditor",
+      "empId": "EMP-1007",
+      "name": "Neha Sharma",
+      "email": "neha.s@emiza.com",
+      "password": "Audit@123",
+      "phone": "+91 98660 22110",
+      "role": "Auditor",
+      "department": "Inventory & Audit",
+      "companyId": "comp-1",
+      "assignedWarehouseIds": [
+        "wh-main"
+      ],
+      "assignedClientIds": [
+        "cli-bellavita",
+        "cli-nykaa",
+        "cli-mama",
+        "cli-boat",
+        "cli-sugar"
+      ],
+      "status": "Active",
+      "authProvider": "local",
+      "lastLoginAt": "2026-08-25T08:05:00Z",
+      "createdAt": "2026-04-01T00:00:00Z"
+    }
+  ],
+  "activityLogs": [
+    {
+      "userId": "usr-super-gmail",
+      "userName": "Brijesh Verma (Gmail)",
+      "userRole": "Super Admin",
+      "action": "Created Master Entry in couriers",
+      "module": "Masters",
+      "details": "Added new couriers record: DTDC Express Ltd",
+      "id": "act-1788452680002",
+      "timestamp": "2026-09-03T16:24:40.002Z"
+    },
+    {
+      "userId": "usr-super-gmail",
+      "userName": "Brijesh Verma (Gmail)",
+      "userRole": "Super Admin",
+      "action": "Created Master Entry in couriers",
+      "module": "Masters",
+      "details": "Added new couriers record: Amazon Shipping India",
+      "id": "act-1788452679125",
+      "timestamp": "2026-09-03T16:24:39.125Z"
+    },
+    {
+      "userId": "usr-super-gmail",
+      "userName": "Brijesh Verma (Gmail)",
+      "userRole": "Super Admin",
+      "action": "Created Master Entry in couriers",
+      "module": "Masters",
+      "details": "Added new couriers record: Ekart Logistics",
+      "id": "act-1788452676551",
+      "timestamp": "2026-09-03T16:24:36.551Z"
+    },
+    {
+      "userId": "usr-super-gmail",
+      "userName": "Brijesh Verma (Gmail)",
+      "userRole": "Super Admin",
+      "action": "User Signed In",
+      "module": "Auth",
+      "details": "Signed in as Super Admin (verma.brijesh0501@gmail.com)",
+      "id": "act-1788452505864",
+      "timestamp": "2026-09-03T16:21:45.864Z"
+    }
+  ],
+  "auditRecords": [],
+  "auditorDevices": [],
+  "activeDevices": [
+    {
+      "id": "sess-super-station",
+      "userId": "usr-super",
+      "userName": "Brijesh Verma",
+      "userRole": "Super Admin",
+      "userEmail": "brijesh.verma@emizainc.com",
+      "warehouseId": "wh-main",
+      "warehouseName": "Bhiwandi WH",
+      "deviceType": "Desktop",
+      "browserInfo": "Chrome / Linux Operations Terminal",
+      "loginTime": "2026-09-03T16:19:48.321Z",
+      "lastActiveAt": "2026-09-03T16:19:48.322Z",
+      "status": "Online"
+    }
+  ],
+  "lastUpdated": "2026-09-03T16:26:57.497Z"
+}
