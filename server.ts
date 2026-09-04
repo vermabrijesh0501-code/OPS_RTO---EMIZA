@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -624,7 +625,12 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // Gzip static assets (JS chunks compress ~70%) for lighter page loads
+    app.use(compression());
+    app.use(express.static(distPath, { maxAge: '1y', setHeaders: (res, fp) => {
+      // never cache the HTML shell — it references hashed chunks
+      if (fp.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    }}));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
