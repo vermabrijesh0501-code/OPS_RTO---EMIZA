@@ -1,21 +1,6 @@
 {
   "gateEntries": [],
-  "batches": [
-    {
-      "id": "batch-test-1",
-      "batchNumber": "TEST-0101",
-      "batchType": "RTO/B2C",
-      "status": "Open",
-      "dockNumber": "Dock 01",
-      "expectedCount": 0,
-      "totalScanned": 0,
-      "remarksBreakdown": {},
-      "createdAt": "2026-09-04T09:02:31.276661+00:00",
-      "createdBy": "usr-super",
-      "createdByName": "Super Admin",
-      "notes": null
-    }
-  ],
+  "batches": [],
   "scannedItems": [],
   "companies": [
     {
@@ -94,33 +79,6 @@
     }
   ],
   "couriers": [
-    {
-      "id": "cou-1788452680001",
-      "code": "DTDC",
-      "name": "DTDC Express Ltd",
-      "trackingFormatPattern": "D+9 DIGITS",
-      "contactNumber": "080-2536-5032",
-      "apiSupported": true,
-      "status": "Active"
-    },
-    {
-      "id": "cou-1788452679125",
-      "code": "AMAZON_SHIP",
-      "name": "Amazon Shipping India",
-      "trackingFormatPattern": "TBA+12 DIGITS",
-      "contactNumber": "1800-3000-9009",
-      "apiSupported": true,
-      "status": "Active"
-    },
-    {
-      "id": "cou-1788452676549",
-      "code": "EKART",
-      "name": "Ekart Logistics",
-      "trackingFormatPattern": "FMPC+10 DIGITS",
-      "contactNumber": "1800-208-9898",
-      "apiSupported": true,
-      "status": "Active"
-    },
     {
       "id": "cour-delhivery",
       "code": "DELHIVERY",
@@ -365,7 +323,6 @@
       "empId": "EMP-1001",
       "name": "Brijesh Verma",
       "email": "brijesh.verma@emizainc.com",
-      "password": "Admin@123",
       "phone": "+91 98765 43210",
       "role": "Super Admin",
       "department": "Central Admin",
@@ -392,7 +349,6 @@
       "empId": "EMP-1001G",
       "name": "Brijesh Verma (Gmail)",
       "email": "verma.brijesh0501@gmail.com",
-      "password": "Admin@123",
       "phone": "+91 98765 43210",
       "role": "Super Admin",
       "department": "Central Admin",
@@ -419,7 +375,6 @@
       "empId": "EMP-1001E",
       "name": "Brijesh Verma",
       "email": "brijesh.verma@emiza.com",
-      "password": "Admin@123",
       "phone": "+91 98765 43210",
       "role": "Super Admin",
       "department": "Central Admin",
@@ -446,7 +401,6 @@
       "empId": "EMP-1002",
       "name": "Vikram Mehta",
       "email": "vikram.m@emiza.com",
-      "password": "Manager@123",
       "phone": "+91 98220 11223",
       "role": "Warehouse Manager",
       "department": "Operations Management",
@@ -471,7 +425,6 @@
       "empId": "EMP-1003",
       "name": "Rajesh Singh",
       "email": "rajesh.security@emiza.com",
-      "password": "Security@123",
       "phone": "+91 98110 55443",
       "role": "Security Officer",
       "department": "Gate Security",
@@ -496,7 +449,6 @@
       "empId": "EMP-1004",
       "name": "Pooja Deshmukh",
       "email": "pooja.d@emiza.com",
-      "password": "Super@123",
       "phone": "+91 98330 99887",
       "role": "Supervisor",
       "department": "Operations Management",
@@ -521,7 +473,6 @@
       "empId": "EMP-1005",
       "name": "Amit Patel",
       "email": "amit.p@emiza.com",
-      "password": "Rto@123",
       "phone": "+91 98440 66778",
       "role": "RTO Operator",
       "department": "RTO & Returns",
@@ -543,7 +494,6 @@
       "empId": "EMP-1006",
       "name": "Sandeep Yadav",
       "email": "sandeep.y@emiza.com",
-      "password": "Grn@123",
       "phone": "+91 98550 44332",
       "role": "GRN Operator",
       "department": "GRN & Inward",
@@ -566,7 +516,6 @@
       "empId": "EMP-1007",
       "name": "Neha Sharma",
       "email": "neha.s@emiza.com",
-      "password": "Audit@123",
       "phone": "+91 98660 22110",
       "role": "Auditor",
       "department": "Inventory & Audit",
@@ -587,58 +536,7 @@
       "createdAt": "2026-04-01T00:00:00Z"
     }
   ],
-  "activityLogs": [
-    {
-      "userId": "a0d6708e-c44a-47ad-9beb-368c270c0c28",
-      "userName": "Brijesh Verma",
-      "userRole": "Super Admin",
-      "action": "User Signed In",
-      "module": "Auth",
-      "details": "Signed in as Super Admin via Supabase Auth (verma.brijesh0501@gmail.com)",
-      "id": "act-1788507963260",
-      "timestamp": "2026-09-04T07:46:03.260Z"
-    },
-    {
-      "userId": "usr-super-gmail",
-      "userName": "Brijesh Verma (Gmail)",
-      "userRole": "Super Admin",
-      "action": "Created Master Entry in couriers",
-      "module": "Masters",
-      "details": "Added new couriers record: DTDC Express Ltd",
-      "id": "act-1788452680002",
-      "timestamp": "2026-09-03T16:24:40.002Z"
-    },
-    {
-      "userId": "usr-super-gmail",
-      "userName": "Brijesh Verma (Gmail)",
-      "userRole": "Super Admin",
-      "action": "Created Master Entry in couriers",
-      "module": "Masters",
-      "details": "Added new couriers record: Amazon Shipping India",
-      "id": "act-1788452679125",
-      "timestamp": "2026-09-03T16:24:39.125Z"
-    },
-    {
-      "userId": "usr-super-gmail",
-      "userName": "Brijesh Verma (Gmail)",
-      "userRole": "Super Admin",
-      "action": "Created Master Entry in couriers",
-      "module": "Masters",
-      "details": "Added new couriers record: Ekart Logistics",
-      "id": "act-1788452676551",
-      "timestamp": "2026-09-03T16:24:36.551Z"
-    },
-    {
-      "userId": "usr-super-gmail",
-      "userName": "Brijesh Verma (Gmail)",
-      "userRole": "Super Admin",
-      "action": "User Signed In",
-      "module": "Auth",
-      "details": "Signed in as Super Admin (verma.brijesh0501@gmail.com)",
-      "id": "act-1788452505864",
-      "timestamp": "2026-09-03T16:21:45.864Z"
-    }
-  ],
+  "activityLogs": [],
   "auditRecords": [],
   "auditorDevices": [],
   "activeDevices": [
@@ -652,10 +550,10 @@
       "warehouseName": "Bhiwandi WH",
       "deviceType": "Desktop",
       "browserInfo": "Chrome / Linux Operations Terminal",
-      "loginTime": "2026-09-03T16:19:48.321Z",
-      "lastActiveAt": "2026-09-03T16:19:48.322Z",
+      "loginTime": "2026-09-04T18:13:32.824Z",
+      "lastActiveAt": "2026-09-04T18:13:32.824Z",
       "status": "Online"
     }
   ],
-  "lastUpdated": "2026-09-04T09:03:57.336Z"
+  "lastUpdated": "2026-09-04T18:16:50.064Z"
 }
