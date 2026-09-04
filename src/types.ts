@@ -354,6 +354,10 @@ export interface ReturnBatch {
   warehouseId: string;
   clientId: string;
   courierId: string;
+  // Denormalized snapshots taken at creation time so batches always display
+  // correctly even if master lists differ/diverge on another device.
+  clientName?: string;
+  courierName?: string;
   status: 'Open' | 'Closed';
   dockNumber?: string;
   expectedCount?: number;

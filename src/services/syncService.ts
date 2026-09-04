@@ -77,6 +77,8 @@ class RealtimeSyncManager {
 
   private wsReconnectTimer: any = null;
   private pingTimer: any = null;
+  private pollTimer: any = null;
+  private lastSeenStoreVersion: string = '';
   private pingSentTime: number = 0;
   private latencyMs: number = 0;
 
@@ -94,6 +96,7 @@ class RealtimeSyncManager {
     this.connectWebSocket();
     this.initSupabaseRealtime();
     this.startPingLoop();
+    this.startPollFallback();
   }
 
   public getDeviceId(): string {
@@ -192,6 +195,9 @@ class RealtimeSyncManager {
             if (data.payload?.activeDevices) {
               this.connectedDevices = data.payload.activeDevices;
             }
+            if (data.payload?.store?.lastUpdated) {
+              this.lastSeenStoreVersion = data.payload.store.lastUpdated;
+            }
             this.lastSyncedAt = new Date().toISOString();
             this.emitStatusChange();
 
@@ -241,6 +247,47 @@ class RealtimeSyncManager {
         this.connectWebSocket();
       }
     }, 2500);
+  }
+
+  // --- REST Polling Fallback (keeps realtime sync alive when WebSocket is blocked,
+  // e.g. mobile networks/proxies that kill WS) ---
+  private startPollFallback() {
+    if (typeof window === 'undefined') return;
+    clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(async () => {
+      // Only needed when the WebSocket is not healthy
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
+
+      try {
+        // 1. Presence heartbeat via REST so other devices still see this device
+        fetch('/api/sync/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId: this.currentDeviceId,
+            deviceType: this.deviceType,
+            deviceName: this.deviceName,
+            userName: this.userName,
+            userRole: this.userRole,
+            warehouseId: this.warehouseId,
+          }),
+        }).catch(() => {});
+
+        // 2. Cheap version check — full sync only when the server store changed
+        const res = await fetch('/api/sync/version');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json?.lastUpdated && json.lastUpdated !== this.lastSeenStoreVersion) {
+          const isFirstRun = this.lastSeenStoreVersion === '';
+          this.lastSeenStoreVersion = json.lastUpdated;
+          if (!isFirstRun) {
+            await this.forceSyncNow();
+          }
+        }
+      } catch {
+        // offline — retry on next tick
+      }
+    }, 3000);
   }
 
   private sendDeviceRegistration() {
@@ -384,17 +431,21 @@ class RealtimeSyncManager {
       }
     }
 
-    // 2. Broadcast via REST POST (as persistent guaranteed fallback)
-    try {
-      fetch('/api/sync/mutate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(msg),
-      }).catch(() => {
-        // Safe failover if offline
-      });
-    } catch {
-      // ignore
+    // 2. REST fallback — ONLY when the WebSocket is not open (the WS path already
+    //    applies the mutation on the server and relays to all devices; sending both
+    //    caused duplicate events & self-echo for every mutation)
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      try {
+        fetch('/api/sync/mutate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg),
+        }).catch(() => {
+          // Safe failover if offline
+        });
+      } catch {
+        // ignore
+      }
     }
 
     // 3. Broadcast to local tabs via BroadcastChannel
@@ -435,6 +486,9 @@ class RealtimeSyncManager {
 
       if (json.data) {
         this.lastSyncedAt = new Date().toISOString();
+        if (json.data.lastUpdated) {
+          this.lastSeenStoreVersion = json.data.lastUpdated;
+        }
         this.connectionStatus = this.ws && this.ws.readyState === WebSocket.OPEN ? 'connected' : 'connected';
         if (Array.isArray(json.activeDevices)) {
           this.connectedDevices = json.activeDevices;

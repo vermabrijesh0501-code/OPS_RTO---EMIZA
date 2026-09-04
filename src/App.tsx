@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -26,22 +26,35 @@ import { startRealtimeSync } from './services/realtimeSync';
 import { DBService } from './services/dbService';
 import { Header } from './components/Header';
 import { Sidebar, ActiveTab } from './components/Sidebar';
-import { DashboardView } from './components/DashboardView';
-import { InwardModule } from './components/InwardModule';
-import { ReturnsModule } from './components/ReturnsModule';
-import { AuditModule } from './components/AuditModule';
-import { MastersModule } from './components/MastersModule';
-import { ReportsModule } from './components/ReportsModule';
-import { SettingsModule } from './components/SettingsModule';
-import { UserManagementPage } from './components/UserManagementPage';
-import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { LoginPage } from './components/LoginPage';
-import { MobileDashboard } from './components/MobileDashboard';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
 import { ForcedPasswordChangeModal } from './components/auth/ForcedPasswordChangeModal';
 import { useAuth } from './context/AuthContext';
 import { getAccessibleModules } from './utils/rbac';
+
+// --- Performance: code-split heavy modules (React.lazy) ---
+// These load on demand, so the login page and initial refresh stay lightweight.
+const DashboardView = React.lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
+const MobileDashboard = React.lazy(() => import('./components/MobileDashboard').then(m => ({ default: m.MobileDashboard })));
+const InwardModule = React.lazy(() => import('./components/InwardModule').then(m => ({ default: m.InwardModule })));
+const ReturnsModule = React.lazy(() => import('./components/ReturnsModule').then(m => ({ default: m.ReturnsModule })));
+const AuditModule = React.lazy(() => import('./components/AuditModule').then(m => ({ default: m.AuditModule })));
+const MastersModule = React.lazy(() => import('./components/MastersModule').then(m => ({ default: m.MastersModule })));
+const ReportsModule = React.lazy(() => import('./components/ReportsModule').then(m => ({ default: m.ReportsModule })));
+const SettingsModule = React.lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
+const UserManagementPage = React.lazy(() => import('./components/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const UniversalSearchModal = React.lazy(() => import('./components/UniversalSearchModal').then(m => ({ default: m.UniversalSearchModal })));
+
+// Lightweight loading placeholder shown while a lazy module chunk downloads
+const ModuleFallback = () => (
+  <div className="flex flex-col items-center justify-center py-24 text-secondary">
+    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-0.5 animate-pulse">
+      <div className="w-full h-full bg-surface rounded-[7px]" />
+    </div>
+    <span className="mt-3 text-xs text-muted">Loading module…</span>
+  </div>
+);
 
 // Tab to URL Route Path helper
 export const tabToPath = (tab: ActiveTab): string => {
@@ -205,6 +218,42 @@ export default function App() {
     return cleanup;
   }, []);
 
+ // Self-heal master drift: if any batch references a courier/client that this
+  // device doesn't know about, pull the full central state — the master was
+  // likely created/changed on another device and this list is stale.
+  // HARD GUARDS: max 3 attempts, 60s cooldown, and give up permanently for a
+  // missing id once two syncs couldn't resolve it (e.g. master was deleted) —
+  // otherwise a batch referencing a dead courier id causes an infinite
+  // force-sync loop that freezes the page ("Page Unresponsive").
+  const mastersHealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mastersHealState = useRef<{ attempts: number; lastAt: number; givenUp: Set<string> }>({ attempts: 0, lastAt: 0, givenUp: new Set() });
+  useEffect(() => {
+    if (!batches.length) return;
+    const unknownIds: string[] = [];
+    for (const b of batches) {
+      if (b.courierId && !couriers.some(c => c.id === b.courierId) && !b.courierName) unknownIds.push(`courier:${b.courierId}`);
+      if (b.clientId && !clients.some(c => c.id === b.clientId) && !b.clientName) unknownIds.push(`client:${b.clientId}`);
+    }
+    const missing = unknownIds.filter(id => !mastersHealState.current.givenUp.has(id));
+    if (missing.length === 0) return;
+    const now = Date.now();
+    if (now - mastersHealState.current.lastAt < 60000) return; // cooldown
+    if (mastersHealState.current.attempts >= 3) {
+      // Server state didn't resolve these ids after 3 tries — they no longer
+      // exist centrally. Give up (snapshots keep old batches displayable).
+      missing.forEach(id => mastersHealState.current.givenUp.add(id));
+      mastersHealState.current.attempts = 0;
+      return;
+    }
+    mastersHealState.current.lastAt = now;
+    mastersHealState.current.attempts += 1;
+    if (mastersHealTimer.current) clearTimeout(mastersHealTimer.current);
+    mastersHealTimer.current = setTimeout(async () => {
+      const ok = await SyncService.forceSyncNow();
+      if (ok) console.info('[App] Masters self-heal sync triggered (batch referenced unknown master record)');
+    }, 1500);
+  }, [batches, couriers, clients]);
+
   // Real-time Cross-Device Synchronization Subscriber
   useEffect(() => {
     const unsubscribe = SyncService.subscribe(event => {
@@ -364,6 +413,11 @@ export default function App() {
             setVehicleTypes(StorageService.getVehicleTypes());
             setReturnReasons(StorageService.getReturnReasons());
             setUsers(StorageService.getUsers());
+          }
+          // Persist silently so this device's local/offline fallback stays
+          // identical to the central master data (no re-broadcast loop).
+          if (category && Array.isArray(allRecords)) {
+            StorageService.applyMasterUpdate(category, allRecords);
           }
           break;
         }
@@ -1306,6 +1360,7 @@ export default function App() {
 
         {/* Main Content View Container */}
         <main className="main-content flex-1 overflow-y-auto bg-page min-h-[calc(100vh-64px)] transition-colors duration-200 lg:pl-[72px] pb-20 lg:pb-8 w-full">
+          <React.Suspense fallback={<ModuleFallback />}>
           <div className="p-3 sm:p-5 lg:p-6 max-w-[1600px] mx-auto w-full">
             {viewTab === 'dashboard' && (
               isMobile ? (
@@ -1433,11 +1488,13 @@ export default function App() {
               />
             )}
           </div>
+          </React.Suspense>
         </main>
       </div>
 
       {/* Universal Search Modal (Ctrl+K) */}
-      <UniversalSearchModal
+      <React.Suspense fallback={null}>
+            <UniversalSearchModal
         isOpen={isUniversalSearchOpen}
         onClose={() => setIsUniversalSearchOpen(false)}
         gateEntries={gateEntries}
@@ -1447,6 +1504,7 @@ export default function App() {
         couriers={couriers}
         onSelectResult={handleUniversalSelectResult}
       />
+            </React.Suspense>
 
       {/* Mobile Bottom Navigation */}
       <div className="mobile-bottom-nav lg:hidden">
