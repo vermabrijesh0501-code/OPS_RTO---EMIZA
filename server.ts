@@ -149,16 +149,16 @@ function getActiveDevicesList() {
   return list;
 }
 
-function broadcastToAll(data: any, excludeClientId?: string) {
+function broadcastToAll(data: any, excludeId?: string) {
   const message = JSON.stringify(data);
   for (const [clientId, client] of connectedClients.entries()) {
-    if (excludeClientId && clientId === excludeClientId) continue;
-    if (client.ws.readyState === WebSocket.OPEN) {
-      try {
-        client.ws.send(message);
-      } catch (err) {
-        console.warn(`[Server WS] Error sending to ${clientId}:`, err);
-      }
+    // Exclude by WS connection id OR by device id (REST senders have no WS id)
+    if (excludeId && (clientId === excludeId || (client.deviceId && client.deviceId === excludeId))) continue;
+    if (!client.ws || client.ws.readyState !== WebSocket.OPEN) continue;
+    try {
+      client.ws.send(message);
+    } catch (err) {
+      console.warn(`[Server WS] Error sending to ${clientId}:`, err);
     }
   }
 }
@@ -536,18 +536,57 @@ async function startServer() {
   app.post('/api/sync/heartbeat', (req, res) => {
     const { deviceId, deviceType, deviceName, userName, userRole, warehouseId } = req.body;
     if (deviceId) {
-      for (const client of connectedClients.values()) {
-        if (client.deviceId === deviceId) {
-          client.lastActiveAt = new Date().toISOString();
-          if (deviceType) client.deviceType = deviceType;
-          if (deviceName) client.deviceName = deviceName;
-          if (userName) client.userName = userName;
-          if (userRole) client.userRole = userRole;
-          if (warehouseId) client.warehouseId = warehouseId;
+      let client = Array.from(connectedClients.values()).find(c => c.deviceId === deviceId);
+      if (!client) {
+        // REST-only device (WS unavailable) — register a synthetic entry for presence.
+        client = {
+          ws: null as any,
+          id: `rest-${deviceId}`,
+          deviceId,
+          deviceName: deviceName || 'Device (Browser)',
+          deviceType: deviceType || 'Desktop',
+          userName: userName || 'Floor Operator',
+          userRole: userRole || 'Operator',
+          warehouseId: warehouseId || 'wh-main',
+          connectedAt: new Date().toISOString(),
+          lastActiveAt: new Date().toISOString(),
+          ip: req.socket.remoteAddress || '127.0.0.1',
+        };
+        connectedClients.set(client.id, client);
+        broadcastToAll({
+          type: 'DEVICES_UPDATED',
+          payload: getActiveDevicesList(),
+          timestamp: new Date().toISOString(),
+          senderId: 'server',
+        });
+      }
+      client.lastActiveAt = new Date().toISOString();
+      if (deviceType) client.deviceType = deviceType;
+      if (deviceName) client.deviceName = deviceName;
+      if (userName) client.userName = userName;
+      if (userRole) client.userRole = userRole;
+      if (warehouseId) client.warehouseId = warehouseId;
+
+      // Prune stale REST-only devices (no heartbeat for 90s and no live WS)
+      const now = Date.now();
+      for (const [id, c] of connectedClients.entries()) {
+        if (!c.ws && now - new Date(c.lastActiveAt).getTime() > 90000) {
+          connectedClients.delete(id);
+          broadcastToAll({
+            type: 'DEVICES_UPDATED',
+            payload: getActiveDevicesList(),
+            timestamp: new Date().toISOString(),
+            senderId: 'server',
+          });
         }
       }
     }
     res.json({ success: true, activeDevices: getActiveDevicesList() });
+  });
+
+  // Lightweight poll endpoint: clients check this when WS is unavailable.
+  app.get('/api/sync/version', (req, res) => {
+    res.json({ lastUpdated: store.lastUpdated, deviceCount: connectedClients.size });
   });
 
   app.get('/api/sync/devices', (req, res) => {
