@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -217,6 +217,25 @@ export default function App() {
     const cleanup = startRealtimeSync();
     return cleanup;
   }, []);
+
+ // Self-heal master drift: if any batch references a courier/client that this
+  // device doesn't know about, pull the full central state — the master was
+  // likely created/changed on another device and this list is stale.
+  const mastersHealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!batches.length) return;
+    const missing = batches.some(b =>
+      (b.courierId && !couriers.some(c => c.id === b.courierId)) ||
+      (b.clientId && !clients.some(c => c.id === b.clientId))
+    );
+    if (!missing) return;
+    if (mastersHealTimer.current) clearTimeout(mastersHealTimer.current);
+    mastersHealTimer.current = setTimeout(async () => {
+      const ok = await SyncService.forceSyncNow();
+      if (ok) console.info('[App] Masters self-heal sync triggered (batch referenced unknown master record)');
+    }, 1200);
+    return () => { if (mastersHealTimer.current) clearTimeout(mastersHealTimer.current); };
+  }, [batches, couriers, clients]);
 
   // Real-time Cross-Device Synchronization Subscriber
   useEffect(() => {

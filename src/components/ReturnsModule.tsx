@@ -236,11 +236,17 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   // CREATE NEW BATCH SUBMIT
   const handleCreateBatchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Snapshot master names onto the batch so every device can display it
+    // correctly even if its courier/client master list is out of sync.
+    const courierSnapshot = couriers.find(cr => cr.id === newBatchCourier);
+    const clientSnapshot = clients.find(c => c.id === newBatchClient);
     const newBatch = onAddBatch({
       batchType: newBatchChannel === 'D2C Return' ? 'RTO/B2C' : 'RTO/B2C',
       warehouseId: activeWarehouse.id,
       clientId: newBatchClient,
+      clientName: clientSnapshot?.name,
       courierId: newBatchCourier,
+      courierName: courierSnapshot?.name,
       status: 'Open',
       dockNumber: newBatchDock,
       notes: `${newBatchChannel} | Dock: ${newBatchDock}${newBatchNotes ? ` | ${newBatchNotes}` : ''}`,
@@ -328,7 +334,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
     // Auto generate & download PDF manifest
     const batchItems = scannedItems.filter(i => i.batchId === activeBatch.id);
     const client = clients.find(c => c.id === activeBatch.clientId);
-    const courier = couriers.find(cr => cr.id === activeBatch.courierId);
+    const courier = couriers.find(cr => cr.id === activeBatch.courierId) || (activeBatch.courierName ? { id: activeBatch.courierId, name: activeBatch.courierName } as any : undefined);
 
     generateBatchPDF(
       { ...activeBatch, status: 'Closed', driverName, driverMobile, supervisorSigner },
@@ -347,8 +353,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   // Download Batch PDF Manifest
   const handleDownloadBatchPDF = (batch: ReturnBatch) => {
     const items = scannedItems.filter(i => i.batchId === batch.id);
-    const client = clients.find(c => c.id === batch.clientId);
-    const courier = couriers.find(cr => cr.id === batch.courierId);
+    const client = clients.find(c => c.id === batch.clientId) || (batch.clientName ? { id: batch.clientId, name: batch.clientName } as any : undefined);
+    const courier = couriers.find(cr => cr.id === batch.courierId) || (batch.courierName ? { id: batch.courierId, name: batch.courierName } as any : undefined);
     generateBatchPDF(batch, items, activeWarehouse, client, courier);
   };
 
@@ -668,7 +674,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         {clients.find(c => c.id === activeBatch.clientId)?.name}
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 truncate max-w-[120px] sm:max-w-[180px]">
-                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name}
+                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
                       </span>
                       {activeBatch.dockNumber && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
@@ -954,7 +960,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     <div className="p-3 bg-elevated border border-theme rounded-xl">
                       <div className="text-[10px] text-secondary uppercase font-bold">Courier</div>
                       <div className="text-sm font-bold text-primary truncate mt-0.5">
-                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name}
+                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
                       </div>
                     </div>
                   </div>
@@ -1131,6 +1137,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     .map(b => {
                       const client = clients.find(c => c.id === b.clientId);
                       const courier = couriers.find(cr => cr.id === b.courierId);
+                      const courierLabel = courier?.name || b.courierName || '—';
+                      const clientLabel = client?.name || b.clientName || '—';
 
                       return (
                         <tr
@@ -1145,8 +1153,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span>{b.batchNumber}</span>
                           </td>
-                          <td className="px-4 py-3 font-bold text-primary">{client?.name}</td>
-                          <td className="px-4 py-3 text-secondary">{courier?.name}</td>
+                          <td className="px-4 py-3 font-bold text-primary">{clientLabel}</td>
+                          <td className="px-4 py-3 text-secondary">{courierLabel}</td>
                           <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">{b.totalScanned} Items</td>
                           <td className="px-4 py-3 text-secondary">
                             {b.driverName ? `${b.driverName} (${b.driverMobile || 'Signed'})` : 'Supervisor Verified'}
@@ -1346,7 +1354,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           (i.scannedByName && i.scannedByName.toLowerCase().includes(closedBatchItemSearch.toLowerCase()))
         );
         const client = clients.find(c => c.id === selectedClosedBatch.clientId);
-        const courier = couriers.find(cr => cr.id === selectedClosedBatch.courierId);
+        const courier = couriers.find(cr => cr.id === selectedClosedBatch.courierId) || (selectedClosedBatch.courierName ? { id: selectedClosedBatch.courierId, name: selectedClosedBatch.courierName } as any : undefined);
 
         // Remark breakdown counts
         const breakdownCounts: Record<string, number> = {};
@@ -1378,9 +1386,9 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       )}
                     </div>
                     <div className="text-xs text-secondary flex items-center gap-2 mt-0.5">
-                      <span className="text-primary font-bold">{client?.name}</span>
+                      <span className="text-primary font-bold">{clients.find(c => c.id === selectedClosedBatch.clientId)?.name || selectedClosedBatch.clientName || '—'}</span>
                       <span>•</span>
-                      <span className="text-[#123B5D] dark:text-indigo-300 font-mono font-medium">{courier?.name}</span>
+                      <span className="text-[#123B5D] dark:text-indigo-300 font-mono font-medium">{couriers.find(cr => cr.id === selectedClosedBatch.courierId)?.name || selectedClosedBatch.courierName || '—'}</span>
                       <span>•</span>
                       <span className="text-secondary">{activeWarehouse.name} ({activeWarehouse.code})</span>
                     </div>
