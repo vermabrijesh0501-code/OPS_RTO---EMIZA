@@ -174,28 +174,37 @@ export function mapGateEntryToDb(entry: InwardGateEntry): Record<string, any> {
 }
 
 export function mapDbToActivityLog(row: any): ActivityLog {
+  let userName = row.user_name || row.userName || 'Staff';
+  let userRole = row.user_role || row.userRole || 'Operator';
+  let details = row.details || '';
+  const match = details.match(/^\[(.*?)(?: - (.*?))?\]\s*(.*)$/);
+  if (match) {
+    userName = match[1];
+    if (match[2]) userRole = match[2] as any;
+    details = match[3];
+  }
   return {
     id: row.id,
     timestamp: row.timestamp || row.created_at || new Date().toISOString(),
-    userId: row.user_id || row.userId,
-    userName: row.user_name || row.userName,
-    userRole: row.user_role || row.userRole,
-    action: row.action,
-    module: row.module,
-    details: row.details,
+    userId: row.user_id || row.userId || 'usr-super',
+    userName,
+    userRole,
+    action: row.action || 'Action',
+    module: row.module || 'Warehouse',
+    details,
   };
 }
 
 export function mapActivityLogToDb(log: ActivityLog): Record<string, any> {
+  const metaPrefix = log.userName ? `[${log.userName}${log.userRole ? ` - ${log.userRole}` : ''}] ` : '';
+  const cleanDetails = (log.details || '').startsWith(metaPrefix) ? log.details : `${metaPrefix}${log.details || ''}`;
   return {
     id: log.id,
-    timestamp: log.timestamp,
+    timestamp: log.timestamp || new Date().toISOString(),
     user_id: log.userId,
-    user_name: log.userName,
-    user_role: log.userRole,
-    action: log.action,
-    module: log.module,
-    details: log.details,
+    action: log.action || 'System Action',
+    module: log.module || 'Warehouse',
+    details: cleanDetails,
   };
 }
 
@@ -237,6 +246,31 @@ async function safeSupabaseWrite(
 
     const { error } = await query;
     if (error) {
+      // Automatic error recovery for foreign key constraint violation (code 23503)
+      if (error.code === '23503' && payload && typeof payload === 'object') {
+        console.warn(`[DBService] Foreign key constraint on ${table} (${error.message}). Retrying with sanitized relational keys...`);
+        const sanitized = { ...payload };
+        if (sanitized.warehouse_id) sanitized.warehouse_id = null;
+        if (sanitized.company_id) sanitized.company_id = null;
+        if (sanitized.client_id) sanitized.client_id = null;
+        if (sanitized.courier_id) sanitized.courier_id = null;
+        if (sanitized.vehicle_type_id) sanitized.vehicle_type_id = null;
+
+        let retryQuery: any;
+        if (operation === 'insert') retryQuery = sb.from(table).insert(sanitized);
+        else if (operation === 'upsert') retryQuery = sb.from(table).upsert(sanitized, { onConflict: 'id' });
+        else if (operation === 'update') {
+          retryQuery = filter
+            ? sb.from(table).update(sanitized).eq(filter.column, filter.value)
+            : sb.from(table).update(sanitized).eq('id', sanitized.id);
+        }
+
+        const retryRes = await retryQuery;
+        if (!retryRes?.error) {
+          console.info(`[DBService] Successfully persisted to ${table} after relational key sanitization.`);
+          return;
+        }
+      }
       throw error;
     }
   } catch (err: any) {
@@ -345,11 +379,12 @@ export const DBService = {
     const itemRow = mapScannedItemToDb(item);
     const batchRow = mapReturnBatchToDb(updatedBatch);
 
-    await Promise.all([
-      safeSupabaseWrite('scanned_return_items', 'insert', itemRow),
-      safeSupabaseWrite('return_batches', 'upsert', batchRow),
-      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
-    ]);
+    // Persist batch first so foreign key relationship is established in database
+    await safeSupabaseWrite('return_batches', 'upsert', batchRow);
+    await safeSupabaseWrite('scanned_return_items', 'insert', itemRow);
+    if (createdLog) {
+      await safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog));
+    }
 
     // 3. Broadcast to all other devices & tabs with full payload
     SyncService.broadcast('ITEM_SCANNED', {

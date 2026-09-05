@@ -4,9 +4,9 @@ import { SyncService } from './syncService';
 import { mapDbToScannedItem, mapDbToReturnBatch, mapDbToGateEntry, mapDbToActivityLog } from './dbService';
 
 export function startRealtimeSync() {
-  if (!isSupabaseConfigured()) return;
+  if (!isSupabaseConfigured()) return () => {};
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return () => {};
 
   const channel = client
     .channel('emiza-global-sync')
@@ -15,16 +15,22 @@ export function startRealtimeSync() {
       if (payload.eventType === 'INSERT') {
         const newItem = mapDbToScannedItem(payload.new);
         if (!items.find(i => i.id === newItem.id)) {
-          StorageService.saveScannedItems([newItem, ...items]);
+          const next = [newItem, ...items];
+          StorageService.saveScannedItems(next);
           SyncService.broadcast('ITEM_SCANNED', { item: newItem, source: 'realtime' });
         }
       } else if (payload.eventType === 'UPDATE') {
         const updated = mapDbToScannedItem(payload.new);
-        const idx = items.findIndex(i => i.id === updated.id);
-        if (idx >= 0) { items[idx] = updated; StorageService.saveScannedItems([...items]); }
+        const next = items.map(i => i.id === updated.id ? updated : i);
+        StorageService.saveScannedItems(next);
+        SyncService.broadcast('ITEM_UPDATED', { itemId: updated.id, item: updated, source: 'realtime' });
       } else if (payload.eventType === 'DELETE') {
-        const id = payload.old.id;
-        StorageService.saveScannedItems(items.filter(i => i.id !== id));
+        const id = payload.old?.id;
+        if (id) {
+          const next = items.filter(i => i.id !== id);
+          StorageService.saveScannedItems(next);
+          SyncService.broadcast('ITEM_DELETED', { itemId: id, source: 'realtime' });
+        }
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'return_batches' }, (payload) => {
@@ -32,13 +38,22 @@ export function startRealtimeSync() {
       if (payload.eventType === 'INSERT') {
         const newBatch = mapDbToReturnBatch(payload.new);
         if (!batches.find(b => b.id === newBatch.id)) {
-          StorageService.saveReturnBatches([newBatch, ...batches]);
+          const next = [newBatch, ...batches];
+          StorageService.saveReturnBatches(next);
           SyncService.broadcast('BATCH_CREATED', { batch: newBatch, source: 'realtime' });
         }
       } else if (payload.eventType === 'UPDATE') {
         const updated = mapDbToReturnBatch(payload.new);
-        const idx = batches.findIndex(b => b.id === updated.id);
-        if (idx >= 0) { batches[idx] = updated; StorageService.saveReturnBatches([...batches]); }
+        const next = batches.map(b => b.id === updated.id ? updated : b);
+        StorageService.saveReturnBatches(next);
+        SyncService.broadcast('BATCH_UPDATED', { batch: updated, source: 'realtime' });
+      } else if (payload.eventType === 'DELETE') {
+        const id = payload.old?.id;
+        if (id) {
+          const next = batches.filter(b => b.id !== id);
+          StorageService.saveReturnBatches(next);
+          SyncService.broadcast('BATCH_CLOSED', { batchId: id, source: 'realtime' });
+        }
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'inward_gate_entries' }, (payload) => {
@@ -46,18 +61,42 @@ export function startRealtimeSync() {
       if (payload.eventType === 'INSERT') {
         const newEntry = mapDbToGateEntry(payload.new);
         if (!entries.find(e => e.id === newEntry.id)) {
-          StorageService.saveGateEntries([newEntry, ...entries]);
+          const next = [newEntry, ...entries];
+          StorageService.saveGateEntries(next);
           SyncService.broadcast('GATE_ENTRY_CREATED', { entry: newEntry, source: 'realtime' });
         }
       } else if (payload.eventType === 'UPDATE') {
         const updated = mapDbToGateEntry(payload.new);
-        const idx = entries.findIndex(e => e.id === updated.id);
-        if (idx >= 0) { entries[idx] = updated; StorageService.saveGateEntries([...entries]); }
+        const next = entries.map(e => e.id === updated.id ? updated : e);
+        StorageService.saveGateEntries(next);
+        SyncService.broadcast('GATE_ENTRY_UPDATED', { id: updated.id, entry: updated, source: 'realtime' });
+      } else if (payload.eventType === 'DELETE') {
+        const id = payload.old?.id;
+        if (id) {
+          const next = entries.filter(e => e.id !== id);
+          StorageService.saveGateEntries(next);
+          SyncService.broadcast('GATE_ENTRY_DELETED', { id, source: 'realtime' });
+        }
+      }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_logs' }, (payload) => {
+      if (payload.new) {
+        const log = mapDbToActivityLog(payload.new);
+        const logs = StorageService.getActivityLogs();
+        if (!logs.some(l => l.id === log.id)) {
+          SyncService.broadcast('ACTIVITY_LOG_ADDED', { log, source: 'realtime' });
+        }
       }
     })
     .subscribe((status) => {
-      console.log('[Realtime] Subscription status:', status);
+      console.log('[Realtime] Global channel subscription status:', status);
     });
 
-  return () => { client.removeChannel(channel); };
+  return () => {
+    try {
+      client.removeChannel(channel);
+    } catch {
+      // ignore
+    }
+  };
 }

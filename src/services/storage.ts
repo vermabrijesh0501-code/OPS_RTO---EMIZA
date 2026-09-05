@@ -615,25 +615,48 @@ CREATE TABLE scanned_return_items (
 );
 
 -- 13. Activity Logs
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
     id TEXT PRIMARY KEY,
     timestamp TIMESTAMPTZ DEFAULT NOW(),
     user_id TEXT,
-    user_name TEXT,
-    user_role TEXT,
     action TEXT NOT NULL,
     module TEXT NOT NULL,
     details TEXT
 );
 
--- 14. Active Devices & Live Sessions
-CREATE TABLE active_devices (
+-- 14. User Profiles (Auth Link)
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL,
+    role TEXT NOT NULL DEFAULT 'Supervisor',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. Permissions & Role Permissions
+CREATE TABLE IF NOT EXISTS permissions (
     id TEXT PRIMARY KEY,
-    user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+    permission_key TEXT UNIQUE NOT NULL,
+    module TEXT NOT NULL,
+    action TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id TEXT PRIMARY KEY,
+    role TEXT NOT NULL,
+    permission_id TEXT REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+-- 16. Active Devices & Live Sessions
+CREATE TABLE IF NOT EXISTS active_devices (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
     user_name TEXT NOT NULL,
     user_role TEXT NOT NULL,
     user_email TEXT NOT NULL,
-    warehouse_id TEXT REFERENCES warehouses(id) ON DELETE CASCADE,
+    warehouse_id TEXT,
     warehouse_name TEXT,
     client_id TEXT,
     device_type TEXT DEFAULT 'Desktop',
@@ -651,18 +674,39 @@ CREATE INDEX IF NOT EXISTS idx_gate_entries_wh ON inward_gate_entries(warehouse_
 CREATE INDEX IF NOT EXISTS idx_batches_wh ON return_batches(warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_active_devices_wh ON active_devices(warehouse_id);
 
--- Enable Row Level Security (RLS) on all operational tables
+-- Enable Row Level Security (RLS)
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scanned_return_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE return_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inward_gate_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE active_devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warehouses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE couriers ENABLE ROW LEVEL SECURITY;
+
+-- FIX RECURSION: Non-recursive RLS Policies for user_profiles
+DROP POLICY IF EXISTS "user_profiles_read_authenticated" ON user_profiles;
+DROP POLICY IF EXISTS "user_profiles_write_authenticated" ON user_profiles;
+CREATE POLICY "user_profiles_read_authenticated" ON user_profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "user_profiles_write_authenticated" ON user_profiles FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Permissive RLS Policies for Authenticated Operations Staff
-CREATE POLICY "Allow authenticated read/write on return batches" ON return_batches FOR ALL USING (true);
-CREATE POLICY "Allow authenticated read/write on scanned items" ON scanned_return_items FOR ALL USING (true);
-CREATE POLICY "Allow authenticated read/write on gate entries" ON inward_gate_entries FOR ALL USING (true);
-CREATE POLICY "Allow authenticated read/write on active devices" ON active_devices FOR ALL USING (true);
-CREATE POLICY "Allow authenticated read/write on users" ON users FOR ALL USING (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on return batches" ON return_batches FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on scanned items" ON scanned_return_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on gate entries" ON inward_gate_entries FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on active devices" ON active_devices FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on users" ON users FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on activity logs" ON activity_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on warehouses" ON warehouses FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on clients" ON clients FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow authenticated read/write on couriers" ON couriers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable Supabase Realtime publication for multi-device sync
+ALTER PUBLICATION supabase_realtime ADD TABLE scanned_return_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE return_batches;
+ALTER PUBLICATION supabase_realtime ADD TABLE inward_gate_entries;
+ALTER PUBLICATION supabase_realtime ADD TABLE activity_logs;
 `;
 }

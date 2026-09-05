@@ -15,7 +15,7 @@ import { SyncService, SyncStatus } from '../services/syncService';
 import { SyncStatusModal } from './SyncStatusModal';
 
 interface HeaderProps {
-  currentUser: User;
+  currentUser?: User | null;
   onSwitchUserRole: (role: UserRole) => void;
   warehouses: Warehouse[];
   activeWarehouseId: string;
@@ -212,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({
           <Search className="w-4 h-4" />
         </button>
 
-        {currentUser.role === 'Super Admin' ? (
+        {currentUser?.role === 'Super Admin' ? (
           <div className="relative hidden sm:block" ref={roleMenuRef}>
             <button
               type="button"
@@ -220,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 dark:bg-[#3B2D54] border border-purple-200 dark:border-[#8B5CF6]/30 text-purple-700 dark:text-[#A78BFA] text-xs font-semibold hover:opacity-90 transition-all cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-[#8B5CF6] shrink-0" />
-              <span>{currentUser.role}</span>
+              <span>{currentUser?.role || 'Guest'}</span>
               <ChevronDown className="w-3 h-3 text-purple-600 dark:text-[#8B5CF6] shrink-0" />
             </button>
 
@@ -238,13 +238,13 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsRoleMenuOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#152238] transition-colors ${
-                      r === currentUser.role
+                      r === currentUser?.role
                         ? 'bg-purple-50 dark:bg-[#3B2D54] text-purple-700 dark:text-[#8B5CF6] font-bold'
                         : 'text-slate-800 dark:text-white'
                     }`}
                   >
                     <span>{r}</span>
-                    {r === currentUser.role && <CheckCircle2 className="w-3.5 h-3.5 text-[#8B5CF6]" />}
+                    {r === currentUser?.role && <CheckCircle2 className="w-3.5 h-3.5 text-[#8B5CF6]" />}
                   </button>
                 ))}
               </div>
@@ -253,7 +253,7 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 dark:bg-[#3B2D54] border border-purple-200 dark:border-[#8B5CF6]/30 text-purple-700 dark:text-[#A78BFA] text-xs font-semibold">
             <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-[#8B5CF6] shrink-0" />
-            <span>{currentUser.role}</span>
+            <span>{currentUser?.role || 'Staff'}</span>
           </div>
         )}
 
@@ -263,18 +263,18 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#8B5CF6] to-[#EC4899] text-white font-bold text-xs flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition-transform"
-            title={`${currentUser.name} (${currentUser.role})`}
+            title={`${currentUser?.name || 'User'} (${currentUser?.role || 'Staff'})`}
           >
-            {currentUser.name.charAt(0).toUpperCase()}
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
           </button>
 
           {isUserMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#1E293B] border border-theme rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in-50 duration-100">
               <div className="px-4 py-2 border-b border-theme">
-                <div className="font-bold text-black dark:text-white text-sm truncate">{currentUser.name}</div>
-                <div className="text-xs text-slate-600 dark:text-slate-400 truncate">{currentUser.email}</div>
+                <div className="font-bold text-black dark:text-white text-sm truncate">{currentUser?.name || 'Warehouse User'}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400 truncate">{currentUser?.email || ''}</div>
                 <div className="text-[11px] text-[#8B5CF6] font-semibold mt-1">
-                  Role: {currentUser.role}
+                  Role: {currentUser?.role || 'Staff'}
                 </div>
               </div>
 

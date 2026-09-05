@@ -177,7 +177,7 @@ export const hasModulePermission = (
   }
 
   // Fallback to role default permissions
-  const roleDefaults = ROLE_DEFAULT_PERMISSIONS[user.role];
+  const roleDefaults = user.role ? ROLE_DEFAULT_PERMISSIONS[user.role] : undefined;
   if (roleDefaults && roleDefaults[canonicalId]) {
     const rolePerm = roleDefaults[canonicalId];
     if (action === 'view') return !!rolePerm.view;
@@ -215,7 +215,7 @@ export const getAccessibleModules = (user: User | null | undefined): ModuleId[] 
 };
 
 // Get Role Color Badge classes
-export const getRoleBadgeConfig = (role: UserRole): { bg: string; text: string; border: string; label: string } => {
+export const getRoleBadgeConfig = (role?: UserRole | string): { bg: string; text: string; border: string; label: string } => {
   switch (role) {
     case 'Super Admin':
       return { bg: 'bg-purple-500/20', text: 'text-purple-300', border: 'border-purple-500/40', label: 'Super Admin' };

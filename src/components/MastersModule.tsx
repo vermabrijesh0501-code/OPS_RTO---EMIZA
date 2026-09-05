@@ -643,16 +643,17 @@ export const MastersModule: React.FC<MastersModuleProps> = ({
               <tbody className="divide-y divide-theme text-primary">
                 {users
                   .filter(u => {
+                    if (!u) return false;
                     if (statusFilter !== 'ALL' && u.status !== statusFilter) return false;
                     if (searchQuery) {
                       const q = searchQuery.toLowerCase();
-                      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
+                      return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.role || '').toLowerCase().includes(q);
                     }
                     return true;
                   })
                   .map(user => {
-                    const roleCfg = getRoleBadgeConfig(user.role);
-                    const perms = user.permissions || ROLE_DEFAULT_PERMISSIONS[user.role] || {};
+                    const roleCfg = getRoleBadgeConfig((user.role || 'Operator') as UserRole);
+                    const perms = user.permissions || (user.role ? ROLE_DEFAULT_PERMISSIONS[user.role] : {}) || {};
                     const visibleModulesCount = Object.values(perms).filter((p: any) => p.view).length;
 
                     return (

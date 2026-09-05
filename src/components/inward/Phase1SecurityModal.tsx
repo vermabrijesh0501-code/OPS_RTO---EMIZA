@@ -252,8 +252,8 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
           <div className="flex items-center gap-2 text-secondary text-[11px]">
             <UserIcon className="w-3.5 h-3.5 text-blue-500" />
             <span>Gate Incharge:</span>
-            <strong className="text-primary">{currentUser.name}</strong>
-            <span className="text-muted font-mono">({currentUser.role})</span>
+            <strong className="text-primary">{currentUser?.name || 'Gate Officer'}</strong>
+            <span className="text-muted font-mono">({currentUser?.role || 'Security Officer'})</span>
           </div>
         </div>
 

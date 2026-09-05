@@ -137,34 +137,24 @@ export async function fetchAppUserFromSupabase(
 
   if (sb) {
     try {
-      // 1. Query user_profiles table using user_id
-      const { data: dbProfile, error: profileError } = await sb
+      // 1. Query user_profiles table using user_id with strict timeout to prevent login hangs
+      const profilePromise = sb
         .from('user_profiles')
         .select('*')
         .eq('user_id', sbUser.id)
         .maybeSingle();
 
+      const timeoutPromise = new Promise<{ data: null; error: any }>(resolve =>
+        setTimeout(() => resolve({ data: null, error: { message: 'Query timed out' } }), 2000)
+      );
+
+      const { data: dbProfile, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise,
+      ]);
+
       if (!profileError && dbProfile) {
         profile = dbProfile as UserProfileRow;
-      } else if (isSuperAdmin) {
-        // Automatically ensure user_profiles row exists for Super Admin
-        const { data: newProfile, error: insertErr } = await sb
-          .from('user_profiles')
-          .upsert(
-            {
-              user_id: sbUser.id,
-              role: 'Super Admin',
-              is_active: true,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'user_id' }
-          )
-          .select()
-          .single();
-
-        if (!insertErr && newProfile) {
-          profile = newProfile as UserProfileRow;
-        }
       }
 
       // 2. Fetch role permissions for this user's role
@@ -172,10 +162,16 @@ export async function fetchAppUserFromSupabase(
         ? 'Super Admin'
         : (profile?.role as UserRole) || (meta.role as UserRole) || 'Supervisor';
 
-      const { data: rolePerms } = await sb
+      const permsPromise = sb
         .from('role_permissions')
         .select('permission_id, permissions ( id, permission_key, description )')
         .eq('role', effectiveRole);
+
+      const permsTimeout = new Promise<{ data: null; error: any }>(resolve =>
+        setTimeout(() => resolve({ data: null, error: { message: 'Permissions timed out' } }), 1500)
+      );
+
+      const { data: rolePerms } = await Promise.race([permsPromise, permsTimeout]);
 
       if (rolePerms && Array.isArray(rolePerms)) {
         rolePerms.forEach((rp: any) => {
@@ -185,7 +181,7 @@ export async function fetchAppUserFromSupabase(
         });
       }
     } catch (err) {
-      console.warn('[Supabase] Error querying user_profiles or role_permissions:', err);
+      console.warn('[Supabase] Non-blocking warning querying user_profiles or role_permissions:', err);
     }
   }
 

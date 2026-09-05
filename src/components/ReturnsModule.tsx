@@ -137,7 +137,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   // CLOSE BATCH SIGN-OFF STATE
   const [driverName, setDriverName] = useState('');
   const [driverMobile, setDriverMobile] = useState('');
-  const [supervisorSigner, setSupervisorSigner] = useState(currentUser.name || 'Supervisor');
+  const [supervisorSigner, setSupervisorSigner] = useState(currentUser?.name || 'Supervisor');
   const [handoverNotes, setHandoverNotes] = useState('');
   const [handoverSignatureStatus, setHandoverSignatureStatus] = useState<'Pending' | 'Signed'>('Pending');
   const [isDrawingSig, setIsDrawingSig] = useState(false);
