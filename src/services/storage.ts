@@ -220,27 +220,27 @@ export const StorageService = {
   saveCurrentWarehouseId: (id: string) => saveItem(STORAGE_KEYS.CURRENT_WH, id),
 
   getGateEntries: (): InwardGateEntry[] => loadItem(STORAGE_KEYS.GATE_ENTRIES, initialInwardGateEntries),
-  saveGateEntries: (data: InwardGateEntry[]) => {
+  saveGateEntries: (data: InwardGateEntry[], broadcast = true) => {
     saveItem(STORAGE_KEYS.GATE_ENTRIES, data);
-    SyncService.broadcast('GATE_ENTRY_UPDATED', { allGateEntries: data, count: data.length });
+    if (broadcast) SyncService.broadcast('GATE_ENTRY_UPDATED', { allGateEntries: data, count: data.length });
   },
 
   getReturnBatches: (): ReturnBatch[] => loadItem(STORAGE_KEYS.RETURN_BATCHES, initialReturnBatches),
-  saveReturnBatches: (data: ReturnBatch[]) => {
+  saveReturnBatches: (data: ReturnBatch[], broadcast = true) => {
     saveItem(STORAGE_KEYS.RETURN_BATCHES, data);
-    SyncService.broadcast('BATCH_UPDATED', { allBatches: data, count: data.length });
+    if (broadcast) SyncService.broadcast('BATCH_UPDATED', { allBatches: data, count: data.length });
   },
 
   getScannedItems: (): ScannedReturnItem[] => loadItem(STORAGE_KEYS.SCANNED_ITEMS, initialScannedItems),
-  saveScannedItems: (data: ScannedReturnItem[]) => {
+  saveScannedItems: (data: ScannedReturnItem[], broadcast = true) => {
     saveItem(STORAGE_KEYS.SCANNED_ITEMS, data);
-    SyncService.broadcast('ITEM_UPDATED', { allScannedItems: data, count: data.length });
+    if (broadcast) SyncService.broadcast('ITEM_UPDATED', { allScannedItems: data, count: data.length });
   },
 
   getActiveDevices: (): ActiveDeviceSession[] => loadItem(STORAGE_KEYS.ACTIVE_DEVICES, initialActiveDevices),
-  saveActiveDevices: (data: ActiveDeviceSession[]) => {
+  saveActiveDevices: (data: ActiveDeviceSession[], broadcast = true) => {
     saveItem(STORAGE_KEYS.ACTIVE_DEVICES, data);
-    SyncService.broadcast('DEVICE_HEARTBEAT', { count: data.length });
+    if (broadcast) SyncService.broadcast('DEVICE_HEARTBEAT', { count: data.length });
   },
 
   registerDeviceSession: (session: ActiveDeviceSession): ActiveDeviceSession[] => {
@@ -302,9 +302,9 @@ export const StorageService = {
   saveActiveAuditorId: (id: string) => saveItem(STORAGE_KEYS.ACTIVE_AUDITOR_ID, id),
 
   getAuditRecords: (): AuditRecord[] => loadItem(STORAGE_KEYS.AUDIT_RECORDS, initialAuditRecords),
-  saveAuditRecords: (data: AuditRecord[]) => {
+  saveAuditRecords: (data: AuditRecord[], broadcast = true) => {
     saveItem(STORAGE_KEYS.AUDIT_RECORDS, data);
-    SyncService.broadcast('AUDIT_RECORD_ADDED', { allAuditRecords: data });
+    if (broadcast) SyncService.broadcast('AUDIT_RECORD_ADDED', { allAuditRecords: data });
   },
   addAuditRecord: (record: Omit<AuditRecord, 'id' | 'scannedAt'>): AuditRecord => {
     const current = StorageService.getAuditRecords();

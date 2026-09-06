@@ -306,13 +306,15 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
         </span>
       </div>
 
-      <SyncStatusModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-        batchesCount={batches.length}
-        scannedItemsCount={totalScanned}
-        gateEntriesCount={inwardEntries.length}
-      />
+      {isSyncModalOpen && (
+        <SyncStatusModal
+          isOpen={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+          batchesCount={batches.length}
+          scannedItemsCount={totalScanned}
+          gateEntriesCount={inwardEntries.length}
+        />
+      )}
     </div>
   );
 };

@@ -348,18 +348,18 @@ export default function App() {
     const unsubscribe = SyncService.subscribe(event => {
       const { type, payload } = event;
 
-      // If full array state is passed in payload, apply immediately
+      // If full array state is passed in payload, apply immediately (silent save to avoid re-broadcast loop)
       if (payload?.allScannedItems) {
         setScannedItems(payload.allScannedItems);
-        StorageService.saveScannedItems(payload.allScannedItems);
+        StorageService.saveScannedItems(payload.allScannedItems, false);
       }
       if (payload?.allBatches) {
         setBatches(payload.allBatches);
-        StorageService.saveReturnBatches(payload.allBatches);
+        StorageService.saveReturnBatches(payload.allBatches, false);
       }
       if (payload?.allGateEntries) {
         setGateEntries(payload.allGateEntries);
-        StorageService.saveGateEntries(payload.allGateEntries);
+        StorageService.saveGateEntries(payload.allGateEntries, false);
       }
       if (payload?.log) {
         setLogs(prev => [payload.log, ...prev.filter(l => l.id !== payload.log.id)].slice(0, 150));
@@ -372,13 +372,13 @@ export default function App() {
               const exists = prev.some(i => i.id === payload.item.id || (i.batchId === payload.item.batchId && i.trackingNumber === payload.item.trackingNumber));
               if (exists) return prev;
               const next = [payload.item, ...prev];
-              StorageService.saveScannedItems(next);
+              StorageService.saveScannedItems(next, false);
               return next;
             });
             if (payload?.batch) {
               setBatches(prev => {
                 const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
-                StorageService.saveReturnBatches(next);
+                StorageService.saveReturnBatches(next, false);
                 return next;
               });
             }
@@ -390,13 +390,13 @@ export default function App() {
           if (payload?.item && !payload?.allScannedItems) {
             setScannedItems(prev => {
               const next = prev.map(i => i.id === (payload.itemId || payload.item.id) ? { ...i, ...payload.item } : i);
-              StorageService.saveScannedItems(next);
+              StorageService.saveScannedItems(next, false);
               return next;
             });
             if (payload?.batch) {
               setBatches(prev => {
                 const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
-                StorageService.saveReturnBatches(next);
+                StorageService.saveReturnBatches(next, false);
                 return next;
               });
             }
@@ -408,13 +408,13 @@ export default function App() {
           if (payload?.itemId && !payload?.allScannedItems) {
             setScannedItems(prev => {
               const next = prev.filter(i => i.id !== payload.itemId);
-              StorageService.saveScannedItems(next);
+              StorageService.saveScannedItems(next, false);
               return next;
             });
             if (payload?.batch) {
               setBatches(prev => {
                 const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
-                StorageService.saveReturnBatches(next);
+                StorageService.saveReturnBatches(next, false);
                 return next;
               });
             }
@@ -427,7 +427,7 @@ export default function App() {
             setBatches(prev => {
               if (prev.some(b => b.id === payload.batch.id)) return prev;
               const next = [payload.batch, ...prev];
-              StorageService.saveReturnBatches(next);
+              StorageService.saveReturnBatches(next, false);
               return next;
             });
           }
@@ -439,7 +439,7 @@ export default function App() {
           if (payload?.batch && !payload?.allBatches) {
             setBatches(prev => {
               const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
-              StorageService.saveReturnBatches(next);
+              StorageService.saveReturnBatches(next, false);
               return next;
             });
           }
@@ -451,7 +451,7 @@ export default function App() {
             setGateEntries(prev => {
               if (prev.some(g => g.id === payload.entry.id)) return prev;
               const next = [payload.entry, ...prev];
-              StorageService.saveGateEntries(next);
+              StorageService.saveGateEntries(next, false);
               return next;
             });
           }
@@ -462,7 +462,7 @@ export default function App() {
           if (payload?.entry && !payload?.allGateEntries) {
             setGateEntries(prev => {
               const next = prev.map(g => g.id === payload.entry.id ? payload.entry : g);
-              StorageService.saveGateEntries(next);
+              StorageService.saveGateEntries(next, false);
               return next;
             });
           }
@@ -473,7 +473,7 @@ export default function App() {
           if (payload?.id) {
             setGateEntries(prev => {
               const next = prev.filter(g => g.id !== payload.id);
-              StorageService.saveGateEntries(next);
+              StorageService.saveGateEntries(next, false);
               return next;
             });
           }

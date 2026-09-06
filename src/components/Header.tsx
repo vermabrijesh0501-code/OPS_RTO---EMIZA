@@ -296,10 +296,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <SyncStatusModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-      />
+      {isSyncModalOpen && (
+        <SyncStatusModal
+          isOpen={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+        />
+      )}
     </header>
   );
 };

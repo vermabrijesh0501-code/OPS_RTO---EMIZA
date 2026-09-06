@@ -98,6 +98,11 @@ class RealtimeSyncManager {
   private serverApiAvailable: boolean = true;
   private supabaseRealtimeState: 'none' | 'subscribed' | 'failed' = 'none';
 
+  private isBroadcasting: boolean = false;
+  private isNotifying: boolean = false;
+  private pendingMessages: SyncMessage[] = [];
+  private isStatusChangePending: boolean = false;
+
   constructor() {
     this.currentDeviceId = this.getOrCreateDeviceId();
     this.detectDeviceMetadata();
@@ -490,66 +495,71 @@ class RealtimeSyncManager {
 
   // --- Broadcasting Mutations ---
   public broadcast(type: SyncEventType, payload?: any) {
-    const msg: SyncMessage = {
-      type,
-      payload,
-      timestamp: new Date().toISOString(),
-      senderId: this.currentDeviceId,
-    };
-
-    this.lastSyncedAt = msg.timestamp;
-    this.emitStatusChange();
-
-    // 1. Broadcast over WebSocket (Real-Time Sub-20ms to all other devices)
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify(msg));
-      } catch (err) {
-        console.warn('[SyncService] Error sending via WebSocket:', err);
-      }
+    if (this.isBroadcasting) {
+      return;
     }
+    this.isBroadcasting = true;
+    try {
+      const msg: SyncMessage = {
+        type,
+        payload,
+        timestamp: new Date().toISOString(),
+        senderId: this.currentDeviceId,
+      };
 
-    // 2. REST fallback — ONLY when the WebSocket is not open (the WS path already
-    //    applies the mutation on the server and relays to all devices; sending both
-    //    caused duplicate events & self-echo for every mutation)
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      try {
-        fetch('/api/sync/mutate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {
-          // Safe failover if offline
-        });
-      } catch {
-        // ignore
+      this.lastSyncedAt = msg.timestamp;
+      this.emitStatusChange();
+
+      // 1. Broadcast over WebSocket (Real-Time Sub-20ms to all other devices)
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          this.ws.send(JSON.stringify(msg));
+        } catch (err) {
+          console.warn('[SyncService] Error sending via WebSocket:', err);
+        }
       }
-    }
 
-    // 3. Broadcast to local tabs via BroadcastChannel
-    if (this.broadcastChannel) {
-      try {
-        this.broadcastChannel.postMessage(msg);
-      } catch (err) {
-        console.warn('[SyncService] Error posting to BroadcastChannel:', err);
+      // 2. REST fallback — ONLY when the WebSocket is not open (the WS path already
+      //    applies the mutation on the server and relays to all devices; sending both
+      //    caused duplicate events & self-echo for every mutation)
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        try {
+          fetch('/api/sync/mutate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(msg),
+          }).catch(() => {
+            // Safe failover if offline
+          });
+        } catch {
+          // ignore
+        }
       }
-    }
 
-    // 4. Broadcast to Supabase if configured
-    if (isSupabaseConfigured() && this.supabaseChannel) {
-      try {
-        this.supabaseChannel.send({
-          type: 'broadcast',
-          event: 'warehouse_update',
-          payload: msg,
-        });
-      } catch {
-        // ignore
+      // 3. Broadcast to local tabs via BroadcastChannel
+      if (this.broadcastChannel) {
+        try {
+          this.broadcastChannel.postMessage(msg);
+        } catch (err) {
+          console.warn('[SyncService] Error posting to BroadcastChannel:', err);
+        }
       }
-    }
 
-    // 5. Notify local subscribers
-    this.notifySubscribers(msg);
+      // 4. Broadcast to Supabase if configured
+      if (isSupabaseConfigured() && this.supabaseChannel) {
+        try {
+          this.supabaseChannel.send({
+            type: 'broadcast',
+            event: 'warehouse_update',
+            payload: msg,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    } finally {
+      this.isBroadcasting = false;
+    }
   }
 
   // --- Force Manual Sync ---
@@ -615,20 +625,38 @@ class RealtimeSyncManager {
 
   public onSyncStatusChange(callback: StatusCallback): () => void {
     this.statusListeners.add(callback);
-    callback(this.getSyncStatus());
+    // Defer initial status notification to microtask to prevent setState during render
+    queueMicrotask(() => {
+      try {
+        if (this.statusListeners.has(callback)) {
+          callback(this.getSyncStatus());
+        }
+      } catch (err) {
+        console.error('[SyncService] Error in initial status listener callback:', err);
+      }
+    });
     return () => {
       this.statusListeners.delete(callback);
     };
   }
 
   private emitStatusChange() {
-    const status = this.getSyncStatus();
-    this.statusListeners.forEach((cb) => {
-      try {
-        cb(status);
-      } catch (err) {
-        console.error('[SyncService] Error in status listener callback:', err);
-      }
+    if (this.isStatusChangePending) return;
+    this.isStatusChangePending = true;
+
+    // Asynchronously notify listeners in a microtask so that:
+    // 1) React component render phases are never interrupted by foreign setState calls
+    // 2) Rapid successive status changes are cleanly coalesced into a single update
+    queueMicrotask(() => {
+      this.isStatusChangePending = false;
+      const status = this.getSyncStatus();
+      this.statusListeners.forEach((cb) => {
+        try {
+          cb(status);
+        } catch (err) {
+          console.error('[SyncService] Error in status listener callback:', err);
+        }
+      });
     });
   }
 
@@ -640,11 +668,27 @@ class RealtimeSyncManager {
   }
 
   private notifySubscribers(msg: SyncMessage) {
-    this.subscribers.forEach((cb) => {
+    this.pendingMessages.push(msg);
+    if (this.isNotifying) return;
+    this.isNotifying = true;
+
+    // Asynchronously flush queued messages in a microtask loop.
+    // This completely prevents recursion stack overflow ("Maximum call stack size exceeded").
+    queueMicrotask(() => {
       try {
-        cb(msg);
-      } catch (e) {
-        console.error('[SyncService] Error in subscriber callback:', e);
+        while (this.pendingMessages.length > 0) {
+          const nextMsg = this.pendingMessages.shift();
+          if (!nextMsg) continue;
+          this.subscribers.forEach((cb) => {
+            try {
+              cb(nextMsg);
+            } catch (e) {
+              console.error('[SyncService] Error in subscriber callback:', e);
+            }
+          });
+        }
+      } finally {
+        this.isNotifying = false;
       }
     });
   }
