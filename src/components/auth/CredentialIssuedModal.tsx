@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   UserCheck,
-  ExternalLink,
   Eye,
   EyeOff,
   Sparkles,

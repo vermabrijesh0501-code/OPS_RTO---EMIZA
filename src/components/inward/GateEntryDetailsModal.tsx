@@ -5,16 +5,8 @@ import {
   ShieldCheck,
   Package,
   CheckCircle2,
-  Clock,
-  User as UserIcon,
-  Phone,
-  CreditCard,
-  Building2,
-  FileText,
   Download,
-  AlertTriangle,
   ArrowRight,
-  Layers,
   Check,
 } from 'lucide-react';
 import {

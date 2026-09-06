@@ -9,12 +9,10 @@ import {
   TrendingUp,
   PackageCheck,
   Radio,
-  ArrowRight,
   ShieldCheck,
   Boxes,
   Layers,
   Sparkles,
-  Wifi,
 } from 'lucide-react';
 import { Client, ReturnBatch, InwardGateEntry } from '../types';
 import { SyncService, SyncStatus } from '../services/syncService';

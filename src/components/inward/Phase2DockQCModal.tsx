@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Truck,
   X,
   Plus,
   Trash2,
@@ -8,14 +7,6 @@ import {
   AlertCircle,
   Package,
   Layers,
-  FileText,
-  Building2,
-  Clock,
-  User as UserIcon,
-  HelpCircle,
-  ChevronDown,
-  ChevronRight,
-  ShieldAlert,
 } from 'lucide-react';
 import {
   InwardGateEntry,

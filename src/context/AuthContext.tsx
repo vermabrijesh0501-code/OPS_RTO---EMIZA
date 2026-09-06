@@ -6,15 +6,10 @@ import {
   fetchAppUserFromSupabase,
   subscribeToUserProfiles,
   isSuperAdminEmail,
-  SUPER_ADMIN_EMAIL,
-  createUserViaSupabaseAuth,
-  updateUserProfile,
-  fetchAllUserProfiles,
-  fetchPermissionsAndRoles,
 } from '../services/supabase';
 import { User, UserRole, ActiveDeviceSession } from '../types';
 import { StorageService } from '../services/storage';
-import { ROLE_DEFAULT_PERMISSIONS, isSuperAdmin, has_permission } from '../utils/rbac';
+import { isSuperAdmin, has_permission } from '../utils/rbac';
 import { SyncService } from '../services/syncService';
 
 interface AuthContextType {

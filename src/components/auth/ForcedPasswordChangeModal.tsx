@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import {
   ShieldAlert,
-  Lock,
   Eye,
   EyeOff,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
   LogOut,
-  Sparkles,
 } from 'lucide-react';
 import { User } from '../../types';
 

@@ -40,7 +40,7 @@ export const MASTER_CATEGORIES: MasterCategory[] = [
 ];
 
 const PUSH_SNAPSHOT_KEY = 'emiza_master_pushed_v1';
-const PUSH_DEBOUNCE_MS = 600;
+const PUSH_DEBOUNCE_MS = 150;
 
 type MasterRow = {
   category: string;
@@ -60,6 +60,20 @@ function loadPushSnapshot(): Record<string, Record<string, any>> {
 function savePushSnapshot(snap: Record<string, Record<string, any>>) {
   try {
     localStorage.setItem(PUSH_SNAPSHOT_KEY, JSON.stringify(snap));
+  } catch { /* ignore */ }
+}
+
+export function recordMergedSnapshot(category: MasterCategory, records: any[]) {
+  try {
+    const snap = loadPushSnapshot();
+    const current: Record<string, any> = snap[category] || {};
+    for (const rec of records) {
+      if (rec?.id) {
+        current[String(rec.id)] = rec;
+      }
+    }
+    snap[category] = current;
+    savePushSnapshot(snap);
   } catch { /* ignore */ }
 }
 
@@ -95,9 +109,11 @@ export async function pushMasterCategory(category: MasterCategory, records: any[
       ? (() => { const { password: _pw, ...rest } = rec; return rest; })()
       : rec;
     // stamp LWW version (keep existing stamp if record unchanged since load)
-    const stamp = prev[rec.id]?._updatedAt && JSON.stringify(stripStamp(prev[rec.id])) === JSON.stringify(stripStamp(clean))
-      ? prev[rec.id]._updatedAt
-      : new Date().toISOString();
+    const existingStamp = rec._updatedAt || prev[rec.id]?._updatedAt;
+    const isUnchanged = prev[rec.id] && JSON.stringify(stripStamp(prev[rec.id])) === JSON.stringify(stripStamp(clean));
+    const stamp = isUnchanged && existingStamp
+      ? existingStamp
+      : (rec._updatedAt && !prev[rec.id] ? rec._updatedAt : new Date().toISOString());
     const withStamp = { ...clean, _updatedAt: stamp };
     next[rec.id] = withStamp;
     if (JSON.stringify(stripStamp(prev[rec.id])) !== JSON.stringify(stripStamp(withStamp))) {
@@ -187,13 +203,14 @@ export function mergeList(local: any[], cloud: any[]): any[] {
 export async function pullAndMergeMasters(): Promise<Partial<MasterLists> | null> {
   const sb = getClient();
   if (!sb) return null;
-  const { data, error } = await sb.from('master_records').select('category,rec_id,data');
+  const { data, error } = await sb.from('master_records').select('category,rec_id,data,updated_at');
   if (error) { console.warn('[MasterSync] pull:', error.message); return null; }
 
   const cloud: Record<string, any[]> = {};
   for (const row of (data as MasterRow[]) || []) {
     if (!row?.category || !row?.data) continue;
-    (cloud[row.category] = cloud[row.category] || []).push({ ...row.data, id: row.rec_id });
+    const item = { ...row.data, id: row.rec_id, _updatedAt: row.data?._updatedAt || row.updated_at };
+    (cloud[row.category] = cloud[row.category] || []).push(item);
   }
 
   const local = readLocalMasterLists();
@@ -206,6 +223,7 @@ export async function pullAndMergeMasters(): Promise<Partial<MasterLists> | null
     const m = mergeList(localList, cloudList);
     (merged as any)[key] = m;
     StorageService.applyMasterUpdate(cat, m);
+    recordMergedSnapshot(cat, m);
   }
   return merged;
 }
@@ -219,6 +237,10 @@ export function subscribeMasterChanges(onChange: MasterChangeHandler): () => voi
   const sb = getClient();
   if (!sb) return () => {};
   try {
+    if (masterChannel) {
+      try { sb.removeChannel(masterChannel); } catch { /* ignore */ }
+      masterChannel = null;
+    }
     masterChannel = sb
       .channel('emiza_master_records_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'master_records' }, (payload: any) => {
@@ -228,10 +250,16 @@ export function subscribeMasterChanges(onChange: MasterChangeHandler): () => voi
         const recId = row?.rec_id || oldRow?.rec_id;
         if (!cat || !recId) return;
         const event = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
-        onChange(cat as MasterCategory, String(recId), row?.data ?? null, event);
+        const data = row?.data
+          ? { ...row.data, id: recId, _updatedAt: row.data._updatedAt || row.updated_at }
+          : null;
+        onChange(cat as MasterCategory, String(recId), data, event);
       })
       .subscribe();
-    return () => { try { sb.removeChannel(masterChannel); } catch { /* ignore */ } masterChannel = null; };
+    return () => {
+      try { sb.removeChannel(masterChannel); } catch { /* ignore */ }
+      masterChannel = null;
+    };
   } catch (e) {
     console.warn('[MasterSync] subscribe failed:', e);
     return () => {};

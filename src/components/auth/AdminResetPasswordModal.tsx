@@ -3,13 +3,11 @@ import {
   RotateCcw,
   KeyRound,
   Mail,
-  ShieldAlert,
   Sparkles,
   Eye,
   EyeOff,
   Send,
   AlertCircle,
-  CheckCircle2,
 } from 'lucide-react';
 import { generateSecureTempPassword } from '../../utils/credentialUtils';
 

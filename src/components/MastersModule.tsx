@@ -8,10 +8,7 @@ import {
   Package,
   Shield,
   Phone,
-  Mail,
   Sliders,
-  Bell,
-  Globe,
   Plus,
   Search,
   CheckCircle2,
@@ -20,15 +17,8 @@ import {
   PlayCircle,
   Edit2,
   Trash2,
-  X,
   Lock,
-  CheckSquare,
-  Square,
   Sparkles,
-  Key,
-  ShieldCheck,
-  UserCheck,
-  FileSpreadsheet,
 } from 'lucide-react';
 import {
   Company,
@@ -46,7 +36,6 @@ import {
   ModulePermission,
 } from '../types';
 import { ROLE_DEFAULT_PERMISSIONS, getRoleBadgeConfig } from '../utils/rbac';
-import { downloadCSV } from '../utils/csvExporter';
 
 interface MastersModuleProps {
   companies: Company[];

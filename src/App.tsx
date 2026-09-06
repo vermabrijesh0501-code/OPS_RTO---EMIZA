@@ -28,9 +28,6 @@ import {
   pullAndMergeMasters,
   subscribeMasterChanges,
   applyMasterChange,
-  categoryKey,
-  queueMasterPush,
-  MASTER_CATEGORIES,
 } from './services/masterSync';
 import { isSupabaseConfigured } from './services/supabase';
 import { Header } from './components/Header';
@@ -66,7 +63,7 @@ const ModuleFallback = () => (
 );
 
 // Tab to URL Route Path helper
-export const tabToPath = (tab: ActiveTab): string => {
+const tabToPath = (tab: ActiveTab): string => {
   switch (tab) {
     case 'dashboard':
       return '/dashboard';
@@ -106,7 +103,7 @@ export const tabToPath = (tab: ActiveTab): string => {
 };
 
 // URL Route Path to Tab helper
-export const pathToTab = (pathname: string): ActiveTab => {
+const pathToTab = (pathname: string): ActiveTab => {
   const normalized = pathname.toLowerCase().replace(/\/$/, '');
   if (normalized === '/inward') return 'inward';
   if (normalized === '/grn') return 'grn';
@@ -214,12 +211,33 @@ export default function App() {
       });
   }, []);
 
-  // Keep device registration updated on user or warehouse change
+  const refreshMastersFromCloud = useCallback(async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const merged = await pullAndMergeMasters();
+      if (!merged) return;
+      if (Array.isArray(merged.companies)) setCompanies(merged.companies);
+      if (Array.isArray(merged.warehouses)) setWarehouses(merged.warehouses);
+      if (Array.isArray(merged.clients)) setClients(merged.clients);
+      if (Array.isArray(merged.couriers)) setCouriers(merged.couriers);
+      if (Array.isArray(merged.skus)) setSKUs(merged.skus);
+      if (Array.isArray(merged.drivers)) setDrivers(merged.drivers);
+      if (Array.isArray(merged.vehicleTypes)) setVehicleTypes(merged.vehicleTypes);
+      if (Array.isArray(merged.returnReasons)) setReturnReasons(merged.returnReasons);
+      if (Array.isArray(merged.users)) setUsers(merged.users);
+    } catch (err) {
+      console.warn('[App] Master sync pull failed:', err);
+    }
+  }, []);
+
+  // Keep device registration updated on user or warehouse change & pull fresh cloud masters
   useEffect(() => {
     if (currentUser) {
       SyncService.updateUserInfo(currentUser.name, currentUser.role, activeWarehouseId);
+      SyncService.ensureSupabaseRealtime();
+      refreshMastersFromCloud();
     }
-  }, [currentUser, activeWarehouseId]);
+  }, [currentUser, activeWarehouseId, refreshMastersFromCloud]);
 
   // Real-time Supabase postgres synchronization
   useEffect(() => {
@@ -231,32 +249,14 @@ export default function App() {
   // on static hosting there is no /api/sync/* server, so master records must
   // sync through the cloud):
   //   1. initial pull + LWW merge into local lists -> setState
-  //   2. cloud backfill: push our merged local lists (catch a fresh cloud up
-  //      with this device's unpushed local records)
-  //   3. live subscription: apply single-record changes from other devices
+  //   2. live subscription: apply single-record changes from other devices in realtime
+  //   3. lifecycle & reconnect auto-pulls (visibilitychange, online, focus, interval)
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     let cancelled = false;
 
-    pullAndMergeMasters().then(merged => {
-      if (cancelled || !merged) return;
-      if (merged.companies) setCompanies(merged.companies);
-      if (merged.warehouses) setWarehouses(merged.warehouses);
-      if (merged.clients) setClients(merged.clients);
-      if (merged.couriers) setCouriers(merged.couriers);
-      if (merged.skus) setSKUs(merged.skus);
-      if (merged.drivers) setDrivers(merged.drivers);
-      if (merged.vehicleTypes) setVehicleTypes(merged.vehicleTypes);
-      if (merged.returnReasons) setReturnReasons(merged.returnReasons);
-      if (merged.users) setUsers(merged.users);
-      // Cloud backfill: push the (merged) local lists so the cloud catches up.
-      for (const cat of MASTER_CATEGORIES) {
-        const key = categoryKey(cat);
-        if (key && merged[key] && merged[key].length > 0) {
-          queueMasterPush(cat, merged[key]);
-        }
-      }
-    }).catch(() => {});
+    // Initial pull
+    refreshMastersFromCloud();
 
     const unsub = subscribeMasterChanges((category, recId, data, event) => {
       if (cancelled) return;
@@ -280,11 +280,32 @@ export default function App() {
       }
     });
 
+    const handleSyncTrigger = () => {
+      if (document.visibilityState === 'visible') {
+        refreshMastersFromCloud();
+      }
+    };
+    const handleOnline = () => {
+      refreshMastersFromCloud();
+      SyncService.ensureSupabaseRealtime();
+    };
+
+    document.addEventListener('visibilitychange', handleSyncTrigger);
+    window.addEventListener('focus', handleSyncTrigger);
+    window.addEventListener('online', handleOnline);
+
+    // Periodic auto-pull every 15s to guarantee non-websocket/mobile logins always catch up
+    const pollInterval = setInterval(handleSyncTrigger, 15000);
+
     return () => {
       cancelled = true;
       unsub();
+      document.removeEventListener('visibilitychange', handleSyncTrigger);
+      window.removeEventListener('focus', handleSyncTrigger);
+      window.removeEventListener('online', handleOnline);
+      clearInterval(pollInterval);
     };
-  }, []);
+  }, [refreshMastersFromCloud]);
 
  // Self-heal master drift: if any batch references a courier/client that this
   // device doesn't know about, pull the full central state — the master was
@@ -1085,8 +1106,8 @@ export default function App() {
 
   // Master Data Add/Update/Delete/Toggle Handlers
   const handleAddMasterRecord = (category: string, record: any) => {
-    const id = `${category.slice(0, 3)}-${Date.now()}`;
-    const newRecord = { ...record, id, status: 'Active' };
+    const id = record.id || `${category.slice(0, 3)}-${Date.now()}`;
+    const newRecord = { ...record, id, status: record.status || 'Active' };
 
     if (category === 'companies') {
       const updated = [newRecord, ...companies];

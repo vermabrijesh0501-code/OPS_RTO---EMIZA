@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Truck,
   RotateCcw,
-  Boxes,
   Scan,
   Layers,
   BarChart3,

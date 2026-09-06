@@ -1,22 +1,11 @@
-import { getSupabase, isSupabaseConfigured } from './supabase';
+import { getSupabase } from './supabase';
 import {
   ReturnBatch,
   ScannedReturnItem,
   InwardGateEntry,
   ActivityLog,
-  AuditRecord,
-  ActiveDeviceSession,
   ReturnRemarkType,
-  User,
-  UserRole,
-  Company,
   Warehouse,
-  Client,
-  Courier,
-  SKU,
-  Driver,
-  VehicleType,
-  ReturnReason,
 } from '../types';
 import { StorageService } from './storage';
 import { SyncService } from './syncService';

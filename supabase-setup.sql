@@ -139,30 +139,31 @@ create table if not exists public.master_records (
 create index if not exists idx_master_records_category on public.master_records (category);
 
 alter table public.master_records enable row level security;
+alter table public.master_records replica identity full;
 
 drop policy if exists "master records select" on public.master_records;
 create policy "master records select"
   on public.master_records for select
-  to authenticated
+  to authenticated, anon
   using (true);
 
 drop policy if exists "master records insert" on public.master_records;
 create policy "master records insert"
   on public.master_records for insert
-  to authenticated
+  to authenticated, anon
   with check (true);
 
 drop policy if exists "master records update" on public.master_records;
 create policy "master records update"
   on public.master_records for update
-  to authenticated
+  to authenticated, anon
   using (true)
   with check (true);
 
 drop policy if exists "master records delete" on public.master_records;
 create policy "master records delete"
   on public.master_records for delete
-  to authenticated
+  to authenticated, anon
   using (true);
 
 -- Realtime: include master_records in the default publication so

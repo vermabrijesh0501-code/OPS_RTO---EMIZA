@@ -6,8 +6,6 @@ import {
   ChevronDown,
   Shield,
   CheckCircle2,
-  Wifi,
-  Smartphone,
 } from 'lucide-react';
 import { User, UserRole, Warehouse } from '../types';
 import { ActiveTab } from './Sidebar';

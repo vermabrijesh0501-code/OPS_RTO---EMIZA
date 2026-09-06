@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, X, Truck, RotateCcw, Package, Building2, ChevronRight } from 'lucide-react';
+import { Search, X, Truck, RotateCcw, Package } from 'lucide-react';
 import { InwardGateEntry, ReturnBatch, ScannedReturnItem, Client, Courier } from '../types';
 
 interface UniversalSearchModalProps {

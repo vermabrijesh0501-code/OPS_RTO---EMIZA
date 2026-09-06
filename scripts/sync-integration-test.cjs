@@ -1,5 +1,5 @@
 /* Integration test: real-time sync between two devices (desktop + mobile) */
-const WebSocket = require('/home/user/OPS_RTO---EMIZA/node_modules/ws');
+const WebSocket = require('ws');
 const http = require('http');
 
 const BASE = 'http://localhost:3000';

@@ -10,7 +10,6 @@ import {
   CreditCard,
   Building2,
   Package,
-  Layers,
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';

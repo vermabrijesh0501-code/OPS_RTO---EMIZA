@@ -338,7 +338,7 @@ class RealtimeSyncManager {
       if (json.lastUpdated !== this.lastSeenStoreVersion) {
         const isFirstRun = this.lastSeenStoreVersion === '';
         this.lastSeenStoreVersion = json.lastUpdated;
-        if (!isFirstRun) {
+        if (!isFirstRun || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
           await this.forceSyncNow();
         }
       }
@@ -479,6 +479,12 @@ class RealtimeSyncManager {
         });
     } catch (e) {
       console.warn('[SyncService] Supabase Realtime subscription error:', e);
+    }
+  }
+
+  public ensureSupabaseRealtime() {
+    if (!this.supabaseChannel || this.supabaseRealtimeState !== 'subscribed') {
+      this.initSupabaseRealtime();
     }
   }
 

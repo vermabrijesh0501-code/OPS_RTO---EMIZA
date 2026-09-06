@@ -1,6 +1,6 @@
 /* Masters sync test: Device A creates/edits/deletes a courier -> Device B sees it instantly;
    fresh device fetches /api/sync/state and sees it too. All master categories covered. */
-const WebSocket = require('/home/user/OPS_RTO---EMIZA/node_modules/ws');
+const WebSocket = require('ws');
 const http = require('http');
 const BASE = 'http://localhost:3000';
 let pass = 0, fail = 0;

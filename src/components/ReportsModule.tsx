@@ -1,24 +1,15 @@
 import React, { useState } from 'react';
 import {
-  BarChart3,
   FileSpreadsheet,
   Download,
-  Calendar,
   Filter,
-  TrendingUp,
   UserCheck,
   Building2,
   Truck,
-  RotateCcw,
   FileText,
   Eye,
-  CheckCircle2,
-  Clock,
-  Printer,
   Search,
   X,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
 import {
   InwardGateEntry,

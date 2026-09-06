@@ -10,7 +10,6 @@ import {
   Clock,
   Database,
   Layers,
-  ShieldCheck,
   Truck,
   RotateCcw,
   Scan,
@@ -19,7 +18,6 @@ import {
   Check,
 } from 'lucide-react';
 import { SyncService, SyncStatus } from '../services/syncService';
-import { StorageService } from '../services/storage';
 
 interface SyncStatusModalProps {
   isOpen: boolean;

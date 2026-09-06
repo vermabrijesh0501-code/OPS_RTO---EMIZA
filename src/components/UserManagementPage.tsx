@@ -14,19 +14,13 @@ import {
   Edit2,
   Copy,
   Check,
-  Mail,
-  Lock,
   Eye,
   EyeOff,
-  Building,
   Key,
   KeyRound,
   Sparkles,
-  ExternalLink,
-  ChevronRight,
   Database,
   Radio,
-  Sliders,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {

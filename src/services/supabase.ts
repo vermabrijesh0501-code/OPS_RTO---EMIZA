@@ -484,81 +484,6 @@ export function subscribeToUserProfiles(
 }
 
 /**
- * Maps a Supabase Auth User + metadata to our application User model with role & permissions.
- */
-export function mapSupabaseUserToAppUser(
-  sbUser: SupabaseAuthUser | null,
-  registeredUsers: User[] = []
-): User | null {
-  if (!sbUser) return null;
-
-  const email = (sbUser.email || '').toLowerCase();
-  const meta = sbUser.user_metadata || {};
-  const isSuperAdmin = isSuperAdminEmail(email);
-
-  // Check if a registered user with this email already exists in User Master
-  const existing = registeredUsers.find(
-    u => u.email.toLowerCase() === email || u.id === sbUser.id
-  );
-
-  const role: UserRole = isSuperAdmin
-    ? 'Super Admin'
-    : (meta.role as UserRole) || existing?.role || 'Supervisor';
-
-  const name: string =
-    meta.name ||
-    meta.full_name ||
-    existing?.name ||
-    (isSuperAdmin ? 'Brijesh Verma' : email.split('@')[0]) ||
-    'Emiza User';
-
-  const department =
-    meta.department ||
-    existing?.department ||
-    (role === 'Super Admin' ? 'Central Admin' : 'Operations Management');
-
-  const empId =
-    meta.empId ||
-    existing?.empId ||
-    (isSuperAdmin ? 'EMP-0001' : `EMP-${sbUser.id.slice(0, 4).toUpperCase()}`);
-
-  const assignedWarehouseIds =
-    meta.assignedWarehouseIds || existing?.assignedWarehouseIds || ['wh-main'];
-
-  const assignedClientIds =
-    meta.assignedClientIds || existing?.assignedClientIds || [
-      'cli-bellavita',
-      'cli-nykaa',
-      'cli-mama',
-      'cli-boat',
-      'cli-sugar',
-    ];
-
-  const permissions =
-    meta.permissions || existing?.permissions || ROLE_DEFAULT_PERMISSIONS[role];
-
-  return {
-    id: sbUser.id || existing?.id || `usr-${Date.now()}`,
-    empId,
-    name,
-    email: sbUser.email || email,
-    phone: meta.phone || existing?.phone || '',
-    role,
-    department,
-    assignedWarehouseIds,
-    assignedClientIds,
-    permissions,
-    status: existing?.status || 'Active',
-    mustChangePassword:
-      meta.mustChangePassword !== undefined
-        ? Boolean(meta.mustChangePassword)
-        : Boolean(existing?.mustChangePassword),
-    authProvider: 'supabase',
-    lastLoginAt: new Date().toISOString(),
-  };
-}
-
-/**
  * Updates the logged-in user's password and clears the mustChangePassword flag.
  */
 export async function updateCurrentUserPassword(newPassword: string): Promise<{ success: boolean; error?: string }> {
@@ -627,11 +552,4 @@ export async function adminResetUserPassword({
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to reset user password.' };
   }
-}
-
-export interface AuthResponse {
-  success: boolean;
-  user?: User;
-  session?: Session | null;
-  error?: string;
 }

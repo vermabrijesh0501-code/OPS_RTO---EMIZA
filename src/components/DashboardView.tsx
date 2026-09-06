@@ -9,16 +9,10 @@ import {
   ChevronLeft,
   Plus,
   QrCode,
-  ArrowRight,
   TrendingUp,
   Activity,
-  Layers,
   ChevronRight,
   Filter,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Building2,
   Boxes,
   Users,
   Radio,
@@ -51,9 +45,9 @@ import {
 } from '../types';
 import { ActiveTab } from './Sidebar';
 
-export type DateFilterOption = 'today' | 'yesterday' | 'last_7_days' | 'custom';
+type DateFilterOption = 'today' | 'yesterday' | 'last_7_days' | 'custom';
 
-export interface DashboardViewProps {
+interface DashboardViewProps {
   warehouse: Warehouse;
   allWarehouses?: Warehouse[];
   companies?: Company[];
