@@ -12,8 +12,6 @@ import {
   ReturnBatch,
   ScannedReturnItem,
   ActivityLog,
-  AuditorDevice,
-  AuditRecord,
   SupabaseConfig,
   ActiveDeviceSession,
   AuthSessionData,
@@ -33,13 +31,108 @@ import {
   initialReturnBatches,
   initialScannedItems,
   initialActivityLogs,
-  initialAuditorDevices,
-  initialAuditRecords,
   initialSupabaseConfig,
   initialActiveDevices,
 } from '../mockData';
 import { SyncService } from './syncService';
 import { queueMasterPush } from './masterSync';
+
+export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): ReturnBatch[] {
+  const result: ReturnBatch[] = [];
+  const idToIndex = new Map<string, number>();
+  const batchNumToIndex = new Map<string, number>();
+
+  const addOrUpdate = (b: ReturnBatch) => {
+    if (!b) return;
+    const idKey = (b.id || '').trim();
+    const numKey = (b.batchNumber || '').trim();
+
+    let targetIdx = -1;
+    if (idKey && idToIndex.has(idKey)) {
+      targetIdx = idToIndex.get(idKey)!;
+    } else if (numKey && batchNumToIndex.has(numKey)) {
+      targetIdx = batchNumToIndex.get(numKey)!;
+    }
+
+    if (targetIdx >= 0) {
+      const existingItem = result[targetIdx];
+      const merged: ReturnBatch = {
+        ...existingItem,
+        ...b,
+        id: existingItem.id || b.id,
+        batchNumber: existingItem.batchNumber || b.batchNumber,
+        totalScanned: Math.max(existingItem.totalScanned || 0, b.totalScanned || 0),
+        status: b.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+      };
+      result[targetIdx] = merged;
+      if (idKey) idToIndex.set(idKey, targetIdx);
+      if (numKey) batchNumToIndex.set(numKey, targetIdx);
+      if (merged.id) idToIndex.set(merged.id, targetIdx);
+      if (merged.batchNumber) batchNumToIndex.set(merged.batchNumber, targetIdx);
+    } else {
+      const idx = result.length;
+      result.push({ ...b });
+      if (idKey) idToIndex.set(idKey, idx);
+      if (numKey) batchNumToIndex.set(numKey, idx);
+    }
+  };
+
+  for (const b of existing) addOrUpdate(b);
+  for (const b of incoming) addOrUpdate(b);
+
+  return result.sort((a, b) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
+export function mergeScannedItems(existing: ScannedReturnItem[], incoming: ScannedReturnItem[]): ScannedReturnItem[] {
+  const result: ScannedReturnItem[] = [];
+  const idToIndex = new Map<string, number>();
+  const trackToIndex = new Map<string, number>();
+
+  const addOrUpdate = (item: ScannedReturnItem) => {
+    if (!item) return;
+    const idKey = (item.id || '').trim();
+    const trackNum = (item.trackingNumber || (item as any).awbNumber || (item as any).barcode || '').trim().toUpperCase();
+    const batchKey = (item.batchId || (item as any).batchNumber || '').trim();
+    const compositeKey = trackNum ? (batchKey ? `${batchKey}::${trackNum}` : trackNum) : '';
+
+    let targetIdx = -1;
+    if (idKey && idToIndex.has(idKey)) {
+      targetIdx = idToIndex.get(idKey)!;
+    } else if (compositeKey && trackToIndex.has(compositeKey)) {
+      targetIdx = trackToIndex.get(compositeKey)!;
+    } else if (trackNum && trackToIndex.has(trackNum)) {
+      targetIdx = trackToIndex.get(trackNum)!;
+    }
+
+    if (targetIdx >= 0) {
+      const prev = result[targetIdx];
+      const merged: ScannedReturnItem = {
+        ...prev,
+        ...item,
+        id: prev.id || item.id,
+      };
+      result[targetIdx] = merged;
+      if (idKey) idToIndex.set(idKey, targetIdx);
+      if (compositeKey) trackToIndex.set(compositeKey, targetIdx);
+      if (trackNum) trackToIndex.set(trackNum, targetIdx);
+    } else {
+      const idx = result.length;
+      result.push({ ...item });
+      if (idKey) idToIndex.set(idKey, idx);
+      if (compositeKey) trackToIndex.set(compositeKey, idx);
+      if (trackNum) trackToIndex.set(trackNum, idx);
+    }
+  };
+
+  for (const item of existing) addOrUpdate(item);
+  for (const item of incoming) addOrUpdate(item);
+
+  return result.sort((a, b) =>
+    new Date(b.scannedAt || 0).getTime() - new Date(a.scannedAt || 0).getTime()
+  );
+}
 
 const STORAGE_KEYS = {
   COMPANIES: 'emiza_companies_v3',
@@ -56,9 +149,6 @@ const STORAGE_KEYS = {
   GATE_ENTRIES: 'emiza_gate_entries_v3',
   RETURN_BATCHES: 'emiza_return_batches_v3',
   SCANNED_ITEMS: 'emiza_scanned_items_v3',
-  AUDITOR_DEVICES: 'emiza_auditor_devices_v3',
-  AUDIT_RECORDS: 'emiza_audit_records_v3',
-  ACTIVE_AUDITOR_ID: 'emiza_active_auditor_id_v3',
   LOGS: 'emiza_logs_v3',
   SUPABASE_CONFIG: 'emiza_supabase_config_v3',
   AUTH_SESSION: 'emiza_auth_session_v3',
@@ -295,30 +385,6 @@ export const StorageService = {
     return updated;
   },
 
-  getAuditorDevices: (): AuditorDevice[] => loadItem(STORAGE_KEYS.AUDITOR_DEVICES, initialAuditorDevices),
-  saveAuditorDevices: (data: AuditorDevice[]) => saveItem(STORAGE_KEYS.AUDITOR_DEVICES, data),
-
-  getActiveAuditorId: (): string => loadItem(STORAGE_KEYS.ACTIVE_AUDITOR_ID, 'AUD-01'),
-  saveActiveAuditorId: (id: string) => saveItem(STORAGE_KEYS.ACTIVE_AUDITOR_ID, id),
-
-  getAuditRecords: (): AuditRecord[] => loadItem(STORAGE_KEYS.AUDIT_RECORDS, initialAuditRecords),
-  saveAuditRecords: (data: AuditRecord[], broadcast = true) => {
-    saveItem(STORAGE_KEYS.AUDIT_RECORDS, data);
-    if (broadcast) SyncService.broadcast('AUDIT_RECORD_ADDED', { allAuditRecords: data });
-  },
-  addAuditRecord: (record: Omit<AuditRecord, 'id' | 'scannedAt'>): AuditRecord => {
-    const current = StorageService.getAuditRecords();
-    const newRecord: AuditRecord = {
-      ...record,
-      id: `aud-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      scannedAt: new Date().toISOString(),
-    };
-    const updated = [newRecord, ...current];
-    saveItem(STORAGE_KEYS.AUDIT_RECORDS, updated);
-    SyncService.broadcast('AUDIT_RECORD_ADDED', { record: newRecord, allAuditRecords: updated });
-    return newRecord;
-  },
-
   getActivityLogs: (): ActivityLog[] => loadItem(STORAGE_KEYS.LOGS, initialActivityLogs),
   addActivityLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => {
     const logs = StorageService.getActivityLogs();
@@ -334,12 +400,31 @@ export const StorageService = {
   },
 
   // Apply full authoritative remote server store to local cache
-  applyRemoteStore: (remoteStore: any) => {
-    if (!remoteStore || typeof remoteStore !== 'object') return;
+  applyRemoteStore: (remoteStore: any): { batches: ReturnBatch[]; scannedItems: ScannedReturnItem[]; gateEntries: InwardGateEntry[] } => {
+    let mergedBatches = StorageService.getReturnBatches();
+    let mergedScannedItems = StorageService.getScannedItems();
+    let mergedGateEntries = StorageService.getGateEntries();
+
+    if (!remoteStore || typeof remoteStore !== 'object') {
+      return { batches: mergedBatches, scannedItems: mergedScannedItems, gateEntries: mergedGateEntries };
+    }
+
     try {
-      if (Array.isArray(remoteStore.gateEntries)) saveItem(STORAGE_KEYS.GATE_ENTRIES, remoteStore.gateEntries);
-      if (Array.isArray(remoteStore.batches)) saveItem(STORAGE_KEYS.RETURN_BATCHES, remoteStore.batches);
-      if (Array.isArray(remoteStore.scannedItems)) saveItem(STORAGE_KEYS.SCANNED_ITEMS, remoteStore.scannedItems);
+      if (Array.isArray(remoteStore.gateEntries)) {
+        const local = StorageService.getGateEntries();
+        mergedGateEntries = remoteStore.gateEntries.length > 0 ? remoteStore.gateEntries : local;
+        saveItem(STORAGE_KEYS.GATE_ENTRIES, mergedGateEntries);
+      }
+      if (Array.isArray(remoteStore.batches)) {
+        const local = StorageService.getReturnBatches();
+        mergedBatches = mergeBatches(local, remoteStore.batches);
+        saveItem(STORAGE_KEYS.RETURN_BATCHES, mergedBatches);
+      }
+      if (Array.isArray(remoteStore.scannedItems)) {
+        const local = StorageService.getScannedItems();
+        mergedScannedItems = mergeScannedItems(local, remoteStore.scannedItems);
+        saveItem(STORAGE_KEYS.SCANNED_ITEMS, mergedScannedItems);
+      }
       if (Array.isArray(remoteStore.companies)) saveItem(STORAGE_KEYS.COMPANIES, remoteStore.companies);
       if (Array.isArray(remoteStore.warehouses)) saveItem(STORAGE_KEYS.WAREHOUSES, remoteStore.warehouses);
       if (Array.isArray(remoteStore.clients)) saveItem(STORAGE_KEYS.CLIENTS, remoteStore.clients);
@@ -350,11 +435,15 @@ export const StorageService = {
       if (Array.isArray(remoteStore.returnReasons)) saveItem(STORAGE_KEYS.RETURN_REASONS, remoteStore.returnReasons);
       if (Array.isArray(remoteStore.users)) saveItem(STORAGE_KEYS.USERS, remoteStore.users);
       if (Array.isArray(remoteStore.activityLogs)) saveItem(STORAGE_KEYS.LOGS, remoteStore.activityLogs);
-      if (Array.isArray(remoteStore.auditRecords)) saveItem(STORAGE_KEYS.AUDIT_RECORDS, remoteStore.auditRecords);
-      if (Array.isArray(remoteStore.auditorDevices)) saveItem(STORAGE_KEYS.AUDITOR_DEVICES, remoteStore.auditorDevices);
     } catch (e) {
       console.warn('[StorageService] Error applying remote store:', e);
     }
+
+    return {
+      batches: mergedBatches,
+      scannedItems: mergedScannedItems,
+      gateEntries: mergedGateEntries,
+    };
   },
 
   // Silently persist a masters list received via realtime sync (no re-broadcast).

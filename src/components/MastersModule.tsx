@@ -58,7 +58,6 @@ const ALL_SYSTEM_MODULES: { id: ModuleId; label: string; description: string }[]
   { id: 'inward', label: 'Inward Gate Entry', description: 'Vehicle gate register, driver logging & box counts' },
   { id: 'returns_rto', label: 'RTO / B2C Returns', description: 'Batch scanning, 7 QC conditions & closed manifests' },
   { id: 'returns_b2b', label: 'B2B Returns', description: 'Box-level pallet inward & bulk invoice validation' },
-  { id: 'audit', label: 'Audit / Cycle Count', description: 'Barcode gun scanning, physical counting & variance' },
   { id: 'masters', label: 'Master Data & RBAC', description: 'Client, courier, SKU, facility & user access controls' },
   { id: 'reports', label: 'Reports & Manifest', description: 'PDF manifest downloads, CSV exports & courier reports' },
 ];

@@ -19,8 +19,6 @@ export type ActiveTab =
   | 'grn'
   | 'returns_rto'
   | 'returns_b2b'
-  | 'inventory'
-  | 'audit'
   | 'clients'
   | 'couriers'
   | 'locations'
@@ -36,7 +34,6 @@ interface SidebarProps {
   onSelectTab: (tab: ActiveTab) => void;
   openBatchCount: number;
   pendingGateEntriesCount: number;
-  auditCount?: number;
   activeWarehouseCode?: string;
   activeWarehouseName?: string;
   currentUser?: User;
@@ -51,7 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   openBatchCount,
   pendingGateEntriesCount,
-  auditCount = 0,
   currentUser,
   onLogout,
 }) => {
@@ -77,13 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: RotateCcw,
       badge: openBatchCount > 0 ? String(openBatchCount) : null,
       badgeBg: '#8B5CF6',
-    },
-    {
-      id: 'inventory' as ActiveTab,
-      label: 'Audit & Guns',
-      icon: Scan,
-      badge: auditCount > 0 ? String(auditCount) : null,
-      badgeBg: '#14B8A6',
     },
     {
       id: 'masters' as ActiveTab,
@@ -119,7 +108,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isItemActive = (itemId: ActiveTab): boolean => {
     if (activeTab === itemId) return true;
     if (activeTab === 'inward' && itemId === 'grn') return false;
-    if (activeTab === 'audit' && itemId === 'inventory') return true;
     if (activeTab === 'user_management' && itemId === 'user_management') return true;
     if (
       activeTab === 'masters' &&

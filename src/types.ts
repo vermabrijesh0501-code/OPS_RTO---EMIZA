@@ -38,8 +38,6 @@ export type ModuleId =
   | 'grn'
   | 'returns_rto'
   | 'returns_b2b'
-  | 'inventory'
-  | 'audit'
   | 'clients'
   | 'couriers'
   | 'locations'
@@ -334,42 +332,8 @@ export interface ActivityLog {
   userName: string;
   userRole: UserRole;
   action: string;
-  module: 'Inward' | 'RTO' | 'B2B' | 'Masters' | 'Auth' | 'System' | 'Audit';
+  module: 'Inward' | 'RTO' | 'B2B' | 'Masters' | 'Auth' | 'System';
   details: string;
-}
-
-export type AuditScanMode = 'WITH_BATCH' | 'WITHOUT_BATCH';
-
-export interface AuditorDevice {
-  id: string; // e.g. 'AUD-01'
-  name: string; // e.g. 'Auditor Gun 01 (Bay A)'
-  assignedPerson: string;
-  zone: string;
-  status: 'Active' | 'Idle' | 'Offline';
-  batteryPercent?: number;
-  lastActiveAt?: string;
-}
-
-export interface AuditRecord {
-  id: string;
-  auditorDeviceId: string; // e.g. 'AUD-01'
-  auditorName: string;
-  clientId: string;
-  clientName: string;
-  mode: AuditScanMode;
-  skuCode: string;
-  eanBarcode: string;
-  productName: string;
-  location: string;
-  quantity: number;
-  // Batch details (for WITH_BATCH mode)
-  batchNumber?: string;
-  mfgDate?: string;
-  expDate?: string;
-  // QC and timestamp
-  qcStatus?: 'Good' | 'Damage' | 'Expired' | 'QC Check Required';
-  scannedAt: string;
-  notes?: string;
 }
 
 export interface ActiveDeviceSession {

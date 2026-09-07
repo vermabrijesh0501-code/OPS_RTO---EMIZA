@@ -4,7 +4,7 @@ import {
   LayoutDashboard,
   Truck,
   ScanLine,
-  ClipboardCheck,
+  BarChart3,
 } from 'lucide-react';
 import {
   User,
@@ -13,14 +13,12 @@ import {
   ReturnBatch,
   ScannedReturnItem,
   ReturnRemarkType,
-  AuditorDevice,
-  AuditRecord,
   SupabaseConfig,
   Phase1SecurityData,
   Phase2UnloadingData,
   Phase3HandoverData,
 } from './types';
-import { StorageService } from './services/storage';
+import { StorageService, mergeBatches, mergeScannedItems } from './services/storage';
 import { SyncService } from './services/syncService';
 import { startRealtimeSync } from './services/realtimeSync';
 import { DBService } from './services/dbService';
@@ -45,7 +43,6 @@ const DashboardView = React.lazy(() => import('./components/DashboardView').then
 const MobileDashboard = React.lazy(() => import('./components/MobileDashboard').then(m => ({ default: m.MobileDashboard })));
 const InwardModule = React.lazy(() => import('./components/InwardModule').then(m => ({ default: m.InwardModule })));
 const ReturnsModule = React.lazy(() => import('./components/ReturnsModule').then(m => ({ default: m.ReturnsModule })));
-const AuditModule = React.lazy(() => import('./components/AuditModule').then(m => ({ default: m.AuditModule })));
 const MastersModule = React.lazy(() => import('./components/MastersModule').then(m => ({ default: m.MastersModule })));
 const ReportsModule = React.lazy(() => import('./components/ReportsModule').then(m => ({ default: m.ReportsModule })));
 const SettingsModule = React.lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
@@ -75,10 +72,6 @@ const tabToPath = (tab: ActiveTab): string => {
       return '/returns/rto';
     case 'returns_b2b':
       return '/returns/b2b';
-    case 'inventory':
-      return '/inventory';
-    case 'audit':
-      return '/audit';
     case 'clients':
       return '/clients';
     case 'couriers':
@@ -109,8 +102,6 @@ const pathToTab = (pathname: string): ActiveTab => {
   if (normalized === '/grn') return 'grn';
   if (normalized === '/returns' || normalized === '/returns/rto' || normalized === '/returns-rto' || normalized === '/rto') return 'returns_rto';
   if (normalized === '/returns/b2b' || normalized === '/returns-b2b' || normalized === '/b2b') return 'returns_b2b';
-  if (normalized === '/inventory') return 'inventory';
-  if (normalized === '/audit') return 'audit';
   if (normalized === '/clients') return 'clients';
   if (normalized === '/couriers') return 'couriers';
   if (normalized === '/locations') return 'locations';
@@ -150,9 +141,6 @@ export default function App() {
   const [gateEntries, setGateEntries] = useState<InwardGateEntry[]>(StorageService.getGateEntries());
   const [batches, setBatches] = useState<ReturnBatch[]>(StorageService.getReturnBatches());
   const [scannedItems, setScannedItems] = useState<ScannedReturnItem[]>(StorageService.getScannedItems());
-  const [auditorDevices, setAuditorDevices] = useState<AuditorDevice[]>(StorageService.getAuditorDevices());
-  const [activeAuditorId, setActiveAuditorId] = useState<string>(StorageService.getActiveAuditorId());
-  const [auditRecords, setAuditRecords] = useState<AuditRecord[]>(StorageService.getAuditRecords());
   const [logs, setLogs] = useState(StorageService.getActivityLogs());
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(StorageService.getSupabaseConfig());
 
@@ -178,16 +166,16 @@ export default function App() {
     }
   }, [location.pathname]);
 
-  // Fetch initial cloud/server state
+  // Fetch initial cloud/server state with bidirectional merge
   useEffect(() => {
     fetch('/api/sync/state')
       .then(res => res.json())
       .then(json => {
         if (json?.data) {
-          StorageService.applyRemoteStore(json.data);
-          if (Array.isArray(json.data.batches)) setBatches(json.data.batches);
-          if (Array.isArray(json.data.scannedItems)) setScannedItems(json.data.scannedItems);
-          if (Array.isArray(json.data.gateEntries)) setGateEntries(json.data.gateEntries);
+          const merged = StorageService.applyRemoteStore(json.data);
+          if (merged?.batches) setBatches(merged.batches);
+          if (merged?.scannedItems) setScannedItems(merged.scannedItems);
+          if (merged?.gateEntries) setGateEntries(merged.gateEntries);
           if (Array.isArray(json.data.companies)) setCompanies(json.data.companies);
           if (Array.isArray(json.data.warehouses)) setWarehouses(json.data.warehouses);
           if (Array.isArray(json.data.clients)) setClients(json.data.clients);
@@ -198,13 +186,36 @@ export default function App() {
           if (Array.isArray(json.data.returnReasons)) setReturnReasons(json.data.returnReasons);
           if (Array.isArray(json.data.users)) setUsers(json.data.users);
           if (Array.isArray(json.data.activityLogs)) setLogs(json.data.activityLogs);
-          if (Array.isArray(json.data.auditRecords)) setAuditRecords(json.data.auditRecords);
+
+          // If local client had more data than remote server, re-hydrate server
+          const localBatchesCount = merged.batches.length;
+          const serverBatchesCount = Array.isArray(json.data.batches) ? json.data.batches.length : 0;
+          const localScansCount = merged.scannedItems.length;
+          const serverScansCount = Array.isArray(json.data.scannedItems) ? json.data.scannedItems.length : 0;
+          if (localBatchesCount > serverBatchesCount || localScansCount > serverScansCount) {
+            fetch('/api/sync/mutate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'SYNC_ALL',
+                payload: {
+                  allBatches: merged.batches,
+                  allScannedItems: merged.scannedItems,
+                  allGateEntries: merged.gateEntries,
+                },
+              }),
+            }).catch(() => {});
+          }
         }
       })
       .catch(() => {
         DBService.fetchAllData().then(data => {
-          if (data.batches && data.batches.length > 0) setBatches(data.batches);
-          if (data.scannedItems && data.scannedItems.length > 0) setScannedItems(data.scannedItems);
+          if (data.batches && data.batches.length > 0) {
+            setBatches(prev => mergeBatches(prev, data.batches));
+          }
+          if (data.scannedItems && data.scannedItems.length > 0) {
+            setScannedItems(prev => mergeScannedItems(prev, data.scannedItems));
+          }
           if (data.gateEntries && data.gateEntries.length > 0) setGateEntries(data.gateEntries);
           if (data.logs && data.logs.length > 0) setLogs(data.logs);
         });
@@ -348,14 +359,20 @@ export default function App() {
     const unsubscribe = SyncService.subscribe(event => {
       const { type, payload } = event;
 
-      // If full array state is passed in payload, apply immediately (silent save to avoid re-broadcast loop)
+      // If full array state is passed in payload, merge safely (silent save to avoid re-broadcast loop)
       if (payload?.allScannedItems) {
-        setScannedItems(payload.allScannedItems);
-        StorageService.saveScannedItems(payload.allScannedItems, false);
+        setScannedItems(prev => {
+          const merged = mergeScannedItems(prev, payload.allScannedItems);
+          StorageService.saveScannedItems(merged, false);
+          return merged;
+        });
       }
       if (payload?.allBatches) {
-        setBatches(payload.allBatches);
-        StorageService.saveReturnBatches(payload.allBatches, false);
+        setBatches(prev => {
+          const merged = mergeBatches(prev, payload.allBatches);
+          StorageService.saveReturnBatches(merged, false);
+          return merged;
+        });
       }
       if (payload?.allGateEntries) {
         setGateEntries(payload.allGateEntries);
@@ -369,15 +386,13 @@ export default function App() {
         case 'ITEM_SCANNED': {
           if (payload?.item && !payload?.allScannedItems) {
             setScannedItems(prev => {
-              const exists = prev.some(i => i.id === payload.item.id || (i.batchId === payload.item.batchId && i.trackingNumber === payload.item.trackingNumber));
-              if (exists) return prev;
-              const next = [payload.item, ...prev];
+              const next = mergeScannedItems(prev, [payload.item]);
               StorageService.saveScannedItems(next, false);
               return next;
             });
             if (payload?.batch) {
               setBatches(prev => {
-                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                const next = mergeBatches(prev, [payload.batch]);
                 StorageService.saveReturnBatches(next, false);
                 return next;
               });
@@ -395,7 +410,7 @@ export default function App() {
             });
             if (payload?.batch) {
               setBatches(prev => {
-                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                const next = mergeBatches(prev, [payload.batch]);
                 StorageService.saveReturnBatches(next, false);
                 return next;
               });
@@ -413,7 +428,7 @@ export default function App() {
             });
             if (payload?.batch) {
               setBatches(prev => {
-                const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+                const next = mergeBatches(prev, [payload.batch]);
                 StorageService.saveReturnBatches(next, false);
                 return next;
               });
@@ -425,8 +440,7 @@ export default function App() {
         case 'BATCH_CREATED': {
           if (payload?.batch && !payload?.allBatches) {
             setBatches(prev => {
-              if (prev.some(b => b.id === payload.batch.id)) return prev;
-              const next = [payload.batch, ...prev];
+              const next = mergeBatches(prev, [payload.batch]);
               StorageService.saveReturnBatches(next, false);
               return next;
             });
@@ -438,7 +452,7 @@ export default function App() {
         case 'BATCH_CLOSED': {
           if (payload?.batch && !payload?.allBatches) {
             setBatches(prev => {
-              const next = prev.map(b => b.id === payload.batch.id ? payload.batch : b);
+              const next = mergeBatches(prev, [payload.batch]);
               StorageService.saveReturnBatches(next, false);
               return next;
             });
@@ -522,18 +536,6 @@ export default function App() {
           break;
         }
 
-        case 'AUDIT_RECORD_ADDED':
-        case 'AUDIT_RECORD_DELETED': {
-          if (payload?.allAuditRecords) {
-            setAuditRecords(payload.allAuditRecords);
-          } else if (payload?.record) {
-            setAuditRecords(prev => [payload.record, ...prev.filter(r => r.id !== payload.record.id)]);
-          } else {
-            setAuditRecords(StorageService.getAuditRecords());
-          }
-          break;
-        }
-
         case 'USER_UPDATED':
         case 'DEVICE_SESSION_UPDATED':
         case 'DEVICE_HEARTBEAT':
@@ -543,10 +545,10 @@ export default function App() {
         case 'SYNC_ALL':
         case 'STORAGE_SYNC': {
           if (payload && typeof payload === 'object') {
-            StorageService.applyRemoteStore(payload);
-            if (Array.isArray(payload.batches)) setBatches(payload.batches);
-            if (Array.isArray(payload.scannedItems)) setScannedItems(payload.scannedItems);
-            if (Array.isArray(payload.gateEntries)) setGateEntries(payload.gateEntries);
+            const merged = StorageService.applyRemoteStore(payload);
+            if (merged?.batches) setBatches(merged.batches);
+            if (merged?.scannedItems) setScannedItems(merged.scannedItems);
+            if (merged?.gateEntries) setGateEntries(merged.gateEntries);
             if (Array.isArray(payload.companies)) setCompanies(payload.companies);
             if (Array.isArray(payload.warehouses)) setWarehouses(payload.warehouses);
             if (Array.isArray(payload.clients)) setClients(payload.clients);
@@ -557,11 +559,10 @@ export default function App() {
             if (Array.isArray(payload.returnReasons)) setReturnReasons(payload.returnReasons);
             if (Array.isArray(payload.users)) setUsers(payload.users);
             if (Array.isArray(payload.activityLogs)) setLogs(payload.activityLogs);
-            if (Array.isArray(payload.auditRecords)) setAuditRecords(payload.auditRecords);
           } else {
             DBService.fetchAllData().then(data => {
-              if (data.batches) setBatches(data.batches);
-              if (data.scannedItems) setScannedItems(data.scannedItems);
+              if (data.batches) setBatches(prev => mergeBatches(prev, data.batches));
+              if (data.scannedItems) setScannedItems(prev => mergeScannedItems(prev, data.scannedItems));
               if (data.gateEntries) setGateEntries(data.gateEntries);
               if (data.logs) setLogs(data.logs);
             });
@@ -779,15 +780,23 @@ export default function App() {
     const client = clients.find(c => c.id === batchData.clientId);
     const clientRef = (client?.code || 'ACC').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase();
 
-    // Calculate serial number for this client (0101, 0102, ...)
-    const clientExistingBatches = batches.filter(b => b.clientId === batchData.clientId);
-    const serialNumber = String(101 + clientExistingBatches.length).padStart(4, '0');
-
+    // Calculate next unique serial number for this client (0101, 0102, ...)
+    const clientPrefix = `${dayStr}-${clientRef}-`;
+    const matchingBatches = batches.filter(b => (b.batchNumber || '').startsWith(clientPrefix));
+    let nextNum = 101;
+    matchingBatches.forEach(b => {
+      const parts = b.batchNumber.split('-');
+      const numPart = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(numPart) && numPart >= nextNum) {
+        nextNum = numPart + 1;
+      }
+    });
+    const serialNumber = String(nextNum).padStart(4, '0');
     const batchNumber = `${dayStr}-${clientRef}-${serialNumber}`;
 
     const newBatch: ReturnBatch = {
       ...batchData,
-      id: `batch-${Date.now()}`,
+      id: `batch-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       batchNumber,
       totalScanned: 0,
       remarksBreakdown: {
@@ -802,7 +811,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
 
-    const updated = [newBatch, ...batches];
+    const updated = mergeBatches(batches, [newBatch]);
     setBatches(updated);
 
     DBService.createBatch(newBatch, updated, {
@@ -1046,62 +1055,6 @@ export default function App() {
       });
     }
     setLogs(StorageService.getActivityLogs());
-  };
-
-  // Audit Guns & Physical Inventory Management
-  const handleSelectAuditorId = (id: string) => {
-    setActiveAuditorId(id);
-    StorageService.saveActiveAuditorId(id);
-  };
-
-  const handleAddAuditRecord = (record: Omit<AuditRecord, 'id' | 'scannedAt'>): AuditRecord => {
-    const newRecord = StorageService.addAuditRecord(record);
-    setAuditRecords(StorageService.getAuditRecords());
-
-    setAuditorDevices(prev =>
-      prev.map(d =>
-        d.id === record.auditorDeviceId
-          ? { ...d, lastActiveAt: new Date().toISOString(), status: 'Active' }
-          : d
-      )
-    );
-
-    StorageService.addActivityLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      action: 'Audited Inventory SKU',
-      module: 'Audit',
-      details: `Gun ${record.auditorDeviceId} scanned ${record.quantity} units of SKU ${record.skuCode} at ${record.location}`,
-    });
-    setLogs(StorageService.getActivityLogs());
-
-    return newRecord;
-  };
-
-  const handleDeleteAuditRecord = (id: string) => {
-    const current = StorageService.getAuditRecords();
-    const target = current.find(r => r.id === id);
-    const updated = current.filter(r => r.id !== id);
-    StorageService.saveAuditRecords(updated);
-    setAuditRecords(updated);
-
-    if (target) {
-      StorageService.addActivityLog({
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
-        action: 'Deleted Audit Scan Record',
-        module: 'Audit',
-        details: `Deleted scan record for SKU ${target.skuCode} at ${target.location}`,
-      });
-      setLogs(StorageService.getActivityLogs());
-    }
-  };
-
-  const handleUpdateAuditorDevices = (devices: AuditorDevice[]) => {
-    setAuditorDevices(devices);
-    StorageService.saveAuditorDevices(devices);
   };
 
   // Master Data Add/Update/Delete/Toggle Handlers
@@ -1421,8 +1374,6 @@ export default function App() {
             setIsNewGateEntryModalOpen(true);
           } else if (viewTab === 'returns_rto' || viewTab === 'returns_b2b') {
             setIsNewBatchModalOpen(true);
-          } else if (viewTab === 'inventory' || viewTab === 'audit') {
-            handleSelectTab('inventory');
           } else {
             setIsNewGateEntryModalOpen(true);
           }
@@ -1437,7 +1388,6 @@ export default function App() {
           onSelectTab={handleSelectTab}
           openBatchCount={openBatchCount}
           pendingGateEntriesCount={pendingGateEntriesCount}
-          auditCount={auditRecords.length}
           activeWarehouseCode={activeWarehouse?.code || 'WH-MAIN-01'}
           activeWarehouseName={activeWarehouse?.name || 'Bhiwandi Central Hub'}
           currentUser={currentUser}
@@ -1468,8 +1418,6 @@ export default function App() {
                   gateEntries={gateEntries}
                   batches={batches}
                   scannedItems={scannedItems}
-                  auditorDevices={auditorDevices}
-                  auditRecords={auditRecords}
                   activeDevices={StorageService.getActiveDevices()}
                   users={users}
                   logs={logs}
@@ -1516,20 +1464,6 @@ export default function App() {
                 onCloseBatch={handleCloseBatch}
                 isOpenCreateModal={isNewBatchModalOpen}
                 onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}
-              />
-            )}
-
-            {(viewTab === 'audit' || viewTab === 'inventory') && (
-              <AuditModule
-                clients={clients}
-                skus={skus}
-                auditorDevices={auditorDevices}
-                auditRecords={auditRecords}
-                activeAuditorId={activeAuditorId}
-                onSelectAuditorId={handleSelectAuditorId}
-                onAddAuditRecord={handleAddAuditRecord}
-                onDeleteAuditRecord={handleDeleteAuditRecord}
-                onUpdateAuditorDevices={handleUpdateAuditorDevices}
               />
             )}
 
@@ -1626,11 +1560,11 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => navigate('/audit')}
-          className={location.pathname === '/audit' || location.pathname === '/inventory' ? 'active' : ''}
+          onClick={() => navigate('/reports')}
+          className={location.pathname === '/reports' ? 'active' : ''}
         >
-          <ClipboardCheck />
-          <span>Audit</span>
+          <BarChart3 />
+          <span>Reports</span>
         </button>
       </div>
     </div>
@@ -1733,20 +1667,12 @@ export default function App() {
 
       <Route
         path="/inventory"
-        element={
-          <ProtectedRoute>
-            {renderAppLayout('inventory')}
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/dashboard" replace />}
       />
 
       <Route
         path="/audit"
-        element={
-          <ProtectedRoute>
-            {renderAppLayout('audit')}
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/dashboard" replace />}
       />
 
       <Route

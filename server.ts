@@ -20,8 +20,6 @@ import {
   initialReturnBatches,
   initialScannedItems,
   initialActivityLogs,
-  initialAuditorDevices,
-  initialAuditRecords,
   initialActiveDevices,
 } from './src/mockData';
 
@@ -44,8 +42,6 @@ interface ServerStore {
   returnReasons: any[];
   users: any[];
   activityLogs: any[];
-  auditRecords: any[];
-  auditorDevices: any[];
   activeDevices: any[];
   lastUpdated: string;
 }
@@ -65,8 +61,6 @@ function getDefaultStore(): ServerStore {
     returnReasons: initialReturnReasons,
     users: initialUsers,
     activityLogs: initialActivityLogs,
-    auditRecords: initialAuditRecords,
-    auditorDevices: initialAuditorDevices,
     activeDevices: initialActiveDevices,
     lastUpdated: new Date().toISOString(),
   };
@@ -93,19 +87,112 @@ function loadStoreFromDisk(): ServerStore {
   return def;
 }
 
-let saveTimer: NodeJS.Timeout | null = null;
 function saveStoreToDisk(store: ServerStore): void {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[Server] Error saving store to disk:', err);
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-  }, 200);
+    fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[Server] Error saving store to disk:', err);
+  }
+}
+
+function mergeBatches(existing: any[], incoming: any[]): any[] {
+  const result: any[] = [];
+  const idToIndex = new Map<string, number>();
+  const batchNumToIndex = new Map<string, number>();
+
+  const addOrUpdate = (b: any) => {
+    if (!b) return;
+    const idKey = (b.id || '').trim();
+    const numKey = (b.batchNumber || '').trim();
+
+    let targetIdx = -1;
+    if (idKey && idToIndex.has(idKey)) {
+      targetIdx = idToIndex.get(idKey)!;
+    } else if (numKey && batchNumToIndex.has(numKey)) {
+      targetIdx = batchNumToIndex.get(numKey)!;
+    }
+
+    if (targetIdx >= 0) {
+      const existingItem = result[targetIdx];
+      const merged = {
+        ...existingItem,
+        ...b,
+        id: existingItem.id || b.id,
+        batchNumber: existingItem.batchNumber || b.batchNumber,
+        totalScanned: Math.max(existingItem.totalScanned || 0, b.totalScanned || 0),
+        status: b.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+      };
+      result[targetIdx] = merged;
+      if (idKey) idToIndex.set(idKey, targetIdx);
+      if (numKey) batchNumToIndex.set(numKey, targetIdx);
+      if (merged.id) idToIndex.set(merged.id, targetIdx);
+      if (merged.batchNumber) batchNumToIndex.set(merged.batchNumber, targetIdx);
+    } else {
+      const idx = result.length;
+      result.push({ ...b });
+      if (idKey) idToIndex.set(idKey, idx);
+      if (numKey) batchNumToIndex.set(numKey, idx);
+    }
+  };
+
+  for (const b of existing) addOrUpdate(b);
+  for (const b of incoming) addOrUpdate(b);
+
+  return result.sort((a, b) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
+function mergeScannedItems(existing: any[], incoming: any[]): any[] {
+  const result: any[] = [];
+  const idToIndex = new Map<string, number>();
+  const trackToIndex = new Map<string, number>();
+
+  const addOrUpdate = (item: any) => {
+    if (!item) return;
+    const idKey = (item.id || '').trim();
+    const trackNum = (item.trackingNumber || item.awbNumber || (item as any).barcode || '').trim().toUpperCase();
+    const batchKey = (item.batchId || (item as any).batchNumber || '').trim();
+    const compositeKey = trackNum ? (batchKey ? `${batchKey}::${trackNum}` : trackNum) : '';
+
+    let targetIdx = -1;
+    if (idKey && idToIndex.has(idKey)) {
+      targetIdx = idToIndex.get(idKey)!;
+    } else if (compositeKey && trackToIndex.has(compositeKey)) {
+      targetIdx = trackToIndex.get(compositeKey)!;
+    } else if (trackNum && trackToIndex.has(trackNum)) {
+      targetIdx = trackToIndex.get(trackNum)!;
+    }
+
+    if (targetIdx >= 0) {
+      const prev = result[targetIdx];
+      const merged = {
+        ...prev,
+        ...item,
+        id: prev.id || item.id,
+      };
+      result[targetIdx] = merged;
+      if (idKey) idToIndex.set(idKey, targetIdx);
+      if (compositeKey) trackToIndex.set(compositeKey, targetIdx);
+      if (trackNum) trackToIndex.set(trackNum, targetIdx);
+    } else {
+      const idx = result.length;
+      result.push({ ...item });
+      if (idKey) idToIndex.set(idKey, idx);
+      if (compositeKey) trackToIndex.set(compositeKey, idx);
+      if (trackNum) trackToIndex.set(trackNum, idx);
+    }
+  };
+
+  for (const item of existing) addOrUpdate(item);
+  for (const item of incoming) addOrUpdate(item);
+
+  return result.sort((a, b) =>
+    new Date(b.scannedAt || 0).getTime() - new Date(a.scannedAt || 0).getTime()
+  );
 }
 
 const store: ServerStore = loadStoreFromDisk();
@@ -204,25 +291,20 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
     // 2. Return Batches
     case 'BATCH_CREATED': {
       if (payload?.batch) {
-        const exists = store.batches.some((b) => b.id === payload.batch.id);
-        if (!exists) {
-          store.batches = [payload.batch, ...store.batches];
-        }
+        store.batches = mergeBatches(store.batches, [payload.batch]);
       }
-      if (payload?.allBatches) {
-        store.batches = payload.allBatches;
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = mergeBatches(store.batches, payload.allBatches);
       }
       break;
     }
     case 'BATCH_UPDATED':
     case 'BATCH_CLOSED': {
       if (payload?.batch) {
-        store.batches = store.batches.map((b) =>
-          b.id === payload.batch.id ? { ...b, ...payload.batch } : b
-        );
+        store.batches = mergeBatches(store.batches, [payload.batch]);
       }
-      if (payload?.allBatches) {
-        store.batches = payload.allBatches;
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = mergeBatches(store.batches, payload.allBatches);
       }
       break;
     }
@@ -230,34 +312,38 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
     // 3. Scanned Items
     case 'ITEM_SCANNED': {
       if (payload?.item) {
-        const exists = store.scannedItems.some((i) => i.id === payload.item.id);
-        if (!exists) {
-          store.scannedItems = [payload.item, ...store.scannedItems];
-        }
+        store.scannedItems = mergeScannedItems(store.scannedItems, [payload.item]);
       }
       if (payload?.batch) {
-        store.batches = store.batches.map((b) =>
-          b.id === payload.batch.id ? { ...b, ...payload.batch } : b
-        );
+        store.batches = mergeBatches(store.batches, [payload.batch]);
       }
-      if (payload?.allScannedItems) {
-        store.scannedItems = payload.allScannedItems;
+      if (payload?.allScannedItems && Array.isArray(payload.allScannedItems)) {
+        store.scannedItems = mergeScannedItems(store.scannedItems, payload.allScannedItems);
+      }
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = mergeBatches(store.batches, payload.allBatches);
       }
       break;
     }
     case 'ITEM_UPDATED': {
       if (payload?.item) {
-        store.scannedItems = store.scannedItems.map((i) =>
-          i.id === (payload.itemId || payload.item.id) ? { ...i, ...payload.item } : i
-        );
+        const item = payload.item;
+        const itemId = payload.itemId || item.id;
+        const idx = store.scannedItems.findIndex(i => i.id === itemId);
+        if (idx >= 0) {
+          store.scannedItems[idx] = { ...store.scannedItems[idx], ...item };
+        } else {
+          store.scannedItems = mergeScannedItems(store.scannedItems, [item]);
+        }
       }
       if (payload?.batch) {
-        store.batches = store.batches.map((b) =>
-          b.id === payload.batch.id ? { ...b, ...payload.batch } : b
-        );
+        store.batches = mergeBatches(store.batches, [payload.batch]);
       }
-      if (payload?.allScannedItems) {
-        store.scannedItems = payload.allScannedItems;
+      if (payload?.allScannedItems && Array.isArray(payload.allScannedItems)) {
+        store.scannedItems = mergeScannedItems(store.scannedItems, payload.allScannedItems);
+      }
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = mergeBatches(store.batches, payload.allBatches);
       }
       break;
     }
@@ -266,11 +352,9 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
         store.scannedItems = store.scannedItems.filter((i) => i.id !== payload.itemId);
       }
       if (payload?.batch) {
-        store.batches = store.batches.map((b) =>
-          b.id === payload.batch.id ? { ...b, ...payload.batch } : b
-        );
+        store.batches = mergeBatches(store.batches, [payload.batch]);
       }
-      if (payload?.allScannedItems) {
+      if (payload?.allScannedItems && Array.isArray(payload.allScannedItems)) {
         store.scannedItems = payload.allScannedItems;
       }
       break;
@@ -340,32 +424,21 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
       break;
     }
 
-    // 6. Audit Records
-    case 'AUDIT_RECORD_ADDED': {
-      if (payload?.record) {
-        const exists = store.auditRecords.some((a) => a.id === payload.record.id);
-        if (!exists) {
-          store.auditRecords = [payload.record, ...store.auditRecords];
-        }
-      }
-      if (payload?.allAuditRecords) {
-        store.auditRecords = payload.allAuditRecords;
-      }
-      break;
-    }
-    case 'AUDIT_RECORD_DELETED': {
-      if (payload?.id) {
-        store.auditRecords = store.auditRecords.filter((a) => a.id !== payload.id);
-      }
-      if (payload?.allAuditRecords) {
-        store.auditRecords = payload.allAuditRecords;
-      }
-      break;
-    }
-
+    case 'SYNC_ALL':
     case 'SYNC_FULL_STATE': {
       if (payload?.store) {
-        Object.assign(store, payload.store);
+        if (payload.store.batches) store.batches = mergeBatches(store.batches, payload.store.batches);
+        if (payload.store.scannedItems) store.scannedItems = mergeScannedItems(store.scannedItems, payload.store.scannedItems);
+        if (payload.store.gateEntries) store.gateEntries = payload.store.gateEntries;
+      }
+      if (payload?.allBatches) {
+        store.batches = mergeBatches(store.batches, payload.allBatches);
+      }
+      if (payload?.allScannedItems) {
+        store.scannedItems = mergeScannedItems(store.scannedItems, payload.allScannedItems);
+      }
+      if (payload?.allGateEntries) {
+        store.gateEntries = payload.allGateEntries;
       }
       break;
     }

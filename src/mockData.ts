@@ -12,8 +12,6 @@ import {
   ReturnBatch,
   ScannedReturnItem,
   ActivityLog,
-  AuditorDevice,
-  AuditRecord,
   SupabaseConfig,
   ActiveDeviceSession,
 } from './types';
@@ -294,9 +292,6 @@ export const initialUsers: User[] = [
   },
 ];
 
-// Auditor Devices - dynamic list populated in real-time as scanner guns connect and scan on floor
-export const initialAuditorDevices: AuditorDevice[] = [];
-
 // Inward Gate entries - starts clean for real-time live gate entries
 export const initialInwardGateEntries: InwardGateEntry[] = [];
 
@@ -305,9 +300,6 @@ export const initialReturnBatches: ReturnBatch[] = [];
 
 // Scanned items - starts clean for real-time live item scanning
 export const initialScannedItems: ScannedReturnItem[] = [];
-
-// Initial Audit (Cycle Count) records across auditor guns - starts clean
-export const initialAuditRecords: AuditRecord[] = [];
 
 // Initial Activity Logs - starts clean
 export const initialActivityLogs: ActivityLog[] = [];

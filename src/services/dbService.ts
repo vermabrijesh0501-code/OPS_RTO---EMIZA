@@ -356,8 +356,8 @@ export const DBService = {
     logData?: Omit<ActivityLog, 'id' | 'timestamp'>
   ): Promise<void> {
     // 1. Save to local storage for immediate offline/cache availability
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
+    StorageService.saveScannedItems(allUpdatedItems, false);
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
 
     let createdLog: ActivityLog | undefined;
     if (logData) {
@@ -394,8 +394,8 @@ export const DBService = {
     allUpdatedBatches: ReturnBatch[],
     logData?: Omit<ActivityLog, 'id' | 'timestamp'>
   ): Promise<void> {
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
+    StorageService.saveScannedItems(allUpdatedItems, false);
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
 
     let createdLog: ActivityLog | undefined;
     if (logData) {
@@ -430,8 +430,8 @@ export const DBService = {
     allUpdatedBatches: ReturnBatch[],
     logData?: Omit<ActivityLog, 'id' | 'timestamp'>
   ): Promise<void> {
-    StorageService.saveScannedItems(allUpdatedItems);
-    StorageService.saveReturnBatches(allUpdatedBatches);
+    StorageService.saveScannedItems(allUpdatedItems, false);
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
 
     let createdLog: ActivityLog | undefined;
     if (logData) {
@@ -462,7 +462,7 @@ export const DBService = {
     allUpdatedBatches: ReturnBatch[],
     logData?: Omit<ActivityLog, 'id' | 'timestamp'>
   ): Promise<void> {
-    StorageService.saveReturnBatches(allUpdatedBatches);
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
 
     let createdLog: ActivityLog | undefined;
     if (logData) {
@@ -490,7 +490,7 @@ export const DBService = {
     allUpdatedBatches: ReturnBatch[],
     logData?: Omit<ActivityLog, 'id' | 'timestamp'>
   ): Promise<void> {
-    StorageService.saveReturnBatches(allUpdatedBatches);
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
 
     let createdLog: ActivityLog | undefined;
     if (logData) {

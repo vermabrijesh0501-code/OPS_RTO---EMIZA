@@ -38,8 +38,6 @@ import {
   Warehouse,
   Client,
   Company,
-  AuditorDevice,
-  AuditRecord,
   ActiveDeviceSession,
   User,
 } from '../types';
@@ -55,8 +53,6 @@ interface DashboardViewProps {
   gateEntries: InwardGateEntry[];
   batches: ReturnBatch[];
   scannedItems: ScannedReturnItem[];
-  auditorDevices: AuditorDevice[];
-  auditRecords: AuditRecord[];
   activeDevices?: ActiveDeviceSession[];
   users?: User[];
   logs: ActivityLog[];
@@ -92,8 +88,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   gateEntries = [],
   batches = [],
   scannedItems = [],
-  auditorDevices = [],
-  auditRecords = [],
   activeDevices = [],
   users = [],
   logs = [],
@@ -254,12 +248,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     );
   }, [scannedItems, batches, warehouse.id, isDateInFilter]);
 
-  const filteredAuditRecords = useMemo(() => {
-    return auditRecords.filter(
-      a => isDateInFilter(a.scannedAt || (a as any).timestamp)
-    );
-  }, [auditRecords, isDateInFilter]);
-
   // Helper to normalize condition key
   const getConditionKey = (item: ScannedReturnItem): string => {
     const raw = ((item.remark || (item as any).qcCondition || (item as any).qc_condition || '') as string).trim().toUpperCase();
@@ -294,13 +282,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const inwardVehiclesCount = filteredGateEntries.length;
     const totalBoxesUnloaded = filteredGateEntries.reduce((acc, g) => acc + (g.receivedBoxCount || 0), 0);
 
-    // Physical Cycle Count: Total Scanned Count + Active Device Login Count
-    const totalCycleScans = filteredAuditRecords.reduce((acc, a) => acc + (a.quantity || 1), 0);
-    const activeAuditDeviceCount = auditorDevices.filter(d => d.status === 'Active').length || (filteredAuditRecords.length > 0 ? 1 : 0);
-
-    // Active HHD & Logins status
-    const activeHHDCount = auditorDevices.filter(d => d.status === 'Active').length || 1;
-    const activeLoginSessions = activeDevices.filter(d => d.status === 'Online').length || users.length || 1;
+    // Active HHD & Logins status - purely dynamic
+    const activeHHDCount = activeDevices.filter(d => d.status === 'Online' && (d.deviceType as string) === 'Mobile / Scanner').length;
+    const activeLoginSessions = activeDevices.filter(d => d.status === 'Online').length || users.filter(u => u.status === 'Active').length || 1;
 
     // B2B Returns metrics
     const b2bBatchesCount = filteredB2BBatches.length;
@@ -324,8 +308,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       othersCount,
       inwardVehiclesCount,
       totalBoxesUnloaded,
-      totalCycleScans,
-      activeAuditDeviceCount,
       activeHHDCount,
       activeLoginSessions,
       b2bBatchesCount,
@@ -336,8 +318,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [
     filteredScannedItems,
     filteredGateEntries,
-    filteredAuditRecords,
-    auditorDevices,
     activeDevices,
     users,
     filteredB2BBatches,
@@ -447,7 +427,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const recentActivities = useMemo(() => {
     const items: Array<{
       id: string;
-      type: 'inward' | 'return' | 'audit' | 'b2b';
+      type: 'inward' | 'return' | 'b2b';
       title: string;
       subtitle: string;
       time: string;
@@ -684,20 +664,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <Plus className="w-4 h-4 text-white" />
             <span>Inward Gate Entry</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab('inventory')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#14B8A6] dark:hover:bg-[#0D9488] text-white text-sm font-semibold shadow-xs hover:-translate-y-0.5 transition-all cursor-pointer"
-          >
-            <Scan className="w-4 h-4 text-white" />
-            <span>Audit Guns</span>
-          </button>
         </div>
       </div>
 
-      {/* 2. Top 5 Stat KPI Cards in One Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      {/* 2. Top 4 Stat KPI Cards in One Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Card 1: B2C / RTO Returns */}
         <div
           id="kpi-card-rto-returns"
@@ -818,55 +789,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Physical Cycle Count */}
-        <div
-          id="kpi-card-cycle-count"
-          onClick={() => onNavigateTab('inventory')}
-          className="bg-card border border-theme rounded-[20px] p-5 shadow-sm hover:border-[#14B8A6]/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Physical Cycle Count
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-[#134E4A] flex items-center justify-center text-[#2DD4BF]">
-              <Scan className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="my-1">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[32px] font-bold text-[#F8FAFC] leading-none">
-                {metrics.totalCycleScans}
-              </span>
-              <span className="text-sm font-semibold text-[#64748B]">Total Scanned Count</span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-[#2DD4BF]">
-              <Users className="w-3.5 h-3.5" />
-              <span>Active Device Login Count: <strong className="text-white font-mono">{metrics.activeAuditDeviceCount}</strong></span>
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
-              <span>Physical Audit Scans</span>
-              <span className="text-white font-bold font-mono">{filteredAuditRecords.length} records</span>
-            </div>
-            <div className="w-full h-1.5 bg-[#334155] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#14B8A6] rounded-full transition-all duration-500"
-                style={{ width: metrics.totalCycleScans > 0 ? '100%' : '0%' }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Card 5: Active HHD & Logins */}
+        {/* Card 4: Active Devices & Logins */}
         <div
           id="kpi-card-active-hhd-logins"
-          onClick={() => onNavigateTab('inventory')}
-          className="bg-card border border-theme rounded-[20px] p-5 shadow-sm hover:border-[#F472B6]/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          className="bg-card border border-theme rounded-[20px] p-5 shadow-sm hover:border-[#F472B6]/50 hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Active HHD & Logins
+              Connected Devices & Logins
             </span>
             <div className="w-10 h-10 rounded-xl bg-[#831843] flex items-center justify-center text-[#F472B6]">
               <Smartphone className="w-5 h-5" />
@@ -877,7 +807,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="text-[32px] font-bold text-[#F8FAFC] leading-none">
                 {metrics.activeHHDCount}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Active HHDs</span>
+              <span className="text-sm font-semibold text-[#64748B]">Active Scanner Guns</span>
             </div>
             <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-[#10B981]">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
