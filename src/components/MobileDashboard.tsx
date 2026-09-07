@@ -53,6 +53,55 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
   const clearedInwardToday = inwardEntries.filter(e => e.status === 'Completed' || e.status === 'Unloaded').length;
   const activeScannerGuns = syncStatus.connectedDevicesCount || 1;
 
+  // Account Distribution (real): units per account, MOST-RECENT scan first —
+  // the account whose RTO was just scanned comes to the front and gets a live
+  // highlight. Accounts missing from this device's client master still appear
+  // via the batch's clientName snapshot.
+  const palette = ['#00BDD6', '#3B82F6', '#A855F7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#64748B'];
+  const clientBreakdown = batches.length === 0 && clients.length === 0 ? [] : (() => {
+    const perClient = new Map<string, { count: number; lastScanAt: number }>();
+    batches.forEach(b => {
+      if (!b.clientId) return;
+      const entry = perClient.get(b.clientId) || { count: 0, lastScanAt: 0 };
+      entry.count += ((b as any).scannedCount || b.totalScanned || 0);
+      const t = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (t > entry.lastScanAt) entry.lastScanAt = t;
+      perClient.set(b.clientId, entry);
+    });
+
+    const total = Array.from(perClient.values()).reduce((a, e) => a + e.count, 0);
+    const knownIds = new Set<string>();
+    const rows = clients.map(c => {
+      knownIds.add(c.id);
+      const agg = perClient.get(c.id) || { count: 0, lastScanAt: 0 };
+      return {
+        id: c.id,
+        name: c.name,
+        count: agg.count,
+        lastScanAt: agg.lastScanAt,
+        pct: total > 0 ? Math.round((agg.count / total) * 100) : 0,
+      };
+    });
+
+    batches.forEach(b => {
+      if (b.clientId && !knownIds.has(b.clientId)) {
+        knownIds.add(b.clientId);
+        const agg = perClient.get(b.clientId) || { count: 0, lastScanAt: 0 };
+        rows.push({
+          id: b.clientId,
+          name: (b as any).clientName || 'Unknown Account',
+          count: agg.count,
+          lastScanAt: agg.lastScanAt,
+          pct: total > 0 ? Math.round((agg.count / total) * 100) : 0,
+        });
+      }
+    });
+
+    rows.sort((a, b) => (b.lastScanAt - a.lastScanAt) || (b.count - a.count) || a.name.localeCompare(b.name));
+    return rows.map((r, i) => ({ ...r, color: palette[i % palette.length] }));
+  })();
+  const liveAccountId = clientBreakdown.find(c => c.lastScanAt > 0)?.id || null;
+
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);
     setIsDatePickerOpen(false);
@@ -259,6 +308,58 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
             <span>Synchronized & Live</span>
           </div>
         </div>
+      </div>
+
+      {/* Account Distribution (real data, most-recent scan first) */}
+      <div className="p-3 rounded-2xl bg-surface border border-theme shadow-md mb-4">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-secondary">
+            Account Distribution
+          </span>
+          <span className="text-[9px] text-muted font-mono">
+            {clientBreakdown.length} accounts
+          </span>
+        </div>
+        {clientBreakdown.length === 0 ? (
+          <div className="text-[11px] text-muted py-2 text-center">
+            No return activity yet — create a batch and start scanning.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {clientBreakdown.slice(0, 6).map((entry) => (
+              <div
+                key={entry.id}
+                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-xl transition-all duration-500 ${
+                  entry.id === liveAccountId && entry.lastScanAt > 0
+                    ? 'bg-[#00BDD6]/10 border border-[#00BDD6]/40'
+                    : 'border border-transparent'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-primary truncate">{entry.name}</span>
+                    {entry.id === liveAccountId && entry.lastScanAt > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-[#00BDD6]/15 text-[#00BDD6] shrink-0">
+                        <span className="w-1 h-1 rounded-full bg-[#00BDD6] animate-pulse" />
+                        LATEST
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-full h-1 bg-slate-700/60 rounded-full overflow-hidden mt-1">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${entry.pct}%`, backgroundColor: entry.color }}
+                    />
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-secondary shrink-0">
+                  {entry.count} <span className="text-muted">({entry.pct}%)</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Direct Shift Status Indicator */}

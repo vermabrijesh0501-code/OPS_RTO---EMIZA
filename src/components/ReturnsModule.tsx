@@ -666,7 +666,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                         {activeBatch.batchNumber}
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 truncate max-w-[120px] sm:max-w-[180px]">
-                        {clients.find(c => c.id === activeBatch.clientId)?.name}
+                        {clients.find(c => c.id === activeBatch.clientId)?.name || activeBatch.clientName || '—'}
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 truncate max-w-[120px] sm:max-w-[180px]">
                         {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
@@ -948,7 +948,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                     <div className="p-3 bg-elevated border border-theme rounded-xl">
                       <div className="text-[10px] text-secondary uppercase font-bold">Account</div>
                       <div className="text-sm font-bold text-primary truncate mt-0.5">
-                        {clients.find(c => c.id === activeBatch.clientId)?.name}
+                        {clients.find(c => c.id === activeBatch.clientId)?.name || activeBatch.clientName || '—'}
                       </div>
                     </div>
 

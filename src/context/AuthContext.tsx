@@ -151,6 +151,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   }, [registerDeviceSession]);
 
+  /**
+   * Resilient wrapper around syncAppUser for SESSION RESTORE on refresh.
+   *
+   * Root cause ("login works but a refresh on mobile drops / hangs me"):
+   * refresh re-validates the profile over multiple network round trips;
+   * on slow/flaky mobile data the Auth Guard spinner hung, or init threw
+   * and the user was bounced back to login despite a valid session.
+   *
+   * The authoritative profile fetch gets a bounded window; on timeout the
+   * signed-in session stays ALIVE via the cached profile while the fetch
+   * continues in the background (plus realtime user_profiles revalidation).
+   * Security preserved: syncAppUser CLEARS the cached session when an
+   * account is deactivated, so this fallback can only resurrect accounts
+   * that were Active at last validation.
+   */
+  const syncAppUserResilient = useCallback(
+    async (sbUser: SupabaseAuthUser): Promise<User | null> => {
+      const PROFILE_FETCH_TIMEOUT_MS = 8000;
+      let timedOut = false;
+      const timeout = new Promise<null>((resolve) =>
+        setTimeout(() => {
+          timedOut = true;
+          resolve(null);
+        }, PROFILE_FETCH_TIMEOUT_MS)
+      );
+
+      const result = await Promise.race([syncAppUser(sbUser), timeout]);
+      if (result) return result;
+
+      if (timedOut) {
+        const cached = StorageService.getCurrentUser();
+        if (cached && cached.status === 'Active') {
+          console.warn('[Auth] Profile fetch timed out — restoring cached session (background revalidation continues).');
+          setAppUser(cached);
+          return cached;
+        }
+      }
+      return result;
+    },
+    [syncAppUser]
+  );
+
   // 1. Initial Session Load strictly from Supabase Auth
   useEffect(() => {
     let isMounted = true;
@@ -198,20 +240,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } else if (isMounted) {
               setSession(refreshData.session);
               setSupabaseUser(refreshData.session.user);
-              await syncAppUser(refreshData.session.user);
+              await syncAppUserResilient(refreshData.session.user);
             }
           } else if (isMounted) {
             setSession(data.session);
             setSupabaseUser(data.session.user);
-            await syncAppUser(data.session.user);
+            await syncAppUserResilient(data.session.user);
           }
         }
       } catch (err) {
         console.error('[Auth] Init error:', err);
         if (isMounted) {
-          setSession(null);
-          setSupabaseUser(null);
-          setAppUser(null);
+          // Network/init failure: keep a previously validated cached session
+          // alive (mobile offline refresh) instead of force-logging out.
+          const cached = StorageService.getCurrentUser();
+          if (cached && cached.status === 'Active') {
+            console.warn('[Auth] Restore failed — keeping cached session active.');
+            setAppUser(cached);
+          } else {
+            setSession(null);
+            setSupabaseUser(null);
+            setAppUser(null);
+          }
         }
       } finally {
         if (isMounted) {
@@ -297,7 +347,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       profilesSub.unsubscribe();
       clearInterval(heartbeatTimer);
     };
-  }, [isConfigured, syncAppUser]);
+  }, [isConfigured, syncAppUser, syncAppUserResilient]);
 
   // Sign In strictly with Supabase Auth
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {

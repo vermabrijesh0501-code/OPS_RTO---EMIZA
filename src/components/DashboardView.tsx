@@ -371,36 +371,90 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   }, [filteredScannedItems]);
 
-  // Account Distribution by Count (Sorted by Count Descending)
+  // Account Distribution sorted by MOST-RECENT scan first, then by count.
+  // Root-cause fixes ("scanned account does not come to the front / details
+  // wrong"):
+  //  - Accounts missing from this device's client master (master drift /
+  //    deleted record) used to VANISH from the distribution; they stay visible
+  //    via the batch's clientName snapshot.
+  //  - The account whose RTO was just scanned jumps to the front and receives
+  //    a live highlight. Sort: latest scan desc -> units desc -> name.
   const clientAccountsList = useMemo(() => {
     const palette = ['#8B5CF6', '#14B8A6', '#EC4899', '#F59E0B', '#06B6D4', '#3B82F6', '#10B981', '#64748B'];
-    if (clients.length === 0) return [];
 
     const totalUnits = metrics.totalScanned;
 
-    const list = clients.map((c) => {
-      const clientBatches = filteredBatches.filter(b => b.clientId === c.id);
-      const clientBatchIds = new Set(clientBatches.map(b => b.id));
-      const count = filteredScannedItems.filter(s => clientBatchIds.has(s.batchId)).length;
-      const pct = totalUnits > 0 ? Math.round((count / totalUnits) * 100) : 0;
+    // batchId -> batch lookup for scan attribution
+    const batchById = new Map<string, ReturnBatch>(filteredBatches.map(b => [b.id, b]));
 
+    // Aggregate scans per clientId (only batches in the filtered/warehouse scope)
+    const perClient = new Map<string, { count: number; lastScanAt: number }>();
+    filteredScannedItems.forEach((item) => {
+      const batch = batchById.get(item.batchId);
+      if (!batch || !batch.clientId) return;
+      const entry = perClient.get(batch.clientId) || { count: 0, lastScanAt: 0 };
+      entry.count += 1;
+      const t = item.scannedAt ? new Date(item.scannedAt).getTime() : 0;
+      if (t > entry.lastScanAt) entry.lastScanAt = t;
+      perClient.set(batch.clientId, entry);
+    });
+
+    // Known master accounts
+    const knownIds = new Set<string>();
+    const list = clients.map((c) => {
+      knownIds.add(c.id);
+      const agg = perClient.get(c.id) || { count: 0, lastScanAt: 0 };
+      const pct = totalUnits > 0 ? Math.round((agg.count / totalUnits) * 100) : 0;
       return {
         id: c.id,
         name: c.name,
         code: c.code,
-        count,
+        count: agg.count,
         pct,
+        lastScanAt: agg.lastScanAt,
       };
     });
 
-    // Automatically sort all existing accounts by count descending, highest count first
-    list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    // Accounts referenced by batches but NOT in this device's client master —
+    // keep them visible using the snapshot stored on the batch so their volume
+    // never silently disappears.
+    const orphanIds = new Set<string>();
+    filteredBatches.forEach((b) => {
+      if (b.clientId && !knownIds.has(b.clientId)) orphanIds.add(b.clientId);
+    });
+    orphanIds.forEach((orphanId) => {
+      const agg = perClient.get(orphanId) || { count: 0, lastScanAt: 0 };
+      const sampleBatch = filteredBatches.find(b => b.clientId === orphanId);
+      const pct = totalUnits > 0 ? Math.round((agg.count / totalUnits) * 100) : 0;
+      list.push({
+        id: orphanId,
+        name: (sampleBatch as any)?.clientName || 'Unknown Account',
+        code: 'OFFLINE-REF',
+        count: agg.count,
+        pct,
+        lastScanAt: agg.lastScanAt,
+      });
+    });
+
+    // Most-recently scanned account first (RTO scan brings account to the
+    // front), then highest unit count, then alphabetical.
+    list.sort((a, b) =>
+      (b.lastScanAt - a.lastScanAt) ||
+      (b.count - a.count) ||
+      a.name.localeCompare(b.name)
+    );
 
     return list.map((item, idx) => ({
       ...item,
       color: palette[idx % palette.length],
     }));
   }, [clients, filteredBatches, filteredScannedItems, metrics.totalScanned]);
+
+  // The most recently scanned account (drives the LIVE highlight below)
+  const liveAccountId = useMemo(() => {
+    const withScan = clientAccountsList.filter(c => c.lastScanAt > 0);
+    return withScan.length > 0 ? withScan[0].id : null;
+  }, [clientAccountsList]);
 
   // Donut Chart Data
   const donutData = useMemo(() => {
@@ -455,7 +509,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         id: `batch-${b.id}`,
         type: b.batchType === 'B2B Return' ? 'b2b' : 'return',
         title: `${b.batchType === 'B2B Return' ? 'B2B Batch' : 'RTO Batch'} ${b.batchNumber}`,
-        subtitle: `${client?.name || 'Client'} • ${b.totalScanned || 0} Items Processed`,
+        subtitle: `${client?.name || (b as any).clientName || 'Client'} • ${b.totalScanned || 0} Items Processed`,
         time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
         status: b.status === 'Closed' ? 'Closed' : 'Active',
         statusColor: b.batchType === 'B2B Return' ? '#EC4899' : '#8B5CF6',
@@ -1016,7 +1070,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="divide-y divide-theme">
             {clientAccountsList.map((client) => (
-              <div key={client.id} className="py-3.5 first:pt-1 last:pb-1">
+              <div
+                key={client.id}
+                className={`py-3.5 first:pt-1 last:pb-1 px-2 -mx-2 rounded-xl transition-all duration-500 ${
+                  client.id === liveAccountId && client.lastScanAt > 0
+                    ? 'bg-[#8B5CF6]/10 ring-1 ring-[#8B5CF6]/40'
+                    : ''
+                }`}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: client.color }} />
@@ -1026,6 +1087,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="text-[10px] font-mono text-slate-500">
                       ({client.code})
                     </span>
+                    {client.id === liveAccountId && client.lastScanAt > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#8B5CF6]/20 text-[#A78BFA] border border-[#8B5CF6]/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-pulse" />
+                        LATEST SCAN
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-xs font-medium text-slate-300 bg-[#152238] px-2.5 py-0.5 rounded-full border border-theme font-mono">
