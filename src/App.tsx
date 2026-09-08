@@ -1423,8 +1423,10 @@ export default function App() {
                 <MobileDashboard
                   clients={clients}
                   batches={batches}
+                  scannedItems={scannedItems}
                   inwardEntries={gateEntries}
                   currentUser={currentUser}
+                  warehouse={activeWarehouse}
                 />
               ) : (
                 <DashboardView

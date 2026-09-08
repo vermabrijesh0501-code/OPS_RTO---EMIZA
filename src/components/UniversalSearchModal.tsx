@@ -97,9 +97,9 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Truck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" /> Inward Gate Passes ({matchedGate.length})
                   </div>
-                  {matchedGate.map(g => (
+                  {matchedGate.map((g, idx) => (
                     <div
-                      key={g.id}
+                      key={`search-gate-${g.id || g.gatePassNumber || idx}-${idx}`}
                       onClick={() => {
                         onSelectResult('inward', g.id);
                         onClose();
@@ -124,9 +124,9 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <RotateCcw className="w-3.5 h-3.5 text-[#123B5D] dark:text-blue-400" /> Return Batches ({matchedBatches.length})
                   </div>
-                  {matchedBatches.map(b => (
+                  {matchedBatches.map((b, idx) => (
                     <div
-                      key={b.id}
+                      key={`search-batch-${b.id || b.batchNumber || idx}-${idx}`}
                       onClick={() => {
                         onSelectResult('rto', b.id);
                         onClose();
@@ -151,9 +151,9 @@ export const UniversalSearchModal: React.FC<UniversalSearchModalProps> = ({
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Package className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Scanned Tracking Numbers ({matchedItems.length})
                   </div>
-                  {matchedItems.map(item => (
+                  {matchedItems.map((item, idx) => (
                     <div
-                      key={item.id}
+                      key={`search-item-${item.id || item.trackingNumber || idx}-${idx}`}
                       onClick={() => {
                         onSelectResult('rto', item.batchId);
                         onClose();

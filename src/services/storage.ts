@@ -44,8 +44,19 @@ export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): 
 
   const addOrUpdate = (b: ReturnBatch) => {
     if (!b) return;
-    const idKey = (b.id || '').trim();
-    const numKey = (b.batchNumber || '').trim();
+    const rawId = (b.id || '').trim();
+    const rawNum = (b.batchNumber || '').trim();
+    const idKey = (rawId !== 'undefined' && rawId !== 'null') ? rawId : '';
+    const numKey = (rawNum !== 'undefined' && rawNum !== 'null') ? rawNum : '';
+
+    // Ignore invalid empty batches
+    if (!idKey && !numKey) return;
+
+    const safeBatch: ReturnBatch = {
+      ...b,
+      id: idKey || numKey || `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      batchNumber: numKey || idKey || `BATCH-${Date.now().toString().slice(-4)}`,
+    };
 
     let targetIdx = -1;
     if (idKey && idToIndex.has(idKey)) {
@@ -58,11 +69,11 @@ export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): 
       const existingItem = result[targetIdx];
       const merged: ReturnBatch = {
         ...existingItem,
-        ...b,
-        id: existingItem.id || b.id,
-        batchNumber: existingItem.batchNumber || b.batchNumber,
-        totalScanned: Math.max(existingItem.totalScanned || 0, b.totalScanned || 0),
-        status: b.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+        ...safeBatch,
+        id: (existingItem.id && existingItem.id !== 'undefined' && existingItem.id !== 'null') ? existingItem.id : safeBatch.id,
+        batchNumber: (existingItem.batchNumber && existingItem.batchNumber !== 'undefined' && existingItem.batchNumber !== 'null') ? existingItem.batchNumber : safeBatch.batchNumber,
+        totalScanned: Math.max(existingItem.totalScanned || 0, safeBatch.totalScanned || 0),
+        status: safeBatch.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -71,8 +82,8 @@ export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): 
       if (merged.batchNumber) batchNumToIndex.set(merged.batchNumber, targetIdx);
     } else {
       const idx = result.length;
-      result.push({ ...b });
-      if (idKey) idToIndex.set(idKey, idx);
+      result.push({ ...safeBatch });
+      if (safeBatch.id) idToIndex.set(safeBatch.id, idx);
       if (numKey) batchNumToIndex.set(numKey, idx);
     }
   };
@@ -155,7 +166,7 @@ const STORAGE_KEYS = {
   ACTIVE_DEVICES: 'emiza_active_devices_v3',
 };
 
-// Auto-purge any stale mock/test scan keys
+// Auto-purge any stale mock/test scan keys and sanitize stored batches
 (() => {
   try {
     const staleKeys = [
@@ -171,6 +182,33 @@ const STORAGE_KEYS = {
         localStorage.removeItem(k);
       }
     });
+
+    if (typeof localStorage !== 'undefined') {
+      const rawBatches = localStorage.getItem('emiza_return_batches_v3');
+      if (rawBatches) {
+        try {
+          const parsed = JSON.parse(rawBatches);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed
+              .filter((b: any) => b && (
+                (b.id && b.id !== 'undefined' && b.id !== 'null') ||
+                (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+              ))
+              .map((b: any, idx: number) => ({
+                ...b,
+                id: (b.id && b.id !== 'undefined' && b.id !== 'null')
+                  ? b.id
+                  : (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+                    ? b.batchNumber
+                    : `batch-${Date.now()}-${idx}`,
+              }));
+            localStorage.setItem('emiza_return_batches_v3', JSON.stringify(cleaned));
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
   } catch {
     // Ignore in non-browser context
   }
@@ -315,16 +353,76 @@ export const StorageService = {
     if (broadcast) SyncService.broadcast('GATE_ENTRY_UPDATED', { allGateEntries: data, count: data.length });
   },
 
-  getReturnBatches: (): ReturnBatch[] => loadItem(STORAGE_KEYS.RETURN_BATCHES, initialReturnBatches),
+  getReturnBatches: (): ReturnBatch[] => {
+    const raw = loadItem(STORAGE_KEYS.RETURN_BATCHES, initialReturnBatches);
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((b: any) => b && (
+        (b.id && b.id !== 'undefined' && b.id !== 'null') ||
+        (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+      ))
+      .map((b: any, idx: number) => ({
+        ...b,
+        id: (b.id && b.id !== 'undefined' && b.id !== 'null')
+          ? b.id
+          : (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+            ? b.batchNumber
+            : `batch-${Date.now()}-${idx}`,
+      }));
+  },
   saveReturnBatches: (data: ReturnBatch[], broadcast = true) => {
-    saveItem(STORAGE_KEYS.RETURN_BATCHES, data);
-    if (broadcast) SyncService.broadcast('BATCH_UPDATED', { allBatches: data, count: data.length });
+    const safe = (data || [])
+      .filter(b => b && (
+        (b.id && b.id !== 'undefined' && b.id !== 'null') ||
+        (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+      ))
+      .map((b: any, idx: number) => ({
+        ...b,
+        id: (b.id && b.id !== 'undefined' && b.id !== 'null')
+          ? b.id
+          : (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+            ? b.batchNumber
+            : `batch-${Date.now()}-${idx}`,
+      }));
+    saveItem(STORAGE_KEYS.RETURN_BATCHES, safe);
+    if (broadcast) SyncService.broadcast('BATCH_UPDATED', { allBatches: safe, count: safe.length });
   },
 
-  getScannedItems: (): ScannedReturnItem[] => loadItem(STORAGE_KEYS.SCANNED_ITEMS, initialScannedItems),
+  getScannedItems: (): ScannedReturnItem[] => {
+    const raw = loadItem(STORAGE_KEYS.SCANNED_ITEMS, initialScannedItems);
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((i: any) => i && (
+        (i.id && i.id !== 'undefined' && i.id !== 'null') ||
+        (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null') ||
+        (i.awbNumber && i.awbNumber !== 'undefined' && i.awbNumber !== 'null')
+      ))
+      .map((i: any, idx: number) => ({
+        ...i,
+        id: (i.id && i.id !== 'undefined' && i.id !== 'null')
+          ? i.id
+          : (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null')
+            ? i.trackingNumber
+            : `item-${Date.now()}-${idx}`,
+      }));
+  },
   saveScannedItems: (data: ScannedReturnItem[], broadcast = true) => {
-    saveItem(STORAGE_KEYS.SCANNED_ITEMS, data);
-    if (broadcast) SyncService.broadcast('ITEM_UPDATED', { allScannedItems: data, count: data.length });
+    const safe = (data || [])
+      .filter(i => i && (
+        (i.id && i.id !== 'undefined' && i.id !== 'null') ||
+        (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null') ||
+        ((i as any).awbNumber && (i as any).awbNumber !== 'undefined' && (i as any).awbNumber !== 'null')
+      ))
+      .map((i: any, idx: number) => ({
+        ...i,
+        id: (i.id && i.id !== 'undefined' && i.id !== 'null')
+          ? i.id
+          : (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null')
+            ? i.trackingNumber
+            : `item-${Date.now()}-${idx}`,
+      }));
+    saveItem(STORAGE_KEYS.SCANNED_ITEMS, safe);
+    if (broadcast) SyncService.broadcast('ITEM_UPDATED', { allScannedItems: safe, count: safe.length });
   },
 
   getActiveDevices: (): ActiveDeviceSession[] => loadItem(STORAGE_KEYS.ACTIVE_DEVICES, initialActiveDevices),

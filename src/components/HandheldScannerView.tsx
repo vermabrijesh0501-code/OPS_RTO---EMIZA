@@ -555,7 +555,7 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
             <div className="space-y-1">
               {batchItems.slice(-5).reverse().map((item, idx) => (
                 <div
-                  key={item.id}
+                  key={`handheld-recent-${item.id || item.trackingNumber || idx}-${idx}`}
                   className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -639,8 +639,8 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
                   No items scanned yet in this batch.
                 </div>
               ) : (
-                batchItems.slice().reverse().map((item) => (
-                  <div key={item.id} className="pt-2 flex items-center justify-between text-xs">
+                batchItems.slice().reverse().map((item, idx) => (
+                  <div key={`handheld-all-${item.id || item.trackingNumber || idx}-${idx}`} className="pt-2 flex items-center justify-between text-xs">
                     <div>
                       <div className="font-mono font-black text-slate-900 dark:text-white">{item.trackingNumber}</div>
                       <div className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -720,13 +720,13 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
                 openBatches.length === 0 ? (
                   <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-xs">No open batches.</div>
                 ) : (
-                  openBatches.map(b => {
+                  openBatches.map((b, idx) => {
                     const client = clients.find(c => c.id === b.clientId);
                     const isSelected = b.id === activeBatch.id;
 
                     return (
                       <div
-                        key={b.id}
+                        key={b.id || b.batchNumber || idx}
                         onClick={() => {
                           onSelectBatch(b.id);
                           setShowBatchPicker(false);
@@ -750,13 +750,13 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
                 closedBatches.length === 0 ? (
                   <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-xs">No closed batches.</div>
                 ) : (
-                  closedBatches.map(b => {
+                  closedBatches.map((b, idx) => {
                     const client = clients.find(c => c.id === b.clientId);
                     const courier = couriers.find(cr => cr.id === b.courierId);
 
                     return (
                       <div
-                        key={b.id}
+                        key={b.id || b.batchNumber || idx}
                         onClick={() => {
                           setSelectedClosedBatch(b);
                           setClosedSearchQuery('');
@@ -908,7 +908,7 @@ export const HandheldScannerView: React.FC<HandheldScannerViewProps> = ({
                     ) : (
                       filteredClosedItems.map((item, idx) => (
                         <div
-                          key={item.id}
+                          key={`handheld-closed-item-${item.id || item.trackingNumber || idx}-${idx}`}
                           className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs"
                         >
                           <div className="flex items-center gap-2 truncate">

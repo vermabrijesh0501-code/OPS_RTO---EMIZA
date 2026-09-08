@@ -74,6 +74,37 @@ function loadStoreFromDisk(): ServerStore {
     if (fs.existsSync(STORE_FILE)) {
       const content = fs.readFileSync(STORE_FILE, 'utf-8');
       const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.batches)) {
+        parsed.batches = parsed.batches
+          .filter((b: any) => b && (
+            (b.id && b.id !== 'undefined' && b.id !== 'null') ||
+            (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+          ))
+          .map((b: any, idx: number) => ({
+            ...b,
+            id: (b.id && b.id !== 'undefined' && b.id !== 'null')
+              ? b.id
+              : (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
+                ? b.batchNumber
+                : `batch-${Date.now()}-${idx}`,
+          }));
+      }
+      if (Array.isArray(parsed.scannedItems)) {
+        parsed.scannedItems = parsed.scannedItems
+          .filter((i: any) => i && (
+            (i.id && i.id !== 'undefined' && i.id !== 'null') ||
+            (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null') ||
+            (i.awbNumber && i.awbNumber !== 'undefined' && i.awbNumber !== 'null')
+          ))
+          .map((i: any, idx: number) => ({
+            ...i,
+            id: (i.id && i.id !== 'undefined' && i.id !== 'null')
+              ? i.id
+              : (i.trackingNumber && i.trackingNumber !== 'undefined' && i.trackingNumber !== 'null')
+                ? i.trackingNumber
+                : `item-${Date.now()}-${idx}`,
+          }));
+      }
       return {
         ...getDefaultStore(),
         ...parsed,
@@ -105,8 +136,19 @@ function mergeBatches(existing: any[], incoming: any[]): any[] {
 
   const addOrUpdate = (b: any) => {
     if (!b) return;
-    const idKey = (b.id || '').trim();
-    const numKey = (b.batchNumber || '').trim();
+    const rawId = (b.id || '').trim();
+    const rawNum = (b.batchNumber || '').trim();
+    const idKey = (rawId !== 'undefined' && rawId !== 'null') ? rawId : '';
+    const numKey = (rawNum !== 'undefined' && rawNum !== 'null') ? rawNum : '';
+
+    // Reject empty batch without id or batch number
+    if (!idKey && !numKey) return;
+
+    const safeBatch = {
+      ...b,
+      id: idKey || numKey || `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      batchNumber: numKey || idKey || `BATCH-${Date.now().toString().slice(-4)}`,
+    };
 
     let targetIdx = -1;
     if (idKey && idToIndex.has(idKey)) {
@@ -119,11 +161,11 @@ function mergeBatches(existing: any[], incoming: any[]): any[] {
       const existingItem = result[targetIdx];
       const merged = {
         ...existingItem,
-        ...b,
-        id: existingItem.id || b.id,
-        batchNumber: existingItem.batchNumber || b.batchNumber,
-        totalScanned: Math.max(existingItem.totalScanned || 0, b.totalScanned || 0),
-        status: b.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+        ...safeBatch,
+        id: (existingItem.id && existingItem.id !== 'undefined' && existingItem.id !== 'null') ? existingItem.id : safeBatch.id,
+        batchNumber: (existingItem.batchNumber && existingItem.batchNumber !== 'undefined' && existingItem.batchNumber !== 'null') ? existingItem.batchNumber : safeBatch.batchNumber,
+        totalScanned: Math.max(existingItem.totalScanned || 0, safeBatch.totalScanned || 0),
+        status: safeBatch.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -132,8 +174,8 @@ function mergeBatches(existing: any[], incoming: any[]): any[] {
       if (merged.batchNumber) batchNumToIndex.set(merged.batchNumber, targetIdx);
     } else {
       const idx = result.length;
-      result.push({ ...b });
-      if (idKey) idToIndex.set(idKey, idx);
+      result.push({ ...safeBatch });
+      if (safeBatch.id) idToIndex.set(safeBatch.id, idx);
       if (numKey) batchNumToIndex.set(numKey, idx);
     }
   };
@@ -592,9 +634,11 @@ async function startServer() {
   app.post('/api/sync/mutate', (req, res) => {
     try {
       const event = req.body;
-      if (!event || !event.type) {
+      const type = event?.type || event?.action;
+      if (!event || !type) {
         return res.status(400).json({ error: 'Invalid event format' });
       }
+      event.type = type;
 
       applyMutation(event);
 

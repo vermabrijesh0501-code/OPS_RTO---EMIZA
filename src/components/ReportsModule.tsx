@@ -348,14 +348,14 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                       </td>
                     </tr>
                   ) : (
-                    filteredBatches.map(batch => {
+                    filteredBatches.map((batch, idx) => {
                       const client = clients.find(c => c.id === batch.clientId);
                       const courier = couriers.find(cr => cr.id === batch.courierId);
                       const breakdown = batch.remarksBreakdown || {};
                       const isClosed = batch.status === 'Closed';
 
                       return (
-                        <tr key={batch.id} className="hover:bg-elevated transition-colors">
+                        <tr key={`rep-batch-${batch.id || batch.batchNumber || idx}-${idx}`} className="hover:bg-elevated transition-colors">
                           <td className="px-4 py-3">
                             <div className="font-mono font-bold text-[#123B5D] dark:text-blue-400">{batch.batchNumber}</div>
                             <div className="text-[10px] text-secondary font-mono">
@@ -486,8 +486,8 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-primary">
-                {whGateEntries.map(g => (
-                  <tr key={g.id} className="hover:bg-elevated">
+                {whGateEntries.map((g, idx) => (
+                  <tr key={`rep-gate-${g.id || g.gatePassNumber || idx}-${idx}`} className="hover:bg-elevated">
                     <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-blue-400">{g.gatePassNumber}</td>
                     <td className="px-4 py-3 font-bold text-primary">{g.vehicleNumber}</td>
                     <td className="px-4 py-3 text-secondary">{g.driverName}</td>
@@ -726,7 +726,7 @@ export const ReportsModule: React.FC<ReportsModuleProps> = ({
                         </tr>
                       ) : (
                         previewItems.map((it, i) => (
-                          <tr key={it.id} className={i % 2 === 0 ? 'bg-surface' : 'bg-elevated'}>
+                          <tr key={`rep-item-${it.id || it.trackingNumber || i}-${i}`} className={i % 2 === 0 ? 'bg-surface' : 'bg-elevated'}>
                             <td className="px-3 py-1.5 font-mono text-secondary">{i + 1}</td>
                             <td className="px-3 py-1.5 font-mono font-bold text-[#123B5D] dark:text-blue-400">{it.trackingNumber}</td>
                             <td className="px-3 py-1.5">

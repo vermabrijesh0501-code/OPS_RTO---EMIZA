@@ -690,8 +690,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             onChange={e => setActiveBatchId(e.target.value)}
                             className="bg-surface border border-theme text-primary text-[10px] sm:text-[11px] rounded px-1.5 py-0.5 font-mono focus:outline-none cursor-pointer"
                           >
-                            {openBatches.map(b => (
-                              <option key={b.id} value={b.id}>
+                            {openBatches.map((b, idx) => (
+                              <option key={b.id || b.batchNumber || idx} value={b.id || b.batchNumber}>
                                 {b.batchNumber} ({b.totalScanned})
                               </option>
                             ))}
@@ -855,7 +855,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             </tr>
                           ) : (
                             activeBatchItems.map((item, idx) => (
-                              <tr key={item.id} className="hover:bg-elevated">
+                              <tr key={`batch-scan-item-${item.id || item.trackingNumber || idx}-${idx}`} className="hover:bg-elevated">
                                 <td className="px-2.5 py-1 font-mono text-secondary">{idx + 1}</td>
                                 <td className="px-2.5 py-1 font-mono font-bold text-primary">{item.trackingNumber}</td>
                                 <td className="px-2.5 py-1">
@@ -1129,7 +1129,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 ) : (
                   closedBatches
                     .filter(b => !batchSearchQuery || b.batchNumber.toLowerCase().includes(batchSearchQuery.toLowerCase()))
-                    .map(b => {
+                    .map((b, idx) => {
                       const client = clients.find(c => c.id === b.clientId);
                       const courier = couriers.find(cr => cr.id === b.courierId);
                       const courierLabel = courier?.name || b.courierName || '—';
@@ -1137,7 +1137,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                       return (
                         <tr
-                          key={b.id}
+                          key={b.id || b.batchNumber || idx}
                           onClick={() => {
                             setSelectedClosedBatch(b);
                             setClosedBatchItemSearch('');
@@ -1501,7 +1501,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           </tr>
                         ) : (
                           filteredItems.map((item, idx) => (
-                            <tr key={item.id} className="hover:bg-elevated">
+                            <tr key={`modal-item-${item.id || item.trackingNumber || idx}-${idx}`} className="hover:bg-elevated">
                               <td className="px-3 py-2 text-center text-secondary font-mono text-[10px]">
                                 {idx + 1}
                               </td>
