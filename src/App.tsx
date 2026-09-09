@@ -167,18 +167,15 @@ export default function App() {
   }, [location.pathname]);
 
   // Fetch initial cloud/server state with bidirectional merge.
-  // Runs ONCE PER AUTHENTICATED USER (not just once at mount): previously an
-  // in-app login never pulled central state while a hard refresh did, so the
-  // same account showed different data depending on how you arrived.
-  // Also never parse non-JSON responses — static hosts (Pages.dev/Netlify SPA
-  // fallback) return index.html with HTTP 200 for /api/* paths.
+  // Fetch initial cloud/server state with bidirectional merge.
+  // Runs immediately on mount so mobile HHD and laptop always hydrate
+  // without losing batches or data on refresh, and runs when user logs in.
+  // Also never parse non-JSON responses — static hosts return index.html for /api/* paths.
   const currentUserId = appUser?.id || currentUser?.id || null;
-  const initialLoadForUser = useRef<string | null>(null);
-  useEffect(() => {
-    if (!currentUserId) return; // load once a session exists (post-login)
-    if (initialLoadForUser.current === currentUserId) return; // once per login
-    initialLoadForUser.current = currentUserId;
+  const initialLoadDone = useRef(false);
+  const lastLoadedUserId = useRef<string | null>(null);
 
+  const syncCentralState = useCallback(() => {
     fetch('/api/sync/state')
       .then(res => {
         const contentType = res.headers.get('content-type') || '';
@@ -237,7 +234,18 @@ export default function App() {
           if (data.logs && data.logs.length > 0) setLogs(data.logs);
         });
       });
-  }, [currentUserId]);
+  }, []);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      syncCentralState();
+    }
+    if (currentUserId && lastLoadedUserId.current !== currentUserId) {
+      lastLoadedUserId.current = currentUserId;
+      syncCentralState();
+    }
+  }, [currentUserId, syncCentralState]);
 
   const refreshMastersFromCloud = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
@@ -1474,6 +1482,7 @@ export default function App() {
                 activeWarehouse={activeWarehouse}
                 batches={batches}
                 scannedItems={scannedItems}
+                gateEntries={gateEntries}
                 clients={clients}
                 couriers={couriers}
                 onAddBatch={handleAddBatch}
@@ -1483,6 +1492,7 @@ export default function App() {
                 onCloseBatch={handleCloseBatch}
                 isOpenCreateModal={isNewBatchModalOpen}
                 onCloseCreateModal={() => setIsNewBatchModalOpen(!isNewBatchModalOpen)}
+                onNavigateTab={handleSelectTab}
               />
             )}
 

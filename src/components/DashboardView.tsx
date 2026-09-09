@@ -843,42 +843,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Active Devices & Logins */}
+        {/* Card 4: Daily Vehicle & Shipment Summary */}
         <div
-          id="kpi-card-active-hhd-logins"
-          className="bg-card border border-theme rounded-[20px] p-5 shadow-sm hover:border-[#F472B6]/50 hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+          id="kpi-card-vehicle-shipment-summary"
+          onClick={() => onNavigateTab('inward')}
+          className="bg-card border border-theme rounded-[20px] p-5 shadow-sm hover:border-[#10B981]/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Connected Devices & Logins
+              Daily Shipment Summary
             </span>
-            <div className="w-10 h-10 rounded-xl bg-[#831843] flex items-center justify-center text-[#F472B6]">
-              <Smartphone className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#064E3B] flex items-center justify-center text-[#34D399]">
+              <Truck className="w-5 h-5" />
             </div>
           </div>
           <div className="my-1">
             <div className="flex items-baseline gap-2">
               <span className="text-[32px] font-bold text-[#F8FAFC] leading-none">
-                {metrics.activeHHDCount}
+                {metrics.totalBoxesUnloaded}
               </span>
-              <span className="text-sm font-semibold text-[#64748B]">Active Scanner Guns</span>
+              <span className="text-sm font-semibold text-[#64748B]">Boxes Today</span>
             </div>
             <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-[#10B981]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{metrics.activeLoginSessions} Operator Logins Online</span>
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>{filteredGateEntries.filter(g => g.status === 'Completed' || g.status === 'Gate Out').length} of {filteredGateEntries.length} Vehicles Cleared</span>
             </div>
           </div>
           <div className="mt-4">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] mb-1.5">
-              <span>Sync & Connectivity</span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <Radio className="w-3 h-3 text-emerald-400" /> Synchronized
+              <span>Dock Inward Clearance</span>
+              <span className="text-white font-bold">
+                {filteredGateEntries.length > 0
+                  ? Math.round((filteredGateEntries.filter(g => g.status === 'Completed' || g.status === 'Gate Out').length / filteredGateEntries.length) * 100)
+                  : 100}%
               </span>
             </div>
             <div className="w-full h-1.5 bg-[#334155] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#EC4899] rounded-full transition-all duration-500"
-                style={{ width: '100%' }}
+                className="h-full bg-[#10B981] rounded-full transition-all duration-500"
+                style={{
+                  width: `${filteredGateEntries.length > 0
+                    ? Math.round((filteredGateEntries.filter(g => g.status === 'Completed' || g.status === 'Gate Out').length / filteredGateEntries.length) * 100)
+                    : 100}%`,
+                }}
               />
             </div>
           </div>
@@ -892,16 +899,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-base font-bold text-white">
-                Live Operations & Hourly Scan Trends
+                Operations & Hourly Scan Trends
               </h2>
               <p className="text-xs text-[#64748B] mt-0.5">
-                Real-time throughput of processed AWB units ({dateFilterLabel})
+                Hourly throughput of processed AWB units ({dateFilterLabel})
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#3B2D54] text-[#A78BFA] border border-purple-800/40">
-                <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-pulse" />
-                Live Feed
+              <span className="text-xs text-slate-400 font-mono">
+                Throughput Overview
               </span>
             </div>
           </div>
@@ -1191,7 +1197,91 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 6. Live Operations Activity Stream (Filtered Feed) */}
+      {/* 6. Daily Vehicle & Shipment Summary */}
+      <div id="dashboard-daily-vehicle-summary" className="bg-card border border-theme rounded-[20px] p-6 shadow-sm space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#164E63] flex items-center justify-center text-[#38BDF8]">
+              <Truck className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                Daily Vehicle & Shipment Summary
+              </h2>
+              <p className="text-xs text-[#64748B]">
+                Registered inward vehicles and shipment manifests for {dateFilterLabel}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab('inward')}
+            className="text-xs font-semibold text-[#38BDF8] hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+          >
+            Gate Inward Register <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-theme">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#152238] text-[#94A3B8] uppercase font-bold text-[10px] border-b border-theme">
+              <tr>
+                <th className="px-3.5 py-2.5">Vehicle Number</th>
+                <th className="px-3.5 py-2.5">Transporter / Courier</th>
+                <th className="px-3.5 py-2.5">Driver & Mobile</th>
+                <th className="px-3.5 py-2.5">Dock</th>
+                <th className="px-3.5 py-2.5 text-center">Expected Boxes</th>
+                <th className="px-3.5 py-2.5 text-center">Received Boxes</th>
+                <th className="px-3.5 py-2.5">Gate In Time</th>
+                <th className="px-3.5 py-2.5 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-theme text-[#F8FAFC]">
+              {filteredGateEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
+                    No vehicle movements recorded for {dateFilterLabel}.
+                  </td>
+                </tr>
+              ) : (
+                filteredGateEntries.slice(0, 10).map(g => (
+                  <tr key={g.id} className="hover:bg-[#152238]/60 transition-colors">
+                    <td className="px-3.5 py-2.5 font-mono font-bold text-white">{g.vehicleNumber}</td>
+                    <td className="px-3.5 py-2.5 text-slate-300">{g.courierPartner || g.transporter || '—'}</td>
+                    <td className="px-3.5 py-2.5 text-slate-300">
+                      {g.driverName} {g.driverMobile && <span className="font-mono text-[10px] text-slate-400">({g.driverMobile})</span>}
+                    </td>
+                    <td className="px-3.5 py-2.5 font-mono font-semibold">{g.dockNumber || 'Dock 01'}</td>
+                    <td className="px-3.5 py-2.5 text-center font-mono font-bold text-slate-300">{g.expectedBoxes || 0}</td>
+                    <td className="px-3.5 py-2.5 text-center font-mono font-extrabold text-[#10B981]">
+                      {g.receivedBoxes || g.expectedBoxes || 0}
+                    </td>
+                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-slate-400">
+                      {g.gateInTime ? new Date(g.gateInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </td>
+                    <td className="px-3.5 py-2.5 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          g.status === 'Completed' || g.status === 'Gate Out'
+                            ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40'
+                            : g.status === 'In Unloading' || g.status === 'Under QC'
+                            ? 'bg-amber-950/40 text-amber-300 border border-amber-800/40'
+                            : 'bg-cyan-950/40 text-cyan-300 border border-cyan-800/40'
+                        }`}
+                      >
+                        {g.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 7. Operations Activity Stream (Filtered Feed) */}
       <div className="bg-card border border-theme rounded-[20px] p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">

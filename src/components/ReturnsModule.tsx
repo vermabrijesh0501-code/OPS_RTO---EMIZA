@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   RotateCcw,
   QrCode,
@@ -21,6 +21,17 @@ import {
   ArrowLeft,
   FileText,
   Eye,
+  Download,
+  Truck,
+  TrendingUp,
+  LayoutDashboard,
+  Boxes,
+  Calendar,
+  AlertCircle,
+  PackageCheck,
+  Building2,
+  Clock,
+  ChevronDown,
 } from 'lucide-react';
 import {
   ReturnBatch,
@@ -30,8 +41,15 @@ import {
   Client,
   Courier,
   User,
+  InwardGateEntry,
 } from '../types';
 import { generateBatchPDF, generateWarehouseBatchesSummaryPDF } from '../utils/pdfGenerator';
+import {
+  exportBatchItemsToCSV,
+  exportDateWiseReportToCSV,
+  exportAccountWiseReportToCSV,
+  exportAllBatchesToCSV,
+} from '../utils/csvExport';
 import { HandheldScannerView } from './HandheldScannerView';
 
 interface ReturnsModuleProps {
@@ -41,6 +59,7 @@ interface ReturnsModuleProps {
   scannedItems: ScannedReturnItem[];
   clients: Client[];
   couriers: Courier[];
+  gateEntries?: InwardGateEntry[];
   onAddBatch: (batch: Omit<ReturnBatch, 'id' | 'batchNumber' | 'totalScanned' | 'remarksBreakdown' | 'createdAt'>) => ReturnBatch;
   onScanItem: (batchId: string, trackingNumber: string, remark: ReturnRemarkType, photoUrl?: string) => { success: boolean; message: string; item?: ScannedReturnItem };
   onUpdateItem?: (itemId: string, updates: { trackingNumber?: string; remark?: ReturnRemarkType }) => void;
@@ -48,6 +67,7 @@ interface ReturnsModuleProps {
   onCloseBatch: (batchId: string, driverName: string, driverMobile: string, supervisorSigner: string) => void;
   isOpenCreateModal: boolean;
   onCloseCreateModal: () => void;
+  onNavigateTab?: (tab: any) => void;
 }
 
 export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
@@ -57,6 +77,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   scannedItems,
   clients,
   couriers,
+  gateEntries = [],
   onAddBatch,
   onScanItem,
   onUpdateItem,
@@ -64,15 +85,22 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   onCloseBatch,
   isOpenCreateModal,
   onCloseCreateModal,
+  onNavigateTab,
 }) => {
-  // Top Tabs: 'open_batch' | 'closed_batch' | 'reports'
-  const [activeMainTab, setActiveMainTab] = useState<'open_batch' | 'closed_batch' | 'reports'>('open_batch');
+  // EXACTLY 4 TABS: 'open_batch' | 'closed_batch' | 'reports' | 'dashboard'
+  const [activeMainTab, setActiveMainTab] = useState<'open_batch' | 'closed_batch' | 'reports' | 'dashboard'>('open_batch');
 
-  // Sub-view in Open Batch: 'scan' (default) | 'create' | 'close'
-  const [openBatchView, setOpenBatchView] = useState<'scan' | 'create' | 'close'>('scan');
+  // Sub-view in Open Batch: 'list' (default to see all open batches) | 'scan' | 'create' | 'close'
+  const [openBatchView, setOpenBatchView] = useState<'list' | 'scan' | 'create' | 'close'>('list');
 
   // Active batch selected for scanning station
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
+
+  // Search in Open Batches
+  const [openBatchSearch, setOpenBatchSearch] = useState('');
+
+  // Search in Closed Batches List
+  const [batchSearchQuery, setBatchSearchQuery] = useState('');
 
   // Device / Handheld Terminal (HHT / PDA / Phone) Fullscreen Mode
   const [isDeviceMode, setIsDeviceMode] = useState(false);
@@ -96,19 +124,19 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const [newBatchChannel, setNewBatchChannel] = useState<'D2C Return' | 'B2C Return' | 'Marketplace Return' | 'Customer RTO'>('B2C Return');
   const [newBatchDock, setNewBatchDock] = useState<string>('Dock 01');
   const [newBatchNotes, setNewBatchNotes] = useState('');
+  const [newBatchExpectedQty, setNewBatchExpectedQty] = useState<number>(100);
 
-  // Keep form selections valid when master lists change in realtime
-  // (e.g. a courier added on another device, or one deleted here).
+  // Keep form selections valid when master lists change
   useEffect(() => {
     if (couriers.length > 0 && !couriers.some(c => c.id === newBatchCourier)) {
       setNewBatchCourier(couriers[0].id);
     }
-  }, [couriers]);
+  }, [couriers, newBatchCourier]);
   useEffect(() => {
     if (clients.length > 0 && !clients.some(c => c.id === newBatchClient)) {
       setNewBatchClient(clients[0].id);
     }
-  }, [clients]);
+  }, [clients, newBatchClient]);
 
   // SCANNER GUN & AWB SCAN STATE
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -126,9 +154,6 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const [selectedClosedBatch, setSelectedClosedBatch] = useState<ReturnBatch | null>(null);
   const [closedBatchItemSearch, setClosedBatchItemSearch] = useState('');
 
-  // Search in Closed Batches List
-  const [batchSearchQuery, setBatchSearchQuery] = useState('');
-
   // CLOSE BATCH SIGN-OFF STATE
   const [driverName, setDriverName] = useState('');
   const [driverMobile, setDriverMobile] = useState('');
@@ -141,23 +166,27 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const sigCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Filter Batches for active warehouse
-  const warehouseBatches = batches.filter(b => b.warehouseId === activeWarehouse.id);
-  const openBatches = warehouseBatches.filter(b => b.status === 'Open');
-  const closedBatches = warehouseBatches.filter(b => b.status === 'Closed');
+  // ALL OPEN AND CLOSED BATCHES (Including old batches and cross-device sync)
+  // We do not drop batches if warehouseId is missing or different, so no data ever disappears!
+  const openBatches = useMemo(() => {
+    return batches.filter(b => b.status !== 'Closed');
+  }, [batches]);
 
-  // Auto Select first open batch on mount or change
-  useEffect(() => {
-    if (openBatches.length > 0) {
-      if (!activeBatchId || !openBatches.some(b => b.id === activeBatchId)) {
-        setActiveBatchId(openBatches[0].id);
-      }
-    } else {
-      setActiveBatchId(null);
-    }
-  }, [batches, activeWarehouse.id, activeBatchId, openBatches]);
+  const closedBatches = useMemo(() => {
+    return batches.filter(b => b.status === 'Closed');
+  }, [batches]);
 
-  // Open Create Modal triggered from header
+  // Active batch object
+  const activeBatch = useMemo(() => {
+    if (!activeBatchId) return openBatches[0] || null;
+    return batches.find(b => b.id === activeBatchId) || openBatches[0] || null;
+  }, [batches, openBatches, activeBatchId]);
+
+  const activeBatchItems = useMemo(() => {
+    return activeBatch ? scannedItems.filter(i => i.batchId === activeBatch.id) : [];
+  }, [scannedItems, activeBatch]);
+
+  // Trigger Create Modal if requested from top header
   useEffect(() => {
     if (isOpenCreateModal) {
       setActiveMainTab('open_batch');
@@ -166,236 +195,116 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
     }
   }, [isOpenCreateModal, onCloseCreateModal]);
 
-  // Keep barcode input focused on scan view
+  // Auto-focus barcode scanner when in scan view
   useEffect(() => {
     if (openBatchView === 'scan' && activeBatchId && !isDeviceMode && !editingItem && !deletingItemId) {
       barcodeInputRef.current?.focus();
     }
   }, [openBatchView, activeBatchId, isDeviceMode, editingItem, deletingItemId]);
 
-  // Active batch object
-  const activeBatch = openBatches.find(b => b.id === activeBatchId) || openBatches[0] || null;
-  const activeBatchItems = activeBatch ? scannedItems.filter(i => i.batchId === activeBatch.id) : [];
+  // Sound feedback
+  const playBeep = (isSuccess: boolean) => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = isSuccess ? 'sine' : 'sawtooth';
+      osc.frequency.setValueAtTime(isSuccess ? 1046.5 : 220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (isSuccess ? 0.12 : 0.3));
+      osc.start();
+      osc.stop(ctx.currentTime + (isSuccess ? 0.12 : 0.3));
+    } catch {
+      // Audio not supported or blocked by browser policy
+    }
+  };
 
+  // Reopen and start scanning a batch
+  const handleOpenBatchForScanning = (batchId: string) => {
+    setActiveBatchId(batchId);
+    setOpenBatchView('scan');
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 50);
+  };
+
+  // Scan submit
+  const handleScanSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const rawVal = barcodeInput.trim();
+    if (!rawVal) return;
+    if (!activeBatch) {
+      setLastScanResult({ success: false, msg: 'Please select an open batch first.' });
+      return;
+    }
+
+    const res = onScanItem(activeBatch.id, rawVal, selectedRemark);
+    playBeep(res.success);
+    setLastScanResult({ success: res.success, msg: res.message });
+    setBarcodeInput('');
+    barcodeInputRef.current?.focus();
+  };
+
+  // Handle Edit Scan
   const handleEditScan = (item: ScannedReturnItem) => {
     setEditingItem(item);
     setEditAwbValue(item.trackingNumber);
     setEditRemarkValue(item.remark);
   };
 
+  const handleSaveEdit = () => {
+    if (!editingItem || !onUpdateItem) return;
+    const trimmed = editAwbValue.trim();
+    if (!trimmed) return;
+    onUpdateItem(editingItem.id, {
+      trackingNumber: trimmed,
+      remark: editRemarkValue,
+    });
+    setEditingItem(null);
+  };
+
+  // Handle Delete Scan
   const handleDeleteScan = (itemId: string) => {
     setDeletingItemId(itemId);
   };
 
-  // Audio Beep generator
-  const playBeep = (success: boolean) => {
-    if (!soundEnabled) return;
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      if (success) {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
-      } else {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(220, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.28);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.28);
-      }
-    } catch (e) {}
-  };
-
-  // Generate Auto Batch Code Format: {DD}-{ClientCode}-{Seq}
-  const getAutoBatchCode = (clientId: string) => {
-    const today = new Date();
-    const dayStr = String(today.getDate()).padStart(2, '0');
-    const selectedClient = clients.find(c => c.id === clientId);
-    const clientRef = (selectedClient?.code || 'ACC').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase();
-    const clientExistingBatches = batches.filter(b => b.clientId === clientId);
-    const serialNo = String(101 + clientExistingBatches.length).padStart(4, '0');
-    return `${dayStr}-${clientRef}-${serialNo}`;
-  };
-
-  // CREATE NEW BATCH SUBMIT
-  const handleCreateBatchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Snapshot master names onto the batch so every device can display it
-    // correctly even if its courier/client master list is out of sync.
-    const courierSnapshot = couriers.find(cr => cr.id === newBatchCourier);
-    const clientSnapshot = clients.find(c => c.id === newBatchClient);
-    const newBatch = onAddBatch({
-      batchType: newBatchChannel === 'D2C Return' ? 'RTO/B2C' : 'RTO/B2C',
-      warehouseId: activeWarehouse.id,
-      clientId: newBatchClient,
-      clientName: clientSnapshot?.name,
-      courierId: newBatchCourier,
-      courierName: courierSnapshot?.name,
-      status: 'Open',
-      dockNumber: newBatchDock,
-      notes: `${newBatchChannel} | Dock: ${newBatchDock}${newBatchNotes ? ` | ${newBatchNotes}` : ''}`,
-      createdBy: currentUser.id,
-      createdByName: currentUser.name,
-    });
-
-    setActiveBatchId(newBatch.id);
-    setOpenBatchView('scan');
-    setNewBatchNotes('');
-    setLastScanResult({
-      success: true,
-      msg: `Batch ${newBatch.batchNumber} created.`,
-    });
-  };
-
-  // SCAN ITEM SUBMIT
-  const handleBarcodeSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const codeToScan = barcodeInput.trim().toUpperCase();
-    if (!activeBatchId || !codeToScan) return;
-
-    const result = onScanItem(activeBatchId, codeToScan, selectedRemark);
-
-    setLastScanResult({ success: result.success, msg: result.message });
-    playBeep(result.success);
-
-    // Haptic vibration feedback for mobile/handheld
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        if (result.success) {
-          navigator.vibrate(80);
-        } else {
-          navigator.vibrate([150, 80, 150]);
-        }
-      } catch (err) {}
-    }
-
-    if (result.success) {
-      setBarcodeInput('');
-    }
-
-    setTimeout(() => {
-      barcodeInputRef.current?.focus();
-    }, 50);
-  };
-
-  // EDIT AWB ITEM SUBMIT
-  const handleSaveEditItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingItem) return;
-    if (onUpdateItem) {
-      onUpdateItem(editingItem.id, {
-        trackingNumber: editAwbValue,
-        remark: editRemarkValue,
-      });
-    }
-    setEditingItem(null);
-    setLastScanResult({
-      success: true,
-      msg: `AWB updated to ${editAwbValue.toUpperCase()} [${editRemarkValue}]`,
-    });
-  };
-
-  // REMOVE AWB ITEM SUBMIT
-  const handleConfirmDeleteItem = () => {
-    if (!deletingItemId) return;
-    if (onDeleteItem) {
+  const confirmDeleteScan = () => {
+    if (deletingItemId && onDeleteItem) {
       onDeleteItem(deletingItemId);
+      setDeletingItemId(null);
     }
-    setDeletingItemId(null);
-    setLastScanResult({
-      success: true,
-      msg: 'AWB removed from batch.',
-    });
   };
 
-  // SIGN HANDOVER & CLOSE BATCH
-  const handleConfirmCloseBatch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeBatch) return;
-
-    onCloseBatch(activeBatch.id, driverName, driverMobile, supervisorSigner);
-
-    // Auto generate & download PDF manifest
-    const batchItems = scannedItems.filter(i => i.batchId === activeBatch.id);
-    const client = clients.find(c => c.id === activeBatch.clientId);
-    const courier = couriers.find(cr => cr.id === activeBatch.courierId) || (activeBatch.courierName ? { id: activeBatch.courierId, name: activeBatch.courierName } as any : undefined);
-
-    generateBatchPDF(
-      { ...activeBatch, status: 'Closed', driverName, driverMobile, supervisorSigner },
-      batchItems,
-      activeWarehouse,
-      client,
-      courier
-    );
-
-    setDriverName('');
-    setDriverMobile('');
-    setHandoverSignatureStatus('Pending');
-    setActiveMainTab('closed_batch');
-  };
-
-  // Download Batch PDF Manifest
-  const handleDownloadBatchPDF = (batch: ReturnBatch) => {
-    const items = scannedItems.filter(i => i.batchId === batch.id);
-    const client = clients.find(c => c.id === batch.clientId) || (batch.clientName ? { id: batch.clientId, name: batch.clientName } as any : undefined);
-    const courier = couriers.find(cr => cr.id === batch.courierId) || (batch.courierName ? { id: batch.courierId, name: batch.courierName } as any : undefined);
-    generateBatchPDF(batch, items, activeWarehouse, client, courier);
-  };
-
-  // 7 QC Conditions List
-  const remarksList: {
-    key: ReturnRemarkType;
-    label: string;
-    textColor: string;
-    bgColor: string;
-    borderColor: string;
-  }[] = [
-    { key: 'Good', label: '✓ Good', textColor: '#10B981', bgColor: '#ECFDF5', borderColor: 'rgba(16, 185, 129, 0.2)' },
-    { key: 'Damage', label: '⚠ Damage', textColor: '#EF4444', bgColor: '#FEF2F2', borderColor: 'rgba(239, 68, 68, 0.2)' },
-    { key: 'Open Box', label: 'Open Box', textColor: '#F59E0B', bgColor: '#FFFBEB', borderColor: 'rgba(245, 158, 11, 0.2)' },
-    { key: 'Wrong Product', label: 'Wrong Prod', textColor: '#8B5CF6', bgColor: '#F5F3FF', borderColor: 'rgba(139, 92, 246, 0.2)' },
-    { key: 'Short Qty', label: 'Short Qty', textColor: '#F97316', bgColor: '#FFF7ED', borderColor: 'rgba(249, 115, 22, 0.2)' },
-    { key: 'Missing Product', label: 'Missing', textColor: '#EC4899', bgColor: '#FDF2F8', borderColor: 'rgba(236, 72, 153, 0.2)' },
-    { key: 'Others', label: 'Others', textColor: '#64748B', bgColor: '#F8FAFC', borderColor: 'rgba(100, 116, 139, 0.2)' },
-  ];
-
-  // Signature pad drawing helpers
-  const handleStartDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  // Digital Signature Canvas
+  const handleStartDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawingSig(true);
     const canvas = sigCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    setIsDrawingSig(true);
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
     ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = '#059669';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
   };
 
-  const handleDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const handleDraw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawingSig) return;
     const canvas = sigCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
-    ctx.strokeStyle = '#10B981';
-    ctx.lineWidth = 2.5;
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    ctx.lineTo(x, y);
     ctx.stroke();
     setHandoverSignatureStatus('Signed');
   };
@@ -413,102 +322,277 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
     setHandoverSignatureStatus('Pending');
   };
 
+  // Close Batch Submit
+  const handleCloseBatchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeBatch) return;
+    if (!driverName.trim()) {
+      alert('Please provide courier driver / representative name.');
+      return;
+    }
+
+    onCloseBatch(activeBatch.id, driverName.trim(), driverMobile.trim(), supervisorSigner.trim());
+
+    // Generate & download manifest PDF
+    const client = clients.find(c => c.id === activeBatch.clientId);
+    const courier = couriers.find(cr => cr.id === activeBatch.courierId);
+    generateBatchPDF(activeBatch, activeBatchItems, activeWarehouse, client, courier);
+
+    // Reset close form
+    setDriverName('');
+    setDriverMobile('');
+    handleClearSig();
+    setOpenBatchView('list');
+    setActiveMainTab('closed_batch');
+  };
+
+  // Download PDF for Closed Batch
+  const handleDownloadBatchPDF = (batch: ReturnBatch) => {
+    const batchItems = scannedItems.filter(i => i.batchId === batch.id);
+    const client = clients.find(c => c.id === batch.clientId);
+    const courier = couriers.find(cr => cr.id === batch.courierId);
+    generateBatchPDF(batch, batchItems, activeWarehouse, client, courier);
+  };
+
+  // Filtered open batches for list view
+  const filteredOpenBatches = useMemo(() => {
+    if (!openBatchSearch.trim()) return openBatches;
+    const q = openBatchSearch.toLowerCase();
+    return openBatches.filter(b => {
+      const client = clients.find(c => c.id === b.clientId);
+      const courier = couriers.find(cr => cr.id === b.courierId);
+      const cName = (client?.name || b.clientName || '').toLowerCase();
+      const crName = (courier?.name || b.courierName || '').toLowerCase();
+      return (
+        b.batchNumber.toLowerCase().includes(q) ||
+        cName.includes(q) ||
+        crName.includes(q) ||
+        (b.dockNumber || '').toLowerCase().includes(q)
+      );
+    });
+  }, [openBatches, openBatchSearch, clients, couriers]);
+
+  // Compute QC condition breakdown across all scanned items
+  const qcBreakdown = useMemo(() => {
+    const conditions: ReturnRemarkType[] = [
+      'Good',
+      'Damage',
+      'Open Box',
+      'Wrong Product',
+      'Short Qty',
+      'Missing Product',
+      'Others',
+    ];
+    const counts: Record<ReturnRemarkType, number> = {
+      'Good': 0,
+      'Damage': 0,
+      'Open Box': 0,
+      'Wrong Product': 0,
+      'Short Qty': 0,
+      'Missing Product': 0,
+      'Others': 0,
+    };
+    scannedItems.forEach(item => {
+      if (counts[item.remark] !== undefined) {
+        counts[item.remark]++;
+      } else {
+        counts['Others']++;
+      }
+    });
+    const total = scannedItems.length || 1;
+    return conditions.map(cond => ({
+      condition: cond,
+      count: counts[cond] || 0,
+      percent: Math.round(((counts[cond] || 0) / total) * 100),
+    }));
+  }, [scannedItems]);
+
+  // Date-wise Report Data
+  const dateWiseReport = useMemo(() => {
+    const map = new Map<string, {
+      date: string;
+      totalBatches: number;
+      openBatches: number;
+      closedBatches: number;
+      totalScanned: number;
+      goodCount: number;
+      damageCount: number;
+      otherCount: number;
+    }>();
+
+    batches.forEach(b => {
+      const dateKey = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-CA') : 'Unknown';
+      if (!map.has(dateKey)) {
+        map.set(dateKey, {
+          date: dateKey,
+          totalBatches: 0,
+          openBatches: 0,
+          closedBatches: 0,
+          totalScanned: 0,
+          goodCount: 0,
+          damageCount: 0,
+          otherCount: 0,
+        });
+      }
+      const entry = map.get(dateKey)!;
+      entry.totalBatches++;
+      if (b.status === 'Closed') entry.closedBatches++;
+      else entry.openBatches++;
+      entry.totalScanned += (b.totalScanned || 0);
+    });
+
+    scannedItems.forEach(item => {
+      const dateKey = item.scannedAt ? new Date(item.scannedAt).toLocaleDateString('en-CA') : 'Unknown';
+      if (map.has(dateKey)) {
+        const entry = map.get(dateKey)!;
+        if (item.remark === 'Good') entry.goodCount++;
+        else if (item.remark === 'Damage' || item.remark === 'Missing Product') entry.damageCount++;
+        else entry.otherCount++;
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+  }, [batches, scannedItems]);
+
+  // Account-wise Report Data
+  const accountWiseReport = useMemo(() => {
+    return clients.map(c => {
+      const accBatches = batches.filter(b => b.clientId === c.id || b.clientName === c.name);
+      const batchIds = new Set(accBatches.map(b => b.id));
+      const accItems = scannedItems.filter(i => batchIds.has(i.batchId));
+      const goodCount = accItems.filter(i => i.remark === 'Good').length;
+      const damageCount = accItems.filter(i => i.remark === 'Damage' || i.remark === 'Missing Product').length;
+      const totalExpected = accBatches.reduce((acc, b) => acc + (b.expectedCount || 0), 0);
+      const totalScanned = accItems.length;
+      const pendingCount = Math.max(0, totalExpected - totalScanned);
+
+      return {
+        accountName: c.name,
+        accountCode: c.code,
+        totalBatches: accBatches.length,
+        totalScanned,
+        goodCount,
+        damageCount,
+        pendingCount,
+      };
+    }).filter(a => a.totalBatches > 0 || a.totalScanned > 0);
+  }, [clients, batches, scannedItems]);
+
+  // Dashboard Stats
+  const totalVehiclesCount = gateEntries.length;
+  const arrivedVehiclesCount = gateEntries.filter(g => g.status === 'Gate In' || g.status === 'Arrived').length;
+  const unloadingVehiclesCount = gateEntries.filter(g => g.status === 'In Unloading' || g.status === 'Under QC').length;
+  const completedVehiclesCount = gateEntries.filter(g => g.status === 'Completed' || g.status === 'Gate Out').length;
+  const totalBoxesReceived = gateEntries.reduce((sum, g) => sum + (g.receivedBoxes || g.expectedBoxes || 0), 0);
+
+  // If mobile handheld mode is requested
   if (isDeviceMode && activeBatch) {
     return (
       <HandheldScannerView
-        activeBatch={activeBatch}
-        batches={batches}
-        scannedItems={scannedItems}
-        clients={clients}
-        couriers={couriers}
-        activeWarehouse={activeWarehouse}
         currentUser={currentUser}
+        activeWarehouse={activeWarehouse}
+        activeBatch={activeBatch}
+        client={clients.find(c => c.id === activeBatch.clientId)}
+        courier={couriers.find(cr => cr.id === activeBatch.courierId)}
+        scannedItems={activeBatchItems}
         onScanItem={onScanItem}
-        onSelectBatch={(batchId) => setActiveBatchId(batchId)}
-        onCloseBatchRequest={(batch) => {
-          setIsDeviceMode(false);
-          setActiveBatchId(batch.id);
-          setOpenBatchView('close');
-        }}
-        onExitDeviceMode={() => setIsDeviceMode(false)}
+        onCloseBatch={() => setOpenBatchView('close')}
+        onExit={() => setIsDeviceMode(false)}
       />
     );
   }
 
   return (
-    <div className="p-2 sm:p-5 space-y-3 sm:space-y-4 max-w-[1680px] mx-auto w-full">
-      {/* MODULE HEADER */}
-      <div className="flex items-center justify-between gap-2 border-b border-theme pb-2.5 sm:pb-3">
+    <div className="space-y-4 pb-12">
+      {/* MODULE TOP BAR */}
+      <div className="flex items-center justify-between gap-2 border-b border-theme pb-2.5">
         <div className="min-w-0">
-          <h1 className="text-sm sm:text-xl font-extrabold text-primary flex items-center gap-1.5 sm:gap-2 truncate">
+          <h1 className="text-sm sm:text-xl font-extrabold text-primary flex items-center gap-2 truncate">
             <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-[#123B5D] dark:text-indigo-400 shrink-0" />
             <span className="truncate">RTO / Returns Station</span>
           </h1>
+          <p className="text-[11px] text-secondary hidden sm:block">
+            High-speed barcode scanner gun intake, batch inspection, manifest generation, and reports.
+          </p>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            id="btn-create-batch-header"
+            id="btn-create-batch-top"
             onClick={() => {
               setActiveMainTab('open_batch');
               setOpenBatchView('create');
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-[11px] sm:text-xs shadow-sm transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Create Batch</span>
-            <span className="xs:hidden">New</span>
+            <span>Create Batch</span>
           </button>
         </div>
       </div>
 
-      {/* 3 TOP TABS */}
-      <div className="grid grid-cols-3 gap-2 bg-elevated p-1 rounded-xl border border-theme">
+      {/* EXACTLY 4 TABS: Open Batch | Closed Batch | Report & Manifest | Dashboard */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-elevated p-1 rounded-xl border border-theme">
+        {/* TAB 1: Open Batch */}
         <button
           id="tab-open-batch"
           onClick={() => {
             setActiveMainTab('open_batch');
-            if (openBatches.length > 0 && openBatchView !== 'create') {
-              setOpenBatchView('scan');
-            }
+            setOpenBatchView('list');
           }}
-          className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'open_batch'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
               : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
-          <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <Unlock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           <span className="truncate">Open Batch ({openBatches.length})</span>
           {openBatches.length > 0 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
           )}
         </button>
 
+        {/* TAB 2: Closed Batch */}
         <button
           id="tab-closed-batch"
           onClick={() => setActiveMainTab('closed_batch')}
-          className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'closed_batch'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
               : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
-          <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
           <span className="truncate">Closed Batch ({closedBatches.length})</span>
         </button>
 
+        {/* TAB 3: Report & Manifest */}
         <button
           id="tab-report-manifest"
           onClick={() => setActiveMainTab('reports')}
-          className={`px-2.5 sm:px-4 py-2 rounded-lg font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMainTab === 'reports'
               ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
               : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
-          <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
           <span className="truncate">Report & Manifest</span>
+        </button>
+
+        {/* TAB 4: Dashboard */}
+        <button
+          id="tab-dashboard"
+          onClick={() => setActiveMainTab('dashboard')}
+          className={`px-3 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            activeMainTab === 'dashboard'
+              ? 'bg-[#123B5D] dark:bg-indigo-600 text-white shadow-xs'
+              : 'text-secondary hover:text-primary hover:bg-surface'
+          }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+          <span className="truncate">Dashboard</span>
         </button>
       </div>
 
@@ -516,351 +600,331 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* TAB 1: OPEN BATCH                                        */}
       {/* ======================================================== */}
       {activeMainTab === 'open_batch' && (
-        <div className="space-y-3.5">
-          {/* VIEW A: CREATE NEW BATCH FORM */}
-          {openBatchView === 'create' && (
-            <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-6 shadow-sm max-w-3xl mx-auto space-y-4">
-              <div className="border-b border-theme pb-2.5 flex items-center justify-between">
-                <h2 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" /> New Return Batch
-                </h2>
-                {openBatches.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setOpenBatchView('scan')}
-                    className="text-xs text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" /> Cancel
-                  </button>
-                )}
-              </div>
-
-              {/* Batch Code Preview */}
-              <div className="p-3 bg-blue-50/70 dark:bg-indigo-950/30 border border-blue-200/80 dark:border-indigo-800/40 rounded-xl flex items-center justify-between gap-3">
+        <div className="space-y-4">
+          {/* SUB-VIEW 1: ALL OPEN BATCHES TABLE (DEFAULT LIST VIEW) */}
+          {openBatchView === 'list' && (
+            <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-3">
                 <div>
-                  <div className="text-[10px] text-[#123B5D] dark:text-indigo-300 font-bold uppercase tracking-wider">
-                    Batch Code
-                  </div>
-                  <div className="text-lg sm:text-xl font-black font-mono text-primary mt-0.5">
-                    {getAutoBatchCode(newBatchClient)}
-                  </div>
-                </div>
-                <div className="text-right font-mono text-[11px] text-secondary">
-                  {liveDateTime}
-                </div>
-              </div>
-
-              <form onSubmit={handleCreateBatchSubmit} className="space-y-3.5 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Account Name */}
-                  <div>
-                    <label className="block text-primary font-bold mb-1">
-                      Account Name *
-                    </label>
-                    <select
-                      value={newBatchClient}
-                      onChange={e => setNewBatchClient(e.target.value)}
-                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
-                    >
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Courier */}
-                  <div>
-                    <label className="block text-primary font-bold mb-1">
-                      Courier Partner *
-                    </label>
-                    <select
-                      value={newBatchCourier}
-                      onChange={e => setNewBatchCourier(e.target.value)}
-                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
-                    >
-                      {couriers.map(cr => (
-                        <option key={cr.id} value={cr.id}>
-                          {cr.name} ({cr.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Channel */}
-                  <div>
-                    <label className="block text-primary font-bold mb-1">
-                      Channel *
-                    </label>
-                    <select
-                      value={newBatchChannel}
-                      onChange={e => setNewBatchChannel(e.target.value as any)}
-                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
-                    >
-                      <option value="B2C Return">B2C Return</option>
-                      <option value="D2C Return">D2C Return</option>
-                      <option value="Marketplace Return">Marketplace Return (Amazon / Flipkart / Myntra)</option>
-                      <option value="Customer RTO">Customer RTO (Undelivered / Refused)</option>
-                    </select>
-                  </div>
-
-                  {/* Dock No Dropdown */}
-                  <div>
-                    <label className="block text-primary font-bold mb-1">
-                      Dock No *
-                    </label>
-                    <select
-                      value={newBatchDock}
-                      onChange={e => setNewBatchDock(e.target.value)}
-                      className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme font-medium focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 cursor-pointer text-xs"
-                    >
-                      <option value="Dock 01">Dock 01</option>
-                      <option value="Dock 02">Dock 02</option>
-                    </select>
-                  </div>
+                  <h2 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
+                    <Unlock className="w-4 h-4 text-emerald-500" />
+                    <span>All Open Batches ({openBatches.length})</span>
+                  </h2>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Showing all created and open batches (including old batches). Click any batch to reopen and continue scanning.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-primary font-bold mb-1">Batch Notes</label>
-                  <input
-                    type="text"
-                    placeholder="Optional notes"
-                    value={newBatchNotes}
-                    onChange={e => setNewBatchNotes(e.target.value)}
-                    className="w-full bg-elevated text-primary p-2 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 text-xs placeholder:text-muted"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-theme">
-                  {openBatches.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => setOpenBatchView('scan')}
-                      className="px-3.5 py-1.5 rounded-xl bg-elevated text-secondary hover:text-primary font-bold text-xs cursor-pointer transition-colors border border-theme"
-                    >
-                      Cancel
-                    </button>
-                  ) : <div />}
-
+                <div className="flex items-center gap-2">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search batch, account, courier..."
+                      value={openBatchSearch}
+                      onChange={e => setOpenBatchSearch(e.target.value)}
+                      className="w-full bg-elevated text-xs text-primary pl-8 pr-3 py-1.5 rounded-lg border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
+                    />
+                  </div>
                   <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer transition-all"
+                    onClick={() => setOpenBatchView('create')}
+                    className="px-3 py-1.5 rounded-lg bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
                   >
-                    <span>Create & Start Scanning</span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create Batch</span>
                   </button>
                 </div>
-              </form>
+              </div>
+
+              {/* TABLE OF ALL OPEN BATCHES */}
+              <div className="overflow-x-auto rounded-xl border border-theme">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
+                    <tr>
+                      <th className="px-3.5 py-3">Batch Number</th>
+                      <th className="px-3.5 py-3">Account Name</th>
+                      <th className="px-3.5 py-3">Courier</th>
+                      <th className="px-3.5 py-3 text-center">Qty</th>
+                      <th className="px-3.5 py-3 text-center">Scanned Count</th>
+                      <th className="px-3.5 py-3 text-center">Pending</th>
+                      <th className="px-3.5 py-3">Date / Time</th>
+                      <th className="px-3.5 py-3 text-center">Status</th>
+                      <th className="px-3.5 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-theme text-primary">
+                    {filteredOpenBatches.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="px-4 py-8 text-center text-secondary">
+                          <p className="text-sm font-semibold">No open batches found.</p>
+                          <p className="text-xs text-muted mt-1">Create a new batch to begin scanning returns.</p>
+                          <button
+                            onClick={() => setOpenBatchView('create')}
+                            className="mt-3 px-4 py-2 rounded-xl bg-[#123B5D] dark:bg-indigo-600 text-white text-xs font-bold shadow-sm"
+                          >
+                            + Create First Return Batch
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredOpenBatches.map(b => {
+                        const client = clients.find(c => c.id === b.clientId);
+                        const courier = couriers.find(cr => cr.id === b.courierId);
+                        const accountName = client?.name || b.clientName || '—';
+                        const courierName = courier?.name || b.courierName || '—';
+                        const expectedQty = b.expectedCount || 0;
+                        const scannedCount = b.totalScanned || 0;
+                        const pendingQty = Math.max(0, expectedQty - scannedCount);
+                        const formattedDateTime = b.createdAt ? new Date(b.createdAt).toLocaleString() : '—';
+
+                        return (
+                          <tr
+                            key={b.id}
+                            onClick={() => handleOpenBatchForScanning(b.id)}
+                            className="hover:bg-elevated cursor-pointer transition-colors group"
+                          >
+                            <td className="px-3.5 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:underline flex items-center gap-1.5">
+                              <Unlock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              <span>{b.batchNumber}</span>
+                            </td>
+                            <td className="px-3.5 py-3 font-bold text-primary">{accountName}</td>
+                            <td className="px-3.5 py-3 text-secondary">{courierName}</td>
+                            <td className="px-3.5 py-3 text-center font-mono font-semibold text-primary">{expectedQty}</td>
+                            <td className="px-3.5 py-3 text-center font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                              {scannedCount}
+                            </td>
+                            <td className="px-3.5 py-3 text-center font-mono font-semibold text-amber-600 dark:text-amber-400">
+                              {pendingQty}
+                            </td>
+                            <td className="px-3.5 py-3 text-secondary font-mono text-[11px]">{formattedDateTime}</td>
+                            <td className="px-3.5 py-3 text-center">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>Open</span>
+                              </span>
+                            </td>
+                            <td className="px-3.5 py-3 text-right" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleOpenBatchForScanning(b.id)}
+                                className="px-3 py-1.5 rounded-lg bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer transition-all"
+                              >
+                                <Zap className="w-3 h-3" />
+                                <span>Reopen & Scan</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {/* VIEW B: ACTIVE SCANNING WORKBENCH */}
+          {/* SUB-VIEW 2: ACTIVE SCANNING WORKBENCH */}
           {openBatchView === 'scan' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {activeBatch ? (
-                <div className="bg-surface border border-theme rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
-                  {/* Active Batch Sleek Compact Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-elevated p-2 sm:p-2.5 rounded-lg border border-theme">
-                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                      <span className="text-xs font-bold font-mono text-primary tracking-wide whitespace-nowrap bg-surface px-1.5 py-0.5 rounded border border-theme shadow-xs">
-                        {activeBatch.batchNumber}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 truncate max-w-[120px] sm:max-w-[180px]">
-                        {clients.find(c => c.id === activeBatch.clientId)?.name || activeBatch.clientName || '—'}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 truncate max-w-[120px] sm:max-w-[180px]">
-                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
-                      </span>
-                      {activeBatch.dockNumber && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
-                          {activeBatch.dockNumber}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-secondary font-mono hidden md:inline ml-1">
-                        {new Date(activeBatch.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
+                <div className="space-y-4">
+                  {/* BATCH HEADER WITH BACK TO LIST & BATCH SWITCHER */}
+                  <div className="bg-surface border border-theme rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setOpenBatchView('list')}
+                        className="p-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs border border-theme shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+                        title="View All Open Batches"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">All Open Batches</span>
+                      </button>
+
+                      <div className="border-l border-theme pl-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base sm:text-lg font-black font-mono text-primary">
+                            {activeBatch.batchNumber}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                            Active Open
+                          </span>
+                        </div>
+                        <div className="text-xs text-secondary flex items-center gap-2 mt-0.5">
+                          <span className="font-bold text-primary">
+                            {clients.find(c => c.id === activeBatch.clientId)?.name || activeBatch.clientName || '—'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
+                          </span>
+                          <span>•</span>
+                          <span>{activeBatch.dockNumber || 'Dock 01'}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-theme">
+                    <div className="flex items-center gap-2 self-end md:self-center">
+                      {/* BATCH SWITCHER DROPDOWN */}
                       {openBatches.length > 1 && (
-                        <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                          <span className="text-secondary font-medium">Batch:</span>
-                          <select
-                            value={activeBatchId || ''}
-                            onChange={e => setActiveBatchId(e.target.value)}
-                            className="bg-surface border border-theme text-primary text-[10px] sm:text-[11px] rounded px-1.5 py-0.5 font-mono focus:outline-none cursor-pointer"
-                          >
-                            {openBatches.map((b, idx) => (
-                              <option key={b.id || b.batchNumber || idx} value={b.id || b.batchNumber}>
-                                {b.batchNumber} ({b.totalScanned})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <select
+                          value={activeBatch.id}
+                          onChange={e => setActiveBatchId(e.target.value)}
+                          className="bg-elevated text-xs font-bold text-primary px-3 py-2 rounded-xl border border-theme focus:outline-none"
+                        >
+                          {openBatches.map(b => (
+                            <option key={b.id} value={b.id}>
+                              {b.batchNumber} - {clients.find(c => c.id === b.clientId)?.name || b.clientName} ({b.totalScanned})
+                            </option>
+                          ))}
+                        </select>
                       )}
 
-                      <div className="flex items-center gap-1 bg-surface px-2 py-0.5 rounded border border-theme shadow-xs">
-                        <span className="text-[9px] text-secondary uppercase font-semibold">Scanned:</span>
-                        <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono leading-none">{activeBatch.totalScanned}</span>
-                      </div>
+                      <button
+                        onClick={() => setIsDeviceMode(true)}
+                        className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                        title="Open Handheld Terminal PDA Mode"
+                      >
+                        <QrCode className="w-4 h-4" />
+                        <span className="hidden sm:inline">HHT Gun Mode</span>
+                      </button>
 
                       <button
                         onClick={() => setOpenBatchView('close')}
-                        className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 cursor-pointer shrink-0"
+                        className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
                       >
-                        <Lock className="w-3 h-3" />
+                        <Lock className="w-4 h-4" />
                         <span>Close Batch</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* SCANNING WORKBENCH */}
-                  <div className="bg-elevated border border-indigo-200 dark:border-indigo-500/30 p-2.5 sm:p-3 rounded-xl shadow-xs space-y-2">
-                    {/* Barcode Scan Box */}
-                    <form onSubmit={handleBarcodeSubmit} className="space-y-1.5">
+                  {/* BARCODE SCANNER INPUT WORKBENCH */}
+                  <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+                    <form onSubmit={handleScanSubmit} className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="block text-[10px] sm:text-[11px] font-bold text-primary uppercase tracking-wide flex items-center gap-1.5">
-                          <QrCode className="w-3 h-3 text-[#123B5D] dark:text-indigo-400" />
-                          AWB / Order Barcode
+                        <label className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Laser Gun Barcode Intake (Auto-Enter Ready)</span>
                         </label>
-                        <span className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                          Laser Gun Ready (Auto-Enter)
-                        </span>
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          ref={barcodeInputRef}
-                          type="text"
-                          autoFocus
-                          placeholder="Scan barcode with gun or type AWB..."
-                          value={barcodeInput}
-                          onChange={e => setBarcodeInput(e.target.value)}
-                          className="w-full bg-surface text-primary placeholder:text-muted pl-2.5 pr-16 py-1.5 sm:py-2 rounded-lg text-xs font-mono font-medium border border-indigo-300 dark:border-indigo-500/60 focus:outline-none focus:border-emerald-500 shadow-inner"
-                        />
-                        <div className="absolute right-1 top-1 bottom-1 flex items-center gap-1">
-                          {barcodeInput && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBarcodeInput('');
-                                barcodeInputRef.current?.focus();
-                              }}
-                              className="p-1 text-secondary hover:text-primary cursor-pointer"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                          <button
-                            type="submit"
-                            className="h-full px-2.5 bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-[11px] rounded shadow-sm transition-all flex items-center gap-1 cursor-pointer"
-                          >
-                            <Zap className="w-3 h-3" /> SCAN
-                          </button>
+                        <div className="text-xs font-bold text-primary font-mono">
+                          Batch Units: <strong className="text-emerald-500 text-sm">{activeBatchItems.length}</strong> / {activeBatch.expectedCount || '—'}
                         </div>
                       </div>
 
-                      {/* Scan Feedback Message */}
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <QrCode className="w-5 h-5 text-muted absolute left-3.5 top-3" />
+                          <input
+                            ref={barcodeInputRef}
+                            type="text"
+                            placeholder="Scan or type AWB Tracking Number..."
+                            value={barcodeInput}
+                            onChange={e => setBarcodeInput(e.target.value)}
+                            className="w-full bg-elevated text-primary font-mono text-sm sm:text-base font-bold pl-11 pr-4 py-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted shadow-inner"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Scan</span>
+                        </button>
+                      </div>
+
+                      {/* LAST SCAN FEEDBACK */}
                       {lastScanResult && (
                         <div
-                          className={`p-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 animate-in fade-in duration-150 ${
+                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in duration-100 ${
                             lastScanResult.success
-                              ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
-                              : 'bg-rose-50 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                              : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
                           }`}
                         >
-                          {lastScanResult.success ? (
-                            <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <ShieldAlert className="w-3 h-3 shrink-0 text-rose-600 dark:text-rose-400" />
-                          )}
-                          <span className="truncate">{lastScanResult.msg}</span>
+                          {lastScanResult.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                          <span>{lastScanResult.msg}</span>
                         </div>
                       )}
                     </form>
 
                     {/* 7 QC CONDITIONS SELECTOR */}
-                    <div className="space-y-2 pt-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-secondary uppercase tracking-wider text-[11px]">
-                          QC Condition for Next Scan:
-                        </span>
-                        <span className="font-semibold text-[#8B5CF6]">
-                          Selected: <strong className="text-primary font-bold underline">{selectedRemark}</strong>
-                        </span>
+                    <div className="space-y-1.5 pt-2 border-t border-theme">
+                      <div className="text-[11px] font-bold text-secondary uppercase tracking-wider">
+                        Select QC Condition for next scan:
                       </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                        {remarksList.map(item => {
-                          const isSelected = selectedRemark === item.key;
-                          return (
-                            <button
-                              type="button"
-                              key={item.key}
-                              onClick={() => {
-                                setSelectedRemark(item.key);
-                                barcodeInputRef.current?.focus();
-                              }}
-                              style={{
-                                backgroundColor: item.bgColor,
-                                borderColor: isSelected ? item.textColor : item.borderColor,
-                                color: item.textColor,
-                              }}
-                              className={`h-12 px-3 rounded-xl text-xs font-semibold border transition-all duration-150 flex items-center justify-center text-center truncate cursor-pointer ${
-                                isSelected
-                                  ? 'border-2 shadow-sm scale-[1.02] font-bold'
-                                  : 'hover:opacity-90'
-                              }`}
-                            >
-                              {item.label}
-                            </button>
-                          );
-                        })}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5">
+                        {(['Good', 'Damage', 'Open Box', 'Wrong Product', 'Short Qty', 'Missing Product', 'Others'] as ReturnRemarkType[]).map(cond => (
+                          <button
+                            key={cond}
+                            type="button"
+                            onClick={() => {
+                              setSelectedRemark(cond);
+                              barcodeInputRef.current?.focus();
+                            }}
+                            className={`p-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${
+                              selectedRemark === cond
+                                ? cond === 'Good'
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                  : cond === 'Damage' || cond === 'Missing Product'
+                                  ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                  : 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                                : 'bg-elevated hover:bg-surface text-secondary hover:text-primary border-theme'
+                            }`}
+                          >
+                            {cond}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* FULL SCANNED TABLE & EXPORT */}
-                  <div className="space-y-1.5 pt-1">
+                  {/* SCANNED ITEMS IN THIS BATCH TABLE */}
+                  <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-bold text-secondary uppercase tracking-wider">
-                        All Items in Batch ({activeBatchItems.length})
+                      <h3 className="text-xs font-extrabold text-primary flex items-center gap-2">
+                        <List className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" />
+                        <span>Scanned Parcels in Batch ({activeBatchItems.length})</span>
                       </h3>
                       <button
-                        onClick={() => handleDownloadBatchPDF(activeBatch)}
-                        className="text-[11px] text-[#123B5D] dark:text-indigo-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                        onClick={() => {
+                          const client = clients.find(c => c.id === activeBatch.clientId);
+                          const courier = couriers.find(cr => cr.id === activeBatch.courierId);
+                          exportBatchItemsToCSV(activeBatch, activeBatchItems, client?.name, courier?.name);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs flex items-center gap-1.5 border border-theme shadow-xs cursor-pointer"
                       >
-                        <Printer className="w-3 h-3" /> PDF Manifest
+                        <Download className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Export Batch CSV</span>
                       </button>
                     </div>
 
-                    <div className="border border-theme rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
+                    <div className="overflow-x-auto rounded-xl border border-theme max-h-80">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] sticky top-0 border-b border-theme">
                           <tr>
-                            <th className="px-2.5 py-1.5">#</th>
-                            <th className="px-2.5 py-1.5">AWB</th>
-                            <th className="px-2.5 py-1.5">Condition</th>
-                            <th className="px-2.5 py-1.5">Scanned Time</th>
-                            <th className="px-2.5 py-1.5">User</th>
-                            <th className="px-2.5 py-1.5 text-right">Actions</th>
+                            <th className="px-3 py-2 w-12 text-center">#</th>
+                            <th className="px-3 py-2">AWB Tracking Number</th>
+                            <th className="px-3 py-2">QC Condition</th>
+                            <th className="px-3 py-2">Time</th>
+                            <th className="px-3 py-2">Operator</th>
+                            <th className="px-3 py-2 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-theme text-primary text-[11px]">
+                        <tbody className="divide-y divide-theme text-primary">
                           {activeBatchItems.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-2.5 py-4 text-center text-muted text-xs">
-                                No items scanned yet. Scan AWB barcode above.
+                              <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                                No items scanned yet in this batch. Use laser gun or enter AWB above.
                               </td>
                             </tr>
                           ) : (
                             activeBatchItems.map((item, idx) => (
-                              <tr key={`batch-scan-item-${item.id || item.trackingNumber || idx}-${idx}`} className="hover:bg-elevated">
-                                <td className="px-2.5 py-1 font-mono text-secondary">{idx + 1}</td>
-                                <td className="px-2.5 py-1 font-mono font-bold text-primary">{item.trackingNumber}</td>
-                                <td className="px-2.5 py-1">
+                              <tr key={item.id || idx} className="hover:bg-elevated">
+                                <td className="px-3 py-2 text-center font-mono text-secondary text-[11px]">{idx + 1}</td>
+                                <td className="px-3 py-2 font-mono font-bold text-primary text-xs">{item.trackingNumber}</td>
+                                <td className="px-3 py-2">
                                   <span
-                                    className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                       item.remark === 'Good'
                                         ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
                                         : item.remark === 'Damage' || item.remark === 'Missing Product'
@@ -871,11 +935,11 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                     {item.remark}
                                   </span>
                                 </td>
-                                <td className="px-2.5 py-1 text-secondary font-mono">
+                                <td className="px-3 py-2 text-secondary font-mono text-[11px]">
                                   {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </td>
-                                <td className="px-2.5 py-1 text-secondary">{item.scannedByName}</td>
-                                <td className="px-2.5 py-1 text-right">
+                                <td className="px-3 py-2 text-secondary text-[11px]">{item.scannedByName || 'Staff'}</td>
+                                <td className="px-3 py-2 text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <button
                                       onClick={() => handleEditScan(item)}
@@ -886,7 +950,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                                     </button>
                                     <button
                                       onClick={() => handleDeleteScan(item.id)}
-                                      className="p-1 rounded bg-elevated hover:bg-rose-50 dark:hover:bg-rose-900/50 text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 transition-colors cursor-pointer border border-theme"
+                                      className="p-1 rounded bg-elevated hover:bg-rose-50 dark:hover:bg-rose-900/40 text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 transition-colors cursor-pointer border border-theme"
                                       title="Delete AWB"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -903,10 +967,10 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                 </div>
               ) : (
                 <div className="bg-surface border border-theme rounded-2xl p-8 text-center text-secondary space-y-3 shadow-sm">
-                  <p className="text-xs">No active open batch.</p>
+                  <p className="text-sm font-semibold">No open batch selected.</p>
                   <button
                     onClick={() => setOpenBatchView('create')}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs cursor-pointer shadow-sm transition-all"
+                    className="px-4 py-2 rounded-xl bg-[#123B5D] dark:bg-indigo-600 text-white font-bold text-xs"
                   >
                     + Create New Batch
                   </button>
@@ -915,169 +979,271 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
             </div>
           )}
 
-          {/* VIEW C: CLOSE BATCH & SIGN HANDOVER */}
-          {openBatchView === 'close' && (
-            <div className="bg-surface border border-theme rounded-2xl p-6 shadow-sm max-w-3xl mx-auto space-y-5">
-              <div className="border-b border-theme pb-3 flex items-center justify-between">
-                <h2 className="text-base font-extrabold text-primary flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Close Batch & Handover
-                </h2>
+          {/* SUB-VIEW 3: CREATE NEW BATCH FORM */}
+          {openBatchView === 'create' && (
+            <div className="bg-surface border border-theme rounded-2xl p-5 sm:p-6 shadow-sm max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between border-b border-theme pb-3">
+                <h3 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-[#123B5D] dark:text-indigo-400" />
+                  <span>Create New Return Batch</span>
+                </h3>
                 <button
-                  type="button"
-                  onClick={() => setOpenBatchView('scan')}
-                  className="text-xs text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
+                  onClick={() => setOpenBatchView('list')}
+                  className="p-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary border border-theme"
                 >
-                  <X className="w-4 h-4" /> Cancel
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {activeBatch ? (
-                <form onSubmit={handleConfirmCloseBatch} className="space-y-5 text-xs">
-                  {/* Summary Metric Pills */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-elevated border border-theme rounded-xl">
-                      <div className="text-[10px] text-secondary uppercase font-bold">Batch Code</div>
-                      <div className="text-sm font-mono font-bold text-[#123B5D] dark:text-indigo-400 truncate mt-0.5">{activeBatch.batchNumber}</div>
-                    </div>
-
-                    <div className="p-3 bg-elevated border border-theme rounded-xl">
-                      <div className="text-[10px] text-secondary uppercase font-bold">Total Scanned</div>
-                      <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">{activeBatch.totalScanned} Items</div>
-                    </div>
-
-                    <div className="p-3 bg-elevated border border-theme rounded-xl">
-                      <div className="text-[10px] text-secondary uppercase font-bold">Account</div>
-                      <div className="text-sm font-bold text-primary truncate mt-0.5">
-                        {clients.find(c => c.id === activeBatch.clientId)?.name || activeBatch.clientName || '—'}
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-elevated border border-theme rounded-xl">
-                      <div className="text-[10px] text-secondary uppercase font-bold">Courier</div>
-                      <div className="text-sm font-bold text-primary truncate mt-0.5">
-                        {couriers.find(cr => cr.id === activeBatch.courierId)?.name || activeBatch.courierName || '—'}
-                      </div>
-                    </div>
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  if (!newBatchClient || !newBatchCourier) {
+                    alert('Please select both Account and Courier.');
+                    return;
+                  }
+                  const created = onAddBatch({
+                    warehouseId: activeWarehouse.id,
+                    clientId: newBatchClient,
+                    courierId: newBatchCourier,
+                    channel: newBatchChannel,
+                    dockNumber: newBatchDock,
+                    notes: newBatchNotes,
+                    status: 'Open',
+                    expectedCount: Number(newBatchExpectedQty) || 100,
+                  });
+                  setActiveBatchId(created.id);
+                  setOpenBatchView('scan');
+                }}
+                className="space-y-4 text-xs"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Account / Client Name *</label>
+                    <select
+                      value={newBatchClient}
+                      onChange={e => setNewBatchClient(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-semibold"
+                    >
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Courier Handover Fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-primary font-bold mb-1">
-                        Courier Driver / Rep Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Driver Name"
-                        value={driverName}
-                        onChange={e => setDriverName(e.target.value)}
-                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-emerald-500 font-medium placeholder:text-muted"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-primary font-bold mb-1">
-                        Courier Driver Mobile *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Mobile Number"
-                        value={driverMobile}
-                        onChange={e => setDriverMobile(e.target.value)}
-                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono focus:outline-none focus:border-emerald-500 placeholder:text-muted"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-primary font-bold mb-1">
-                        Supervisor Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={supervisorSigner}
-                        onChange={e => setSupervisorSigner(e.target.value)}
-                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-medium focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-primary font-bold mb-1">
-                        Notes (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Bag seal or remarks"
-                        value={handoverNotes}
-                        onChange={e => setHandoverNotes(e.target.value)}
-                        className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none placeholder:text-muted"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Courier Partner *</label>
+                    <select
+                      value={newBatchCourier}
+                      onChange={e => setNewBatchCourier(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-semibold"
+                    >
+                      {couriers.map(cr => (
+                        <option key={cr.id} value={cr.id}>
+                          {cr.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Digital Signature Pad */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-primary font-bold flex items-center gap-1.5">
-                        <PenTool className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        Driver Signature *
-                      </label>
-                      <div className="flex items-center gap-2">
-                        {handoverSignatureStatus === 'Signed' && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓ Signed</span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleClearSig}
-                          className="text-[11px] text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
-                        >
-                          <Undo2 className="w-3 h-3" /> Clear
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-elevated border border-theme rounded-xl p-1 flex items-center justify-center">
-                      <canvas
-                        ref={sigCanvasRef}
-                        width={600}
-                        height={120}
-                        onMouseDown={handleStartDraw}
-                        onMouseMove={handleDraw}
-                        onMouseUp={handleStopDraw}
-                        onMouseLeave={handleStopDraw}
-                        onTouchStart={handleStartDraw}
-                        onTouchMove={handleDraw}
-                        onTouchEnd={handleStopDraw}
-                        className="w-full h-[120px] bg-surface cursor-crosshair rounded-lg touch-none"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Return Channel</label>
+                    <select
+                      value={newBatchChannel}
+                      onChange={e => setNewBatchChannel(e.target.value as any)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-medium"
+                    >
+                      <option value="B2C Return">B2C Return</option>
+                      <option value="D2C Return">D2C Return</option>
+                      <option value="Marketplace Return">Marketplace Return</option>
+                      <option value="Customer RTO">Customer RTO</option>
+                    </select>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 pt-4 border-t border-theme">
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Dock Number</label>
+                    <input
+                      type="text"
+                      value={newBatchDock}
+                      onChange={e => setNewBatchDock(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-medium"
+                      placeholder="e.g. Dock 01"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Expected Qty (Units)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={newBatchExpectedQty}
+                      onChange={e => setNewBatchExpectedQty(Number(e.target.value))}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none font-mono font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Warehouse Hub</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={`${activeWarehouse.name} (${activeWarehouse.code})`}
+                      className="w-full bg-elevated/50 text-secondary p-2.5 rounded-xl border border-theme font-medium cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-primary font-bold mb-1">Notes / Description (Optional)</label>
+                  <textarea
+                    rows={2}
+                    value={newBatchNotes}
+                    onChange={e => setNewBatchNotes(e.target.value)}
+                    placeholder="Vehicle number, bag seal number, or supervisor notes..."
+                    className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none placeholder:text-muted"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-theme">
+                  <button
+                    type="button"
+                    onClick={() => setOpenBatchView('list')}
+                    className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold border border-theme"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold shadow-sm"
+                  >
+                    Create & Open Station
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* SUB-VIEW 4: CLOSE BATCH HANDOVER FORM */}
+          {openBatchView === 'close' && activeBatch && (
+            <div className="bg-surface border border-theme rounded-2xl p-5 sm:p-6 shadow-sm max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between border-b border-theme pb-3">
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-500" />
+                    <span>Close Batch & Sign Handover</span>
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Batch: <strong className="font-mono text-primary">{activeBatch.batchNumber}</strong> ({activeBatchItems.length} scanned units)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setOpenBatchView('scan')}
+                  className="p-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary border border-theme"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCloseBatchSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Courier Driver / Representative Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Kumar"
+                      value={driverName}
+                      onChange={e => setDriverName(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-emerald-500 font-medium placeholder:text-muted"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Courier Driver Mobile *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 9876543210"
+                      value={driverMobile}
+                      onChange={e => setDriverMobile(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono focus:outline-none focus:border-emerald-500 placeholder:text-muted"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Supervisor Signer</label>
+                    <input
+                      type="text"
+                      required
+                      value={supervisorSigner}
+                      onChange={e => setSupervisorSigner(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-medium focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-primary font-bold mb-1">Handover Remarks</label>
+                    <input
+                      type="text"
+                      placeholder="Bag seals, discrepancy notes..."
+                      value={handoverNotes}
+                      onChange={e => setHandoverNotes(e.target.value)}
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none placeholder:text-muted"
+                    />
+                  </div>
+                </div>
+
+                {/* DIGITAL SIGNATURE CANVAS */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-primary font-bold flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Driver Digital Signature</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setOpenBatchView('scan')}
-                      className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold flex items-center gap-1.5 cursor-pointer transition-colors border border-theme"
+                      onClick={handleClearSig}
+                      className="text-[11px] text-secondary hover:text-primary flex items-center gap-1 cursor-pointer"
                     >
-                      <ArrowLeft className="w-4 h-4" /> Back to Scanning
-                    </button>
-
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-all"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Close Batch & Download Manifest</span>
+                      <Undo2 className="w-3 h-3" /> Clear
                     </button>
                   </div>
-                </form>
-              ) : (
-                <div className="text-center py-8 text-muted">
-                  Select an open batch first.
+                  <div className="bg-elevated border border-theme rounded-xl p-1 flex items-center justify-center">
+                    <canvas
+                      ref={sigCanvasRef}
+                      width={500}
+                      height={100}
+                      onMouseDown={handleStartDraw}
+                      onMouseMove={handleDraw}
+                      onMouseUp={handleStopDraw}
+                      onMouseLeave={handleStopDraw}
+                      onTouchStart={handleStartDraw}
+                      onTouchMove={handleDraw}
+                      onTouchEnd={handleStopDraw}
+                      className="w-full h-[100px] bg-surface cursor-crosshair rounded-lg touch-none"
+                    />
+                  </div>
                 </div>
-              )}
+
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-theme">
+                  <button
+                    type="button"
+                    onClick={() => setOpenBatchView('scan')}
+                    className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold border border-theme"
+                  >
+                    Back to Scanning
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Complete Sign-off & Download PDF</span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>
@@ -1087,49 +1253,75 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* TAB 2: CLOSED BATCH                                      */}
       {/* ======================================================== */}
       {activeMainTab === 'closed_batch' && (
-        <div className="bg-surface border border-theme rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme pb-3">
             <div>
-              <h2 className="text-sm font-extrabold text-primary flex items-center gap-2">
-                <Lock className="w-4 h-4 text-amber-500" /> Closed Batches ({closedBatches.length})
+              <h2 className="text-sm sm:text-base font-extrabold text-primary flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-500" />
+                <span>All Closed Batches ({closedBatches.length})</span>
               </h2>
+              <p className="text-xs text-secondary mt-0.5">
+                All closed and scanned batches. Print PDF manifest or export CSV items for each batch.
+              </p>
             </div>
 
-            <div className="w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Search batches..."
-                value={batchSearchQuery}
-                onChange={e => setBatchSearchQuery(e.target.value)}
-                className="w-full bg-elevated text-xs text-primary p-2 rounded-lg border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search by batch, account, courier..."
+                  value={batchSearchQuery}
+                  onChange={e => setBatchSearchQuery(e.target.value)}
+                  className="w-full bg-elevated text-xs text-primary pl-8 pr-3 py-1.5 rounded-lg border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
+                />
+              </div>
+
+              <button
+                onClick={() => exportAllBatchesToCSV(closedBatches, clients, couriers)}
+                className="px-3 py-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs flex items-center gap-1.5 border border-theme shrink-0"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="hidden sm:inline">Export All</span>
+              </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-theme">
             <table className="w-full text-left text-xs">
               <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
                 <tr>
-                  <th className="px-4 py-3">Batch Number</th>
-                  <th className="px-4 py-3">Client / Brand</th>
-                  <th className="px-4 py-3">Courier</th>
-                  <th className="px-4 py-3">Total Scanned</th>
-                  <th className="px-4 py-3">Driver Sign-off</th>
-                  <th className="px-4 py-3">Closed Date</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-3.5 py-3">Batch Number</th>
+                  <th className="px-3.5 py-3">Account Name</th>
+                  <th className="px-3.5 py-3">Courier</th>
+                  <th className="px-3.5 py-3 text-center">Scanned Units</th>
+                  <th className="px-3.5 py-3">Driver Sign-off</th>
+                  <th className="px-3.5 py-3">Closed Date / Time</th>
+                  <th className="px-3.5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-theme text-primary">
                 {closedBatches.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-muted">
-                      No closed batches.
+                      No closed batches yet. Complete and close an open batch to see it here.
                     </td>
                   </tr>
                 ) : (
                   closedBatches
-                    .filter(b => !batchSearchQuery || b.batchNumber.toLowerCase().includes(batchSearchQuery.toLowerCase()))
-                    .map((b, idx) => {
+                    .filter(b => {
+                      if (!batchSearchQuery) return true;
+                      const q = batchSearchQuery.toLowerCase();
+                      const client = clients.find(c => c.id === b.clientId);
+                      const courier = couriers.find(cr => cr.id === b.courierId);
+                      return (
+                        b.batchNumber.toLowerCase().includes(q) ||
+                        (client?.name || b.clientName || '').toLowerCase().includes(q) ||
+                        (courier?.name || b.courierName || '').toLowerCase().includes(q) ||
+                        (b.driverName || '').toLowerCase().includes(q)
+                      );
+                    })
+                    .map(b => {
                       const client = clients.find(c => c.id === b.clientId);
                       const courier = couriers.find(cr => cr.id === b.courierId);
                       const courierLabel = courier?.name || b.courierName || '—';
@@ -1137,45 +1329,64 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                       return (
                         <tr
-                          key={b.id || b.batchNumber || idx}
+                          key={b.id}
                           onClick={() => {
                             setSelectedClosedBatch(b);
                             setClosedBatchItemSearch('');
                           }}
                           className="hover:bg-elevated cursor-pointer transition-colors group"
                         >
-                          <td className="px-4 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:text-blue-700 dark:group-hover:text-indigo-300 flex items-center gap-1.5">
+                          <td className="px-3.5 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:underline flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span>{b.batchNumber}</span>
                           </td>
-                          <td className="px-4 py-3 font-bold text-primary">{clientLabel}</td>
-                          <td className="px-4 py-3 text-secondary">{courierLabel}</td>
-                          <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">{b.totalScanned} Items</td>
-                          <td className="px-4 py-3 text-secondary">
+                          <td className="px-3.5 py-3 font-bold text-primary">{clientLabel}</td>
+                          <td className="px-3.5 py-3 text-secondary">{courierLabel}</td>
+                          <td className="px-3.5 py-3 text-center font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                            {b.totalScanned || 0}
+                          </td>
+                          <td className="px-3.5 py-3 text-secondary">
                             {b.driverName ? `${b.driverName} (${b.driverMobile || 'Signed'})` : 'Supervisor Verified'}
                           </td>
-                          <td className="px-4 py-3 text-secondary">
-                            {b.closedAt ? new Date(b.closedAt).toLocaleString() : new Date(b.createdAt).toLocaleDateString()}
+                          <td className="px-3.5 py-3 text-secondary font-mono text-[11px]">
+                            {b.closedAt ? new Date(b.closedAt).toLocaleString() : (b.createdAt ? new Date(b.createdAt).toLocaleString() : '—')}
                           </td>
-                          <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-3.5 py-3 text-right" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* VIEW */}
                               <button
                                 onClick={() => {
                                   setSelectedClosedBatch(b);
                                   setClosedBatchItemSearch('');
                                 }}
                                 className="px-2.5 py-1 rounded bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-[11px] flex items-center gap-1 border border-theme shadow-xs cursor-pointer"
-                                title="View Batch Details & AWBs"
+                                title="View Batch Items"
                               >
-                                <Eye className="w-3.5 h-3.5 text-[#123B5D] dark:text-indigo-400" /> View
+                                <Eye className="w-3 h-3 text-[#123B5D] dark:text-indigo-400" />
+                                <span>View</span>
                               </button>
+
+                              {/* PRINT PDF */}
                               <button
                                 onClick={() => handleDownloadBatchPDF(b)}
                                 className="px-2.5 py-1 rounded bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
-                                title="Download Return Batch PDF Manifest"
+                                title="Print PDF Manifest"
                               >
-                                <Printer className="w-3.5 h-3.5" />
-                                <span>PDF Manifest</span>
+                                <Printer className="w-3 h-3" />
+                                <span>PDF</span>
+                              </button>
+
+                              {/* EXPORT CSV */}
+                              <button
+                                onClick={() => {
+                                  const batchItems = scannedItems.filter(i => i.batchId === b.id);
+                                  exportBatchItemsToCSV(b, batchItems, clientLabel, courierLabel);
+                                }}
+                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
+                                title="Export Batch CSV"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Export</span>
                               </button>
                             </div>
                           </td>
@@ -1193,46 +1404,465 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       {/* TAB 3: REPORT & MANIFEST                                 */}
       {/* ======================================================== */}
       {activeMainTab === 'reports' && (
-        <div className="bg-surface border border-theme rounded-2xl p-6 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-theme pb-3">
-            <div>
-              <h2 className="text-base font-extrabold text-primary flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Return Reports & Audit Manifests
-              </h2>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
-              <div className="text-xs text-secondary font-bold uppercase">Total Batches</div>
-              <div className="text-2xl font-black text-primary">{warehouseBatches.length}</div>
-              <div className="text-[11px] text-secondary">{openBatches.length} Open • {closedBatches.length} Closed</div>
-            </div>
-
-            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
-              <div className="text-xs text-secondary font-bold uppercase">Total Scanned Items</div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {warehouseBatches.reduce((sum, b) => sum + b.totalScanned, 0)}
+        <div className="space-y-4">
+          {/* TOP METRIC CARDS */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Total Accounts */}
+            <div className="p-4 rounded-2xl bg-surface border border-theme shadow-xs">
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Total Accounts</span>
+                <Building2 className="w-4 h-4 text-blue-500" />
               </div>
-              <div className="text-[11px] text-secondary">Across {clients.length} Accounts</div>
+              <div className="text-2xl font-black font-mono text-primary">{clients.length}</div>
+              <div className="text-[11px] text-secondary mt-0.5">Active Client Portfolios</div>
             </div>
 
-            <div className="p-4 bg-elevated border border-theme rounded-xl space-y-1">
-              <div className="text-xs text-secondary font-bold uppercase">Warehouse Hub</div>
-              <div className="text-2xl font-black text-[#123B5D] dark:text-indigo-400">{activeWarehouse.code}</div>
-              <div className="text-[11px] text-secondary">{activeWarehouse.city}</div>
+            {/* Total Scan Count */}
+            <div className="p-4 rounded-2xl bg-surface border border-theme shadow-xs">
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Total Scan Count</span>
+                <QrCode className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                {scannedItems.length}
+              </div>
+              <div className="text-[11px] text-secondary mt-0.5">Scanned Across All Batches</div>
+            </div>
+
+            {/* Total Batches */}
+            <div className="p-4 rounded-2xl bg-surface border border-theme shadow-xs">
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Total Batches</span>
+                <Boxes className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-primary">{batches.length}</div>
+              <div className="text-[11px] text-secondary mt-0.5">
+                {openBatches.length} Open • {closedBatches.length} Closed
+              </div>
+            </div>
+
+            {/* QC Pass Rate */}
+            <div className="p-4 rounded-2xl bg-surface border border-theme shadow-xs">
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">QC Pass Rate</span>
+                <PackageCheck className="w-4 h-4 text-cyan-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-cyan-600 dark:text-cyan-400">
+                {scannedItems.length > 0
+                  ? Math.round((scannedItems.filter(i => i.remark === 'Good').length / scannedItems.length) * 100)
+                  : 100}
+                %
+              </div>
+              <div className="text-[11px] text-secondary mt-0.5">Good Condition Parcels</div>
             </div>
           </div>
 
-          <div className="border-t border-theme pt-4 flex justify-end">
+          {/* QC CONDITION BREAKDOWN (ALL 7 CONDITIONS) */}
+          <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-theme pb-2.5">
+              <h3 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                <span>QC Condition Breakdown (7 Parameters)</span>
+              </h3>
+              <span className="text-xs font-mono font-bold text-secondary">{scannedItems.length} Total Evaluated</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+              {qcBreakdown.map(qc => (
+                <div key={qc.condition} className="p-3 bg-elevated border border-theme rounded-xl flex flex-col justify-between">
+                  <div className="text-[10px] font-bold text-secondary uppercase truncate">{qc.condition}</div>
+                  <div className="text-lg font-black font-mono text-primary my-1">{qc.count}</div>
+                  <div>
+                    <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          qc.condition === 'Good'
+                            ? 'bg-emerald-500'
+                            : qc.condition === 'Damage' || qc.condition === 'Missing Product'
+                            ? 'bg-rose-500'
+                            : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${qc.percent}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-[10px] text-secondary mt-1 font-mono">{qc.percent}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* DATE-WISE REPORT TABLE */}
+          <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-theme pb-2.5">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span>Date-wise Report</span>
+                </h3>
+                <p className="text-[11px] text-secondary">Returns throughput aggregated by operational date.</p>
+              </div>
+
+              <button
+                onClick={() => exportDateWiseReportToCSV(dateWiseReport)}
+                className="px-3 py-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs flex items-center gap-1.5 border border-theme"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Export Date CSV</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-theme">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
+                  <tr>
+                    <th className="px-3.5 py-2.5">Date</th>
+                    <th className="px-3.5 py-2.5 text-center">Total Batches</th>
+                    <th className="px-3.5 py-2.5 text-center">Open</th>
+                    <th className="px-3.5 py-2.5 text-center">Closed</th>
+                    <th className="px-3.5 py-2.5 text-center">Total Scanned</th>
+                    <th className="px-3.5 py-2.5 text-center">Good Condition</th>
+                    <th className="px-3.5 py-2.5 text-center">Damaged / Missing</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme text-primary">
+                  {dateWiseReport.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-muted">
+                        No returns data recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    dateWiseReport.map(d => (
+                      <tr key={d.date} className="hover:bg-elevated">
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{d.date}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono">{d.totalBatches}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-emerald-600 dark:text-emerald-400">{d.openBatches}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-amber-600 dark:text-amber-400">{d.closedBatches}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono font-extrabold text-primary">{d.totalScanned}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-emerald-600 dark:text-emerald-400">{d.goodCount}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-rose-600 dark:text-rose-400">{d.damageCount}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ACCOUNT-WISE REPORT TABLE */}
+          <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-theme pb-2.5">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-purple-500" />
+                  <span>Account-wise Report</span>
+                </h3>
+                <p className="text-[11px] text-secondary">Returns performance and volume aggregated by client account.</p>
+              </div>
+
+              <button
+                onClick={() => exportAccountWiseReportToCSV(accountWiseReport)}
+                className="px-3 py-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs flex items-center gap-1.5 border border-theme"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Export Account CSV</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-theme">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
+                  <tr>
+                    <th className="px-3.5 py-2.5">Account Name</th>
+                    <th className="px-3.5 py-2.5">Account Code</th>
+                    <th className="px-3.5 py-2.5 text-center">Total Batches</th>
+                    <th className="px-3.5 py-2.5 text-center">Scanned Units</th>
+                    <th className="px-3.5 py-2.5 text-center">Good Condition</th>
+                    <th className="px-3.5 py-2.5 text-center">Damaged / Flagged</th>
+                    <th className="px-3.5 py-2.5 text-center">Pending Expected</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme text-primary">
+                  {accountWiseReport.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-muted">
+                        No client account returns recorded.
+                      </td>
+                    </tr>
+                  ) : (
+                    accountWiseReport.map(a => (
+                      <tr key={a.accountCode} className="hover:bg-elevated">
+                        <td className="px-3.5 py-2.5 font-bold text-primary">{a.accountName}</td>
+                        <td className="px-3.5 py-2.5 font-mono text-secondary">{a.accountCode}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono">{a.totalBatches}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                          {a.totalScanned}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-emerald-600 dark:text-emerald-400">{a.goodCount}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-rose-600 dark:text-rose-400">{a.damageCount}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono text-amber-600 dark:text-amber-400">{a.pendingCount}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* GLOBAL DOWNLOAD SUMMARY PDF */}
+          <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => {
-                generateWarehouseBatchesSummaryPDF(warehouseBatches, activeWarehouse, clients, couriers);
-              }}
+              onClick={() => generateWarehouseBatchesSummaryPDF(batches, activeWarehouse, clients, couriers)}
               className="px-5 py-2.5 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-sm cursor-pointer transition-all"
             >
-              <Printer className="w-4 h-4" /> Download Warehouse Batches PDF Report
+              <Printer className="w-4 h-4" />
+              <span>Download Warehouse Batches Summary PDF</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 4: DASHBOARD                                         */}
+      {/* ======================================================== */}
+      {activeMainTab === 'dashboard' && (
+        <div className="space-y-4">
+          {/* 4 TOP STAT CARDS (Clean layout: Total Vehicles, Total Scanned, Open Batches, QC Health) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Card 1: Total Vehicles */}
+            <div
+              onClick={() => onNavigateTab && onNavigateTab('inward')}
+              className="p-4 rounded-2xl bg-surface border border-theme hover:border-cyan-500/40 transition-all cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Total Vehicles</span>
+                <Truck className="w-4 h-4 text-cyan-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-primary">{totalVehiclesCount}</div>
+              <div className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-0.5">
+                {arrivedVehiclesCount} Gate In • {completedVehiclesCount} Cleared
+              </div>
+            </div>
+
+            {/* Card 2: Total Scanned Returns */}
+            <div
+              onClick={() => {
+                setActiveMainTab('open_batch');
+                setOpenBatchView('list');
+              }}
+              className="p-4 rounded-2xl bg-surface border border-theme hover:border-purple-500/40 transition-all cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Total Scanned Returns</span>
+                <RotateCcw className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-primary">{scannedItems.length}</div>
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                Across {batches.length} Batches
+              </div>
+            </div>
+
+            {/* Card 3: Active Open Batches */}
+            <div
+              onClick={() => {
+                setActiveMainTab('open_batch');
+                setOpenBatchView('list');
+              }}
+              className="p-4 rounded-2xl bg-surface border border-theme hover:border-emerald-500/40 transition-all cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">Active Open Batches</span>
+                <Unlock className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                {openBatches.length}
+              </div>
+              <div className="text-[11px] text-secondary mt-0.5">
+                {closedBatches.length} Closed Batches
+              </div>
+            </div>
+
+            {/* Card 4: QC Health Pass Rate */}
+            <div className="p-4 rounded-2xl bg-surface border border-theme shadow-xs">
+              <div className="flex items-center justify-between text-secondary mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider">QC Pass Rate</span>
+                <PackageCheck className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                {scannedItems.length > 0
+                  ? Math.round((scannedItems.filter(i => i.remark === 'Good').length / scannedItems.length) * 100)
+                  : 100}
+                %
+              </div>
+              <div className="text-[11px] text-secondary mt-0.5">
+                {scannedItems.filter(i => i.remark === 'Good').length} Good Units
+              </div>
+            </div>
+          </div>
+
+          {/* DAILY VEHICLE & SHIPMENT SUMMARY */}
+          <div className="bg-surface border border-theme rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-theme pb-2.5">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-cyan-500" />
+                  <span>Daily Vehicle & Shipment Summary</span>
+                </h3>
+                <p className="text-[11px] text-secondary">
+                  Complete manifest of all vehicles and shipments processed at warehouse docks today.
+                </p>
+              </div>
+
+              {onNavigateTab && (
+                <button
+                  onClick={() => onNavigateTab('inward')}
+                  className="px-3 py-1.5 rounded-lg bg-[#123B5D] dark:bg-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Gate Entry</span>
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-theme">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] border-b border-theme">
+                  <tr>
+                    <th className="px-3.5 py-2.5">Vehicle Number</th>
+                    <th className="px-3.5 py-2.5">Courier / Transporter</th>
+                    <th className="px-3.5 py-2.5">Driver Name</th>
+                    <th className="px-3.5 py-2.5">Dock</th>
+                    <th className="px-3.5 py-2.5 text-center">Expected Boxes</th>
+                    <th className="px-3.5 py-2.5 text-center">Received</th>
+                    <th className="px-3.5 py-2.5">Gate In Time</th>
+                    <th className="px-3.5 py-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme text-primary">
+                  {gateEntries.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-secondary">
+                        No vehicle entries recorded yet today.
+                      </td>
+                    </tr>
+                  ) : (
+                    gateEntries.slice(0, 10).map(g => (
+                      <tr key={g.id} className="hover:bg-elevated">
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{g.vehicleNumber}</td>
+                        <td className="px-3.5 py-2.5 text-secondary">{g.courierPartner || g.transporter || '—'}</td>
+                        <td className="px-3.5 py-2.5 text-secondary">
+                          {g.driverName} {g.driverMobile && <span className="font-mono text-[10px]">({g.driverMobile})</span>}
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono font-semibold">{g.dockNumber || 'Dock 01'}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono font-bold">{g.expectedBoxes || 0}</td>
+                        <td className="px-3.5 py-2.5 text-center font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                          {g.receivedBoxes || g.expectedBoxes || 0}
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono text-[11px] text-secondary">
+                          {g.gateInTime ? new Date(g.gateInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              g.status === 'Completed' || g.status === 'Gate Out'
+                                ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                                : g.status === 'In Unloading' || g.status === 'Under QC'
+                                ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
+                                : 'bg-cyan-50 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/30'
+                            }`}
+                          >
+                            {g.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* RETURNS STATION OVERVIEW */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Open Batches Quick Summary */}
+            <div className="bg-surface border border-theme rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-theme pb-2">
+                <h4 className="text-xs font-extrabold text-primary flex items-center gap-1.5">
+                  <Unlock className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Current Open Batches ({openBatches.length})</span>
+                </h4>
+                <button
+                  onClick={() => {
+                    setActiveMainTab('open_batch');
+                    setOpenBatchView('list');
+                  }}
+                  className="text-xs text-[#123B5D] dark:text-indigo-400 font-bold hover:underline cursor-pointer"
+                >
+                  View All →
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {openBatches.slice(0, 4).map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => handleOpenBatchForScanning(b.id)}
+                    className="p-2.5 rounded-xl bg-elevated hover:bg-surface border border-theme flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <div className="font-mono font-bold text-xs text-primary">{b.batchNumber}</div>
+                      <div className="text-[11px] text-secondary">
+                        {clients.find(c => c.id === b.clientId)?.name || b.clientName} • {couriers.find(cr => cr.id === b.courierId)?.name || b.courierName}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                        {b.totalScanned} Scanned
+                      </div>
+                      <div className="text-[10px] text-secondary">{b.dockNumber || 'Dock 01'}</div>
+                    </div>
+                  </div>
+                ))}
+                {openBatches.length === 0 && (
+                  <div className="text-center py-6 text-muted text-xs">No active open batches.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Account Share Quick Summary */}
+            <div className="bg-surface border border-theme rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-theme pb-2">
+                <h4 className="text-xs font-extrabold text-primary flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Account Volumes</span>
+                </h4>
+                <button
+                  onClick={() => setActiveMainTab('reports')}
+                  className="text-xs text-[#123B5D] dark:text-indigo-400 font-bold hover:underline cursor-pointer"
+                >
+                  View Report →
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {accountWiseReport.slice(0, 4).map(a => (
+                  <div key={a.accountCode} className="p-2.5 rounded-xl bg-elevated border border-theme flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-primary">{a.accountName}</div>
+                      <div className="text-[10px] text-secondary font-mono">{a.accountCode} • {a.totalBatches} Batches</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-extrabold text-xs text-primary">{a.totalScanned} Units</div>
+                      <div className="text-[10px] text-emerald-500">{a.goodCount} Good</div>
+                    </div>
+                  </div>
+                ))}
+                {accountWiseReport.length === 0 && (
+                  <div className="text-center py-6 text-muted text-xs">No account data yet.</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1252,85 +1882,49 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditItem} className="space-y-4 text-xs">
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-primary font-bold mb-1">AWB / Tracking Number *</label>
+                <label className="block text-primary font-bold mb-1">AWB Tracking Number</label>
                 <input
                   type="text"
-                  required
                   value={editAwbValue}
                   onChange={e => setEditAwbValue(e.target.value)}
-                  className="w-full bg-elevated text-emerald-600 dark:text-emerald-400 p-2.5 rounded-xl border border-theme font-mono font-bold uppercase focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-mono font-bold focus:outline-none focus:border-[#123B5D]"
                 />
               </div>
 
               <div>
-                <label className="block text-primary font-bold mb-1">Condition (QC Status) *</label>
+                <label className="block text-primary font-bold mb-1">QC Condition</label>
                 <select
                   value={editRemarkValue}
                   onChange={e => setEditRemarkValue(e.target.value as ReturnRemarkType)}
-                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-bold focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500"
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme font-bold focus:outline-none"
                 >
-                  <option value="Good">1. Good</option>
-                  <option value="Damage">2. Damage</option>
-                  <option value="Open Box">3. Open Box</option>
-                  <option value="Wrong Product">4. Wrong Product</option>
-                  <option value="Short Qty">5. Short Qty</option>
-                  <option value="Missing Product">6. Missing Product</option>
-                  <option value="Others">7. Others</option>
+                  <option value="Good">Good</option>
+                  <option value="Damage">Damage</option>
+                  <option value="Open Box">Open Box</option>
+                  <option value="Wrong Product">Wrong Product</option>
+                  <option value="Short Qty">Short Qty</option>
+                  <option value="Missing Product">Missing Product</option>
+                  <option value="Others">Others</option>
                 </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-theme">
-                <button
-                  type="button"
-                  onClick={() => setEditingItem(null)}
-                  className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold cursor-pointer transition-colors border border-theme"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer transition-all"
-                >
-                  <Save className="w-3.5 h-3.5" /> Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* MODAL 2: DELETE AWB CONFIRMATION                         */}
-      {/* ======================================================== */}
-      {deletingItemId && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-surface border border-theme rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-primary">Remove AWB?</h3>
-                <p className="text-xs text-secondary mt-0.5">This will deduct 1 unit from total count.</p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-theme text-xs">
+            <div className="flex justify-end gap-2 pt-3 border-t border-theme">
               <button
                 type="button"
-                onClick={() => setDeletingItemId(null)}
-                className="px-4 py-2 rounded-xl bg-elevated text-secondary hover:text-primary font-bold cursor-pointer transition-colors border border-theme"
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 rounded-xl bg-elevated text-secondary font-bold text-xs"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirmDeleteItem}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-sm cursor-pointer transition-all"
+                onClick={handleSaveEdit}
+                className="px-4 py-2 rounded-xl bg-[#123B5D] text-white font-bold text-xs shadow-sm"
               >
-                Yes, Remove AWB
+                Save Changes
               </button>
             </div>
           </div>
@@ -1338,29 +1932,53 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       )}
 
       {/* ======================================================== */}
-      {/* MODAL 3: CLOSED BATCH DETAILS & SCAN ITEMS VIEWER        */}
+      {/* MODAL 2: DELETE CONFIRMATION MODAL                       */}
+      {/* ======================================================== */}
+      {deletingItemId && (
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-surface border border-theme rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <h3 className="text-sm font-extrabold text-primary flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-rose-500" /> Delete Scanned Parcel
+            </h3>
+            <p className="text-xs text-secondary">
+              Are you sure you want to remove this scanned AWB from the batch? This action will adjust the batch count immediately.
+            </p>
+            <div className="flex justify-end gap-2 pt-3 border-t border-theme">
+              <button
+                type="button"
+                onClick={() => setDeletingItemId(null)}
+                className="px-4 py-2 rounded-xl bg-elevated text-secondary font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteScan}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-sm"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: CLOSED BATCH DETAIL INSPECTION MODAL             */}
       {/* ======================================================== */}
       {selectedClosedBatch && (() => {
         const batchItems = scannedItems.filter(i => i.batchId === selectedClosedBatch.id);
-        const filteredItems = batchItems.filter(i =>
-          !closedBatchItemSearch ||
-          i.trackingNumber.toLowerCase().includes(closedBatchItemSearch.toLowerCase()) ||
-          i.remark.toLowerCase().includes(closedBatchItemSearch.toLowerCase()) ||
-          (i.scannedByName && i.scannedByName.toLowerCase().includes(closedBatchItemSearch.toLowerCase()))
-        );
-        const client = clients.find(c => c.id === selectedClosedBatch.clientId);
-        const courier = couriers.find(cr => cr.id === selectedClosedBatch.courierId) || (selectedClosedBatch.courierName ? { id: selectedClosedBatch.courierId, name: selectedClosedBatch.courierName } as any : undefined);
-
-        // Remark breakdown counts
-        const breakdownCounts: Record<string, number> = {};
-        batchItems.forEach(i => {
-          breakdownCounts[i.remark] = (breakdownCounts[i.remark] || 0) + 1;
+        const filteredItems = batchItems.filter(i => {
+          if (!closedBatchItemSearch) return true;
+          return i.trackingNumber.toLowerCase().includes(closedBatchItemSearch.toLowerCase()) ||
+                 i.remark.toLowerCase().includes(closedBatchItemSearch.toLowerCase());
         });
+        const client = clients.find(c => c.id === selectedClosedBatch.clientId);
+        const courier = couriers.find(cr => cr.id === selectedClosedBatch.courierId);
 
         return (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 z-50 overflow-y-auto animate-in fade-in duration-150">
             <div className="bg-surface border border-theme rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
-              {/* MODAL HEADER */}
               <div className="p-4 sm:p-5 border-b border-theme flex items-center justify-between bg-elevated">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 text-[#123B5D] dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">
@@ -1374,33 +1992,26 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
                         Closed
                       </span>
-                      {selectedClosedBatch.dockNumber && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-indigo-500/20 text-[#123B5D] dark:text-indigo-300 border border-blue-200 dark:border-indigo-500/30">
-                          {selectedClosedBatch.dockNumber}
-                        </span>
-                      )}
                     </div>
                     <div className="text-xs text-secondary flex items-center gap-2 mt-0.5">
-                      <span className="text-primary font-bold">{clients.find(c => c.id === selectedClosedBatch.clientId)?.name || selectedClosedBatch.clientName || '—'}</span>
+                      <span className="text-primary font-bold">{client?.name || selectedClosedBatch.clientName || '—'}</span>
                       <span>•</span>
-                      <span className="text-[#123B5D] dark:text-indigo-300 font-mono font-medium">{couriers.find(cr => cr.id === selectedClosedBatch.courierId)?.name || selectedClosedBatch.courierName || '—'}</span>
+                      <span className="text-secondary">{courier?.name || selectedClosedBatch.courierName || '—'}</span>
                       <span>•</span>
-                      <span className="text-secondary">{activeWarehouse.name} ({activeWarehouse.code})</span>
+                      <span className="text-secondary">{selectedClosedBatch.dockNumber || 'Dock 01'}</span>
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedClosedBatch(null)}
-                  className="p-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary transition-colors cursor-pointer border border-theme"
+                  className="p-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary border border-theme"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* MODAL BODY */}
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 text-xs">
-                {/* METRICS & HANDOVER SUMMARY */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div className="p-3 bg-elevated border border-theme rounded-xl">
                     <div className="text-[10px] text-secondary uppercase font-bold">Total Scanned</div>
@@ -1434,124 +2045,82 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                   </div>
                 </div>
 
-                {/* REMARKS BREAKDOWN */}
-                {Object.keys(breakdownCounts).length > 0 && (
-                  <div className="p-3 bg-elevated border border-theme rounded-xl">
-                    <div className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-2">
-                      QC Conditions Breakdown:
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(breakdownCounts).map(([remark, count]) => (
-                        <span
-                          key={remark}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                            remark === 'Good'
-                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
-                              : remark === 'Damage' || remark === 'Missing Product'
-                              ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30'
-                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
-                          }`}
-                        >
-                          {remark}: <strong className="font-mono text-primary ml-1">{count}</strong>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* SCANNED AWBs LIST TABLE */}
                 <div className="space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <h4 className="text-xs font-extrabold text-primary flex items-center gap-1.5">
                       <List className="w-3.5 h-3.5 text-[#123B5D] dark:text-indigo-400" />
                       Scanned Parcels in Batch ({batchItems.length})
                     </h4>
-
-                    <div className="w-full sm:w-60">
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-2.5" />
-                        <input
-                          type="text"
-                          placeholder="Search AWB or condition..."
-                          value={closedBatchItemSearch}
-                          onChange={e => setClosedBatchItemSearch(e.target.value)}
-                          className="w-full bg-elevated text-primary pl-8 pr-3 py-1.5 rounded-lg border border-theme text-xs focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 placeholder:text-muted"
-                        />
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="Filter AWBs..."
+                      value={closedBatchItemSearch}
+                      onChange={e => setClosedBatchItemSearch(e.target.value)}
+                      className="bg-elevated text-primary px-3 py-1.5 rounded-lg border border-theme text-xs w-48 focus:outline-none"
+                    />
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-theme max-h-72">
+                  <div className="overflow-x-auto rounded-xl border border-theme max-h-64">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-elevated text-secondary uppercase font-bold text-[10px] sticky top-0 border-b border-theme">
                         <tr>
                           <th className="px-3 py-2 w-12 text-center">#</th>
-                          <th className="px-3 py-2">AWB / Tracking Number</th>
-                          <th className="px-3 py-2">Condition (QC)</th>
+                          <th className="px-3 py-2">AWB Tracking Number</th>
+                          <th className="px-3 py-2">QC Condition</th>
                           <th className="px-3 py-2">Scanned At</th>
                           <th className="px-3 py-2">Operator</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-theme text-primary">
-                        {filteredItems.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-muted">
-                              {batchItems.length === 0 ? 'No items in this batch.' : 'No items match your search.'}
+                        {filteredItems.map((item, idx) => (
+                          <tr key={item.id || idx} className="hover:bg-elevated">
+                            <td className="px-3 py-2 text-center text-secondary font-mono text-[10px]">{idx + 1}</td>
+                            <td className="px-3 py-2 font-mono font-bold text-primary">{item.trackingNumber}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  item.remark === 'Good'
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                                }`}
+                              >
+                                {item.remark}
+                              </span>
                             </td>
+                            <td className="px-3 py-2 text-secondary font-mono text-[11px]">
+                              {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="px-3 py-2 text-secondary">{item.scannedByName || 'Staff'}</td>
                           </tr>
-                        ) : (
-                          filteredItems.map((item, idx) => (
-                            <tr key={`modal-item-${item.id || item.trackingNumber || idx}-${idx}`} className="hover:bg-elevated">
-                              <td className="px-3 py-2 text-center text-secondary font-mono text-[10px]">
-                                {idx + 1}
-                              </td>
-                              <td className="px-3 py-2 font-mono font-bold text-primary text-xs">
-                                {item.trackingNumber}
-                              </td>
-                              <td className="px-3 py-2">
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    item.remark === 'Good'
-                                      ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
-                                      : item.remark === 'Damage' || item.remark === 'Missing Product'
-                                      ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
-                                      : 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
-                                  }`}
-                                >
-                                  {item.remark}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-secondary font-mono text-[11px]">
-                                {new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                              </td>
-                              <td className="px-3 py-2 text-secondary text-[11px]">
-                                {item.scannedByName || 'Staff'}
-                              </td>
-                            </tr>
-                          ))
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
 
-              {/* MODAL FOOTER */}
-              <div className="p-4 border-t border-theme bg-elevated flex flex-wrap items-center justify-between gap-3">
+              <div className="p-4 border-t border-theme bg-elevated flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => generateBatchPDF(selectedClosedBatch, batchItems, activeWarehouse, client, courier)}
-                    className="px-4 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+                    className="px-4 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>Download PDF Manifest</span>
+                    <span>Print PDF Manifest</span>
+                  </button>
+                  <button
+                    onClick={() => exportBatchItemsToCSV(selectedClosedBatch, batchItems, client?.name, courier?.name)}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
                   </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setSelectedClosedBatch(null)}
-                  className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs cursor-pointer transition-colors border border-theme"
+                  className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold text-xs border border-theme"
                 >
                   Close
                 </button>

@@ -517,21 +517,19 @@ class RealtimeSyncManager {
         }
       }
 
-      // 2. REST fallback — ONLY when the WebSocket is not open (the WS path already
-      //    applies the mutation on the server and relays to all devices; sending both
-      //    caused duplicate events & self-echo for every mutation)
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        try {
-          fetch('/api/sync/mutate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(msg),
-          }).catch(() => {
-            // Safe failover if offline
-          });
-        } catch {
-          // ignore
-        }
+      // 2. REST persist & sync — always post mutation to server backend
+      // so disk persistence (.data/sync-store.json) is guaranteed instantly,
+      // even on mobile HHD when WebSocket is sleeping or reconnecting.
+      try {
+        fetch('/api/sync/mutate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg),
+        }).catch(() => {
+          // Safe failover if offline
+        });
+      } catch {
+        // ignore
       }
 
       // 3. Broadcast to local tabs via BroadcastChannel
