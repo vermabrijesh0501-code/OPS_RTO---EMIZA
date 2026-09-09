@@ -92,6 +92,23 @@ export interface Company {
   status: 'Active' | 'Inactive' | 'On Hold';
 }
 
+export const WAREHOUSE_DOCKS = [
+  'Dock 01',
+  'Dock 02',
+  'Dock 03',
+  'Dock 04',
+  'Dock 05',
+  'Dock 06',
+  'Dock 07',
+  'Dock 08',
+  'Dock 09',
+  'Dock 10',
+  'Dock 11',
+  'Dock 12',
+] as const;
+
+export type WarehouseDock = typeof WAREHOUSE_DOCKS[number];
+
 export interface Warehouse {
   id: string;
   companyId: string;

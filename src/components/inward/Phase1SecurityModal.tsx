@@ -22,6 +22,7 @@ import {
   Driver,
   InwardGateEntry,
   Phase1SecurityData,
+  WAREHOUSE_DOCKS,
 } from '../../types';
 
 interface Phase1SecurityModalProps {
@@ -550,8 +551,11 @@ export const Phase1SecurityModal: React.FC<Phase1SecurityModalProps> = ({
                   onChange={e => setAlignedDock(e.target.value)}
                   className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-blue-500 font-bold text-amber-600 dark:text-amber-400 [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
                 >
-                  <option value="Dock 01" className="bg-[#1E293B] text-[#F8FAFC]">Dock 01</option>
-                  <option value="Dock 02" className="bg-[#1E293B] text-[#F8FAFC]">Dock 02</option>
+                  {WAREHOUSE_DOCKS.map(dock => (
+                    <option key={dock} value={dock} className="bg-[#1E293B] text-[#F8FAFC]">
+                      {dock}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -87,6 +87,7 @@ function loadStoreFromDisk(): ServerStore {
               : (b.batchNumber && b.batchNumber !== 'undefined' && b.batchNumber !== 'null')
                 ? b.batchNumber
                 : `batch-${Date.now()}-${idx}`,
+            warehouseId: b.warehouseId || 'wh-main',
           }));
       }
       if (Array.isArray(parsed.scannedItems)) {
@@ -129,6 +130,27 @@ function saveStoreToDisk(store: ServerStore): void {
   }
 }
 
+function mergeGateEntries(existing: any[], incoming: any[]): any[] {
+  if (!Array.isArray(incoming) || incoming.length === 0) return existing || [];
+  if (!Array.isArray(existing) || existing.length === 0) return incoming || [];
+  const map = new Map<string, any>();
+  for (const g of existing) {
+    if (g && (g.id || g.gatePassNumber)) {
+      map.set(g.id || g.gatePassNumber, g);
+    }
+  }
+  for (const g of incoming) {
+    if (g && (g.id || g.gatePassNumber)) {
+      const key = g.id || g.gatePassNumber;
+      const prev = map.get(key);
+      map.set(key, prev ? { ...prev, ...g } : g);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    new Date(b.entryTime || b.createdAt || 0).getTime() - new Date(a.entryTime || a.createdAt || 0).getTime()
+  );
+}
+
 function mergeBatches(existing: any[], incoming: any[]): any[] {
   const result: any[] = [];
   const idToIndex = new Map<string, number>();
@@ -148,6 +170,7 @@ function mergeBatches(existing: any[], incoming: any[]): any[] {
       ...b,
       id: idKey || numKey || `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       batchNumber: numKey || idKey || `BATCH-${Date.now().toString().slice(-4)}`,
+      warehouseId: b.warehouseId || 'wh-main',
     };
 
     let targetIdx = -1;
@@ -159,13 +182,29 @@ function mergeBatches(existing: any[], incoming: any[]): any[] {
 
     if (targetIdx >= 0) {
       const existingItem = result[targetIdx];
+      const cleanIncoming: any = {};
+      for (const [k, v] of Object.entries(safeBatch)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanIncoming[k] = v;
+        }
+      }
       const merged = {
         ...existingItem,
-        ...safeBatch,
+        ...cleanIncoming,
         id: (existingItem.id && existingItem.id !== 'undefined' && existingItem.id !== 'null') ? existingItem.id : safeBatch.id,
         batchNumber: (existingItem.batchNumber && existingItem.batchNumber !== 'undefined' && existingItem.batchNumber !== 'null') ? existingItem.batchNumber : safeBatch.batchNumber,
+        warehouseId: cleanIncoming.warehouseId || existingItem.warehouseId || 'wh-main',
         totalScanned: Math.max(existingItem.totalScanned || 0, safeBatch.totalScanned || 0),
-        status: safeBatch.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+        status: (cleanIncoming.status === 'Closed' || existingItem.status === 'Closed') ? 'Closed' : (cleanIncoming.status || existingItem.status || 'Open'),
+        remarksBreakdown: cleanIncoming.remarksBreakdown || existingItem.remarksBreakdown || {
+          Good: 0,
+          Damage: 0,
+          'Open Box': 0,
+          'Wrong Product': 0,
+          'Short Qty': 0,
+          'Missing Product': 0,
+          Others: 0,
+        },
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -211,10 +250,18 @@ function mergeScannedItems(existing: any[], incoming: any[]): any[] {
 
     if (targetIdx >= 0) {
       const prev = result[targetIdx];
+      const cleanItem: any = {};
+      for (const [k, v] of Object.entries(item)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanItem[k] = v;
+        }
+      }
       const merged = {
         ...prev,
-        ...item,
-        id: prev.id || item.id,
+        ...cleanItem,
+        id: prev.id || cleanItem.id || item.id,
+        batchId: cleanItem.batchId || prev.batchId,
+        scannedAt: cleanItem.scannedAt || prev.scannedAt || new Date().toISOString(),
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -340,13 +387,41 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
       }
       break;
     }
-    case 'BATCH_UPDATED':
+    case 'BATCH_UPDATED': {
+      if (payload?.batch) {
+        const batch = payload.batch;
+        const bId = payload.batchId || batch.id;
+        const idx = store.batches.findIndex(b => b.id === bId || b.batchNumber === bId);
+        if (idx >= 0) {
+          store.batches[idx] = { ...store.batches[idx], ...batch };
+        } else {
+          store.batches = mergeBatches(store.batches, [batch]);
+        }
+      }
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = payload.allBatches;
+      }
+      break;
+    }
     case 'BATCH_CLOSED': {
       if (payload?.batch) {
         store.batches = mergeBatches(store.batches, [payload.batch]);
       }
       if (payload?.allBatches && Array.isArray(payload.allBatches)) {
         store.batches = mergeBatches(store.batches, payload.allBatches);
+      }
+      break;
+    }
+    case 'BATCH_DELETED': {
+      if (payload?.batchId) {
+        store.batches = store.batches.filter((b) => b.id !== payload.batchId && b.batchNumber !== payload.batchId);
+        store.scannedItems = store.scannedItems.filter((i) => i.batchId !== payload.batchId);
+      }
+      if (payload?.allBatches && Array.isArray(payload.allBatches)) {
+        store.batches = payload.allBatches;
+      }
+      if (payload?.allScannedItems && Array.isArray(payload.allScannedItems)) {
+        store.scannedItems = payload.allScannedItems;
       }
       break;
     }
@@ -471,7 +546,7 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
       if (payload?.store) {
         if (payload.store.batches) store.batches = mergeBatches(store.batches, payload.store.batches);
         if (payload.store.scannedItems) store.scannedItems = mergeScannedItems(store.scannedItems, payload.store.scannedItems);
-        if (payload.store.gateEntries) store.gateEntries = payload.store.gateEntries;
+        if (payload.store.gateEntries && payload.store.gateEntries.length > 0) store.gateEntries = mergeGateEntries(store.gateEntries, payload.store.gateEntries);
       }
       if (payload?.allBatches) {
         store.batches = mergeBatches(store.batches, payload.allBatches);
@@ -479,8 +554,8 @@ function applyMutation(event: { type: string; payload: any; senderId?: string })
       if (payload?.allScannedItems) {
         store.scannedItems = mergeScannedItems(store.scannedItems, payload.allScannedItems);
       }
-      if (payload?.allGateEntries) {
-        store.gateEntries = payload.allGateEntries;
+      if (payload?.allGateEntries && payload.allGateEntries.length > 0) {
+        store.gateEntries = mergeGateEntries(store.gateEntries, payload.allGateEntries);
       }
       break;
     }

@@ -512,6 +512,64 @@ export const DBService = {
     });
   },
 
+  // Update return batch details (client, courier, expected count, dock, notes)
+  async updateBatch(
+    batchId: string,
+    updatedBatch: ReturnBatch,
+    allUpdatedBatches: ReturnBatch[],
+    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
+  ): Promise<void> {
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
+
+    let createdLog: ActivityLog | undefined;
+    if (logData) {
+      createdLog = StorageService.addActivityLog(logData);
+    }
+
+    const batchRow = mapReturnBatchToDb(updatedBatch);
+
+    await Promise.all([
+      safeSupabaseWrite('return_batches', 'update', batchRow, { column: 'id', value: batchId }),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
+
+    SyncService.broadcast('BATCH_UPDATED', {
+      batchId,
+      batch: updatedBatch,
+      allBatches: allUpdatedBatches,
+      log: createdLog,
+    });
+  },
+
+  // Delete return batch and its associated scanned items
+  async deleteBatch(
+    batchId: string,
+    allUpdatedBatches: ReturnBatch[],
+    allUpdatedItems: ScannedReturnItem[],
+    logData?: Omit<ActivityLog, 'id' | 'timestamp'>
+  ): Promise<void> {
+    StorageService.saveReturnBatches(allUpdatedBatches, false);
+    StorageService.saveScannedItems(allUpdatedItems, false);
+
+    let createdLog: ActivityLog | undefined;
+    if (logData) {
+      createdLog = StorageService.addActivityLog(logData);
+    }
+
+    await Promise.all([
+      safeSupabaseWrite('scanned_return_items', 'delete', { batch_id: batchId }, { column: 'batch_id', value: batchId }),
+      safeSupabaseWrite('return_batches', 'delete', { id: batchId }, { column: 'id', value: batchId }),
+      createdLog ? safeSupabaseWrite('activity_logs', 'insert', mapActivityLogToDb(createdLog)) : Promise.resolve(),
+    ]);
+
+    SyncService.broadcast('BATCH_DELETED', {
+      batchId,
+      allBatches: allUpdatedBatches,
+      allScannedItems: allUpdatedItems,
+      log: createdLog,
+    });
+  },
+
   // Gate entry create
   async createGateEntry(
     newEntry: InwardGateEntry,

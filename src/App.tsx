@@ -45,7 +45,6 @@ const InwardModule = React.lazy(() => import('./components/InwardModule').then(m
 const ReturnsModule = React.lazy(() => import('./components/ReturnsModule').then(m => ({ default: m.ReturnsModule })));
 const MastersModule = React.lazy(() => import('./components/MastersModule').then(m => ({ default: m.MastersModule })));
 const ReportsModule = React.lazy(() => import('./components/ReportsModule').then(m => ({ default: m.ReportsModule })));
-const SettingsModule = React.lazy(() => import('./components/SettingsModule').then(m => ({ default: m.SettingsModule })));
 const UserManagementPage = React.lazy(() => import('./components/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 const UniversalSearchModal = React.lazy(() => import('./components/UniversalSearchModal').then(m => ({ default: m.UniversalSearchModal })));
 
@@ -86,10 +85,6 @@ const tabToPath = (tab: ActiveTab): string => {
       return '/user-management';
     case 'masters':
       return '/masters';
-    case 'settings':
-      return '/settings';
-    case 'supabase_hub':
-      return '/supabase-hub';
     default:
       return '/dashboard';
   }
@@ -109,8 +104,6 @@ const pathToTab = (pathname: string): ActiveTab => {
   if (normalized === '/notifications') return 'notifications';
   if (normalized === '/user-management' || normalized === '/users') return 'user_management';
   if (normalized === '/masters') return 'masters';
-  if (normalized === '/settings') return 'settings';
-  if (normalized === '/supabase-hub' || normalized === '/supabase_hub') return 'supabase_hub';
   return 'dashboard';
 };
 
@@ -473,12 +466,38 @@ export default function App() {
           break;
         }
 
-        case 'BATCH_UPDATED':
+        case 'BATCH_UPDATED': {
+          if (payload?.batch) {
+            setBatches(prev => {
+              const updated = prev.map(b => (b.id === payload.batch.id || b.batchNumber === payload.batch.batchNumber ? { ...b, ...payload.batch } : b));
+              StorageService.saveReturnBatches(updated, false);
+              return updated;
+            });
+          }
+          break;
+        }
+
         case 'BATCH_CLOSED': {
           if (payload?.batch && !payload?.allBatches) {
             setBatches(prev => {
               const next = mergeBatches(prev, [payload.batch]);
               StorageService.saveReturnBatches(next, false);
+              return next;
+            });
+          }
+          break;
+        }
+
+        case 'BATCH_DELETED': {
+          if (payload?.batchId) {
+            setBatches(prev => {
+              const next = prev.filter(b => b.id !== payload.batchId && b.batchNumber !== payload.batchId);
+              StorageService.saveReturnBatches(next, false);
+              return next;
+            });
+            setScannedItems(prev => {
+              const next = prev.filter(i => i.batchId !== payload.batchId);
+              StorageService.saveScannedItems(next, false);
               return next;
             });
           }
@@ -1082,6 +1101,67 @@ export default function App() {
     setLogs(StorageService.getActivityLogs());
   };
 
+  // Update Batch Details (Edit Open Batch)
+  const handleUpdateBatch = (batchId: string, updates: Partial<ReturnBatch>) => {
+    let targetUpdatedBatch: ReturnBatch | undefined;
+    const updatedBatches = batches.map(b => {
+      if (b.id === batchId || b.batchNumber === batchId) {
+        targetUpdatedBatch = {
+          ...b,
+          ...updates,
+        };
+        return targetUpdatedBatch;
+      }
+      return b;
+    });
+
+    if (!targetUpdatedBatch) return;
+
+    setBatches(updatedBatches);
+
+    DBService.updateBatch(
+      targetUpdatedBatch.id,
+      targetUpdatedBatch,
+      updatedBatches,
+      {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Updated Batch Details',
+        module: targetUpdatedBatch.batchType === 'B2B Return' ? 'B2B' : 'RTO',
+        details: `Updated batch ${targetUpdatedBatch.batchNumber} details`,
+      }
+    );
+    setLogs(StorageService.getActivityLogs());
+  };
+
+  // Delete Batch and all its associated scanned items
+  const handleDeleteBatch = (batchId: string) => {
+    const targetBatch = batches.find(b => b.id === batchId || b.batchNumber === batchId);
+    if (!targetBatch) return;
+
+    const updatedBatches = batches.filter(b => b.id !== targetBatch.id && b.batchNumber !== targetBatch.batchNumber);
+    const updatedItems = scannedItems.filter(i => i.batchId !== targetBatch.id);
+
+    setBatches(updatedBatches);
+    setScannedItems(updatedItems);
+
+    DBService.deleteBatch(
+      targetBatch.id,
+      updatedBatches,
+      updatedItems,
+      {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'Deleted Return Batch',
+        module: targetBatch.batchType === 'B2B Return' ? 'B2B' : 'RTO',
+        details: `Deleted batch ${targetBatch.batchNumber} with all its scanned items`,
+      }
+    );
+    setLogs(StorageService.getActivityLogs());
+  };
+
   // Master Data Add/Update/Delete/Toggle Handlers
   const handleAddMasterRecord = (category: string, record: any) => {
     const id = record.id || `${category.slice(0, 3)}-${Date.now()}`;
@@ -1388,8 +1468,6 @@ export default function App() {
         activeWarehouseId={activeWarehouseId}
         onSelectWarehouse={handleSelectWarehouse}
         onOpenUniversalSearch={() => setIsUniversalSearchOpen(true)}
-        onOpenSupabaseHub={() => handleSelectTab('supabase_hub')}
-        supabaseStatus={supabaseConfig.connectedStatus}
         onLogout={handleLogout}
         onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -1486,6 +1564,8 @@ export default function App() {
                 clients={clients}
                 couriers={couriers}
                 onAddBatch={handleAddBatch}
+                onUpdateBatch={handleUpdateBatch}
+                onDeleteBatch={handleDeleteBatch}
                 onScanItem={handleScanItem}
                 onUpdateItem={handleUpdateItem}
                 onDeleteItem={handleDeleteItem}
@@ -1530,13 +1610,6 @@ export default function App() {
                 clients={clients}
                 couriers={couriers}
                 users={users}
-              />
-            )}
-
-            {(viewTab === 'supabase_hub' || viewTab === 'settings') && (
-              <SettingsModule
-                config={supabaseConfig}
-                onSaveConfig={handleSaveSupabaseConfig}
               />
             )}
           </div>

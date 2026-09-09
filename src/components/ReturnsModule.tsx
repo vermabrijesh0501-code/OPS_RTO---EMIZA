@@ -42,6 +42,7 @@ import {
   Courier,
   User,
   InwardGateEntry,
+  WAREHOUSE_DOCKS,
 } from '../types';
 import { generateBatchPDF, generateWarehouseBatchesSummaryPDF } from '../utils/pdfGenerator';
 import {
@@ -61,6 +62,8 @@ interface ReturnsModuleProps {
   couriers: Courier[];
   gateEntries?: InwardGateEntry[];
   onAddBatch: (batch: Omit<ReturnBatch, 'id' | 'batchNumber' | 'totalScanned' | 'remarksBreakdown' | 'createdAt'>) => ReturnBatch;
+  onUpdateBatch?: (batchId: string, updates: Partial<ReturnBatch>) => void;
+  onDeleteBatch?: (batchId: string) => void;
   onScanItem: (batchId: string, trackingNumber: string, remark: ReturnRemarkType, photoUrl?: string) => { success: boolean; message: string; item?: ScannedReturnItem };
   onUpdateItem?: (itemId: string, updates: { trackingNumber?: string; remark?: ReturnRemarkType }) => void;
   onDeleteItem?: (itemId: string) => void;
@@ -79,6 +82,8 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   couriers,
   gateEntries = [],
   onAddBatch,
+  onUpdateBatch,
+  onDeleteBatch,
   onScanItem,
   onUpdateItem,
   onDeleteItem,
@@ -149,6 +154,16 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
   const [editAwbValue, setEditAwbValue] = useState('');
   const [editRemarkValue, setEditRemarkValue] = useState<ReturnRemarkType>('Good');
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
+  // Batch Edit & Delete Modal States
+  const [editingBatch, setEditingBatch] = useState<ReturnBatch | null>(null);
+  const [editClientId, setEditClientId] = useState('');
+  const [editCourierId, setEditCourierId] = useState('');
+  const [editChannel, setEditChannel] = useState<'D2C Return' | 'B2C Return' | 'Marketplace Return' | 'Customer RTO'>('B2C Return');
+  const [editDock, setEditDock] = useState('Dock 01');
+  const [editExpectedQty, setEditExpectedQty] = useState<number>(100);
+  const [editNotes, setEditNotes] = useState('');
+  const [batchToDelete, setBatchToDelete] = useState<ReturnBatch | null>(null);
 
   // CLOSED BATCH DETAIL INSPECTION MODAL STATE
   const [selectedClosedBatch, setSelectedClosedBatch] = useState<ReturnBatch | null>(null);
@@ -276,6 +291,52 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
       onDeleteItem(deletingItemId);
       setDeletingItemId(null);
     }
+  };
+
+  // Handle Open Batch Edit
+  const handleStartEditBatch = (b: ReturnBatch, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingBatch(b);
+    setEditClientId(b.clientId);
+    setEditCourierId(b.courierId);
+    setEditDock(b.dockNumber || 'Dock 01');
+    setEditExpectedQty(b.expectedCount || 0);
+    setEditNotes(b.notes || '');
+  };
+
+  const handleSaveBatchEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBatch) return;
+
+    const client = clients.find(c => c.id === editClientId);
+    const courier = couriers.find(cr => cr.id === editCourierId);
+
+    const updates: Partial<ReturnBatch> = {
+      clientId: editClientId,
+      clientName: client?.name || editingBatch.clientName,
+      courierId: editCourierId,
+      courierName: courier?.name || editingBatch.courierName,
+      dockNumber: editDock,
+      expectedCount: Number(editExpectedQty) || 0,
+      notes: editNotes.trim(),
+    };
+
+    if (onUpdateBatch) {
+      onUpdateBatch(editingBatch.id, updates);
+    }
+    setEditingBatch(null);
+  };
+
+  const handleConfirmDeleteBatch = () => {
+    if (!batchToDelete) return;
+    if (onDeleteBatch) {
+      onDeleteBatch(batchToDelete.id);
+    }
+    if (activeBatchId === batchToDelete.id) {
+      setActiveBatchId(null);
+      setOpenBatchView('list');
+    }
+    setBatchToDelete(null);
   };
 
   // Digital Signature Canvas
@@ -649,7 +710,7 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                       <th className="px-3.5 py-3 text-center">Pending</th>
                       <th className="px-3.5 py-3">Date / Time</th>
                       <th className="px-3.5 py-3 text-center">Status</th>
-                      <th className="px-3.5 py-3 text-right">Action</th>
+                      <th className="px-3.5 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-theme text-primary">
@@ -683,9 +744,14 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                             onClick={() => handleOpenBatchForScanning(b.id)}
                             className="hover:bg-elevated cursor-pointer transition-colors group"
                           >
-                            <td className="px-3.5 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:underline flex items-center gap-1.5">
-                              <Unlock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              <span>{b.batchNumber}</span>
+                            <td className="px-3.5 py-3 font-mono font-bold text-[#123B5D] dark:text-indigo-400 group-hover:underline">
+                              <div className="flex items-center gap-1.5">
+                                <Unlock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                <span>{b.batchNumber}</span>
+                              </div>
+                              <div className="text-[10px] text-secondary font-sans font-medium mt-0.5">
+                                {b.dockNumber || 'Dock 01'}
+                              </div>
                             </td>
                             <td className="px-3.5 py-3 font-bold text-primary">{accountName}</td>
                             <td className="px-3.5 py-3 text-secondary">{courierName}</td>
@@ -704,13 +770,35 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                               </span>
                             </td>
                             <td className="px-3.5 py-3 text-right" onClick={e => e.stopPropagation()}>
-                              <button
-                                onClick={() => handleOpenBatchForScanning(b.id)}
-                                className="px-3 py-1.5 rounded-lg bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer transition-all"
-                              >
-                                <Zap className="w-3 h-3" />
-                                <span>Reopen & Scan</span>
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleOpenBatchForScanning(b.id)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer transition-all shrink-0"
+                                  title="Reopen and continue scanning"
+                                >
+                                  <Zap className="w-3 h-3" />
+                                  <span>Scan</span>
+                                </button>
+                                <button
+                                  onClick={e => handleStartEditBatch(b, e)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30 font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer transition-all shrink-0"
+                                  title="Edit Open Batch"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setBatchToDelete(b);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 font-bold text-xs inline-flex items-center gap-1 shadow-xs cursor-pointer transition-all shrink-0"
+                                  title="Delete Batch"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -777,6 +865,24 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                           ))}
                         </select>
                       )}
+
+                      <button
+                        onClick={() => handleStartEditBatch(activeBatch)}
+                        className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30 font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                        title="Edit Batch Details"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Edit Batch</span>
+                      </button>
+
+                      <button
+                        onClick={() => setBatchToDelete(activeBatch)}
+                        className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                        title="Delete Batch"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </button>
 
                       <button
                         onClick={() => setIsDeviceMode(true)}
@@ -1064,13 +1170,17 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
 
                   <div>
                     <label className="block text-primary font-bold mb-1">Dock Number</label>
-                    <input
-                      type="text"
+                    <select
                       value={newBatchDock}
                       onChange={e => setNewBatchDock(e.target.value)}
-                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-medium"
-                      placeholder="e.g. Dock 01"
-                    />
+                      className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-bold text-amber-600 dark:text-amber-400 [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
+                    >
+                      {WAREHOUSE_DOCKS.map(dock => (
+                        <option key={dock} value={dock} className="bg-[#1E293B] text-[#F8FAFC]">
+                          {dock}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -1387,6 +1497,18 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
                               >
                                 <Download className="w-3 h-3" />
                                 <span>Export</span>
+                              </button>
+
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setBatchToDelete(b);
+                                }}
+                                className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
+                                title="Delete Closed Batch"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
                               </button>
                             </div>
                           </td>
@@ -2129,6 +2251,203 @@ export const ReturnsModule: React.FC<ReturnsModuleProps> = ({
           </div>
         );
       })()}
+
+      {/* EDIT OPEN BATCH MODAL */}
+      {editingBatch && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 sm:p-5 border-b border-theme flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-primary">Edit Batch Details</h3>
+                  <p className="text-xs text-secondary font-mono font-bold mt-0.5">
+                    {editingBatch.batchNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingBatch(null)}
+                className="p-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary border border-theme"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBatchEdit} className="p-4 sm:p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-bold text-primary mb-1">Account / Client *</label>
+                  <select
+                    value={editClientId}
+                    onChange={e => setEditClientId(e.target.value)}
+                    className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-semibold"
+                  >
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-primary mb-1">Courier Partner *</label>
+                  <select
+                    value={editCourierId}
+                    onChange={e => setEditCourierId(e.target.value)}
+                    className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-semibold"
+                  >
+                    {couriers.map(cr => (
+                      <option key={cr.id} value={cr.id}>
+                        {cr.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-primary mb-1">Dock Number (Dock 01 - 12)</label>
+                  <select
+                    value={editDock}
+                    onChange={e => setEditDock(e.target.value)}
+                    className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-[#123B5D] dark:focus:border-indigo-500 font-bold text-amber-600 dark:text-amber-400 [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
+                  >
+                    {WAREHOUSE_DOCKS.map(dock => (
+                      <option key={dock} value={dock} className="bg-[#1E293B] text-[#F8FAFC]">
+                        {dock}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-primary mb-1">Expected Qty (Units)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editExpectedQty}
+                    onChange={e => setEditExpectedQty(Number(e.target.value))}
+                    className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-primary mb-1">Notes / Remarks</label>
+                <textarea
+                  rows={2}
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  placeholder="Vehicle number, bay info, seal number, or supervisor notes..."
+                  className="w-full bg-elevated text-primary p-2.5 rounded-xl border border-theme focus:outline-none placeholder:text-muted"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-theme flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBatch(null)}
+                  className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold border border-theme"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#123B5D] hover:bg-[#184C77] dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold shadow-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE BATCH CONFIRMATION MODAL */}
+      {batchToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-rose-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 sm:p-5 border-b border-theme bg-rose-500/10 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-primary">Delete Batch</h3>
+                  <p className="text-xs text-secondary font-mono font-bold">
+                    {batchToDelete.batchNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBatchToDelete(null)}
+                className="p-1.5 rounded-lg bg-elevated hover:bg-surface text-secondary hover:text-primary border border-theme"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-4 text-xs">
+              <p className="text-secondary leading-relaxed">
+                Are you sure you want to permanently delete batch{' '}
+                <strong className="text-primary font-mono">{batchToDelete.batchNumber}</strong>?
+              </p>
+
+              <div className="p-3 rounded-xl bg-elevated border border-theme space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-secondary">Account:</span>
+                  <span className="font-bold text-primary">
+                    {clients.find(c => c.id === batchToDelete.clientId)?.name || batchToDelete.clientName || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">Courier:</span>
+                  <span className="font-bold text-primary">
+                    {couriers.find(cr => cr.id === batchToDelete.courierId)?.name || batchToDelete.courierName || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">Dock:</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">
+                    {batchToDelete.dockNumber || 'Dock 01'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">Scanned Items:</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                    {batchToDelete.totalScanned || 0} units
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-[11px] leading-relaxed">
+                Warning: All {batchToDelete.totalScanned || 0} scanned barcode items associated with this batch will also be permanently deleted and removed from synced devices.
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBatchToDelete(null)}
+                  className="px-4 py-2 rounded-xl bg-elevated hover:bg-surface text-secondary hover:text-primary font-bold border border-theme"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteBatch}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Batch</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

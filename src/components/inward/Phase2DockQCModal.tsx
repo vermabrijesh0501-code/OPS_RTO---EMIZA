@@ -17,6 +17,7 @@ import {
   Client,
   Courier,
   User,
+  WAREHOUSE_DOCKS,
 } from '../../types';
 
 interface Phase2DockQCModalProps {
@@ -327,10 +328,13 @@ export const Phase2DockQCModal: React.FC<Phase2DockQCModalProps> = ({
                 <select
                   value={confirmedDock}
                   onChange={e => setConfirmedDock(e.target.value)}
-                  className="w-full bg-surface text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400"
+                  className="w-full bg-surface text-primary p-2.5 rounded-xl border border-theme focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400 [&>option]:bg-[#1E293B] [&>option]:text-[#F8FAFC]"
                 >
-                  <option value="Dock 01">Dock 01 {entry.dockNumber === 'Dock 01' ? '(Security Assigned)' : ''}</option>
-                  <option value="Dock 02">Dock 02 {entry.dockNumber === 'Dock 02' ? '(Security Assigned)' : ''}</option>
+                  {WAREHOUSE_DOCKS.map(dock => (
+                    <option key={dock} value={dock} className="bg-[#1E293B] text-[#F8FAFC]">
+                      {dock} {entry.dockNumber === dock ? '(Security Assigned)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 

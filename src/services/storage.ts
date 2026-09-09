@@ -37,6 +37,27 @@ import {
 import { SyncService } from './syncService';
 import { queueMasterPush } from './masterSync';
 
+export function mergeGateEntries(existing: InwardGateEntry[], incoming: InwardGateEntry[]): InwardGateEntry[] {
+  if (!Array.isArray(incoming) || incoming.length === 0) return existing || [];
+  if (!Array.isArray(existing) || existing.length === 0) return incoming || [];
+  const map = new Map<string, InwardGateEntry>();
+  for (const g of existing) {
+    if (g && (g.id || g.gatePassNumber)) {
+      map.set(g.id || g.gatePassNumber, g);
+    }
+  }
+  for (const g of incoming) {
+    if (g && (g.id || g.gatePassNumber)) {
+      const key = g.id || g.gatePassNumber;
+      const prev = map.get(key);
+      map.set(key, prev ? { ...prev, ...g } : g);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    new Date(b.entryTime || b.createdAt || 0).getTime() - new Date(a.entryTime || a.createdAt || 0).getTime()
+  );
+}
+
 export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): ReturnBatch[] {
   const result: ReturnBatch[] = [];
   const idToIndex = new Map<string, number>();
@@ -56,6 +77,7 @@ export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): 
       ...b,
       id: idKey || numKey || `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       batchNumber: numKey || idKey || `BATCH-${Date.now().toString().slice(-4)}`,
+      warehouseId: b.warehouseId || 'wh-main',
     };
 
     let targetIdx = -1;
@@ -67,13 +89,29 @@ export function mergeBatches(existing: ReturnBatch[], incoming: ReturnBatch[]): 
 
     if (targetIdx >= 0) {
       const existingItem = result[targetIdx];
+      const cleanSafe: any = {};
+      for (const [k, v] of Object.entries(safeBatch)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanSafe[k] = v;
+        }
+      }
       const merged: ReturnBatch = {
         ...existingItem,
-        ...safeBatch,
+        ...cleanSafe,
         id: (existingItem.id && existingItem.id !== 'undefined' && existingItem.id !== 'null') ? existingItem.id : safeBatch.id,
         batchNumber: (existingItem.batchNumber && existingItem.batchNumber !== 'undefined' && existingItem.batchNumber !== 'null') ? existingItem.batchNumber : safeBatch.batchNumber,
+        warehouseId: cleanSafe.warehouseId || existingItem.warehouseId || 'wh-main',
         totalScanned: Math.max(existingItem.totalScanned || 0, safeBatch.totalScanned || 0),
-        status: safeBatch.status === 'Closed' || existingItem.status === 'Closed' ? 'Closed' : 'Open',
+        status: (cleanSafe.status === 'Closed' || existingItem.status === 'Closed') ? 'Closed' : (cleanSafe.status || existingItem.status || 'Open'),
+        remarksBreakdown: cleanSafe.remarksBreakdown || existingItem.remarksBreakdown || {
+          Good: 0,
+          Damage: 0,
+          'Open Box': 0,
+          'Wrong Product': 0,
+          'Short Qty': 0,
+          'Missing Product': 0,
+          Others: 0,
+        },
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -119,10 +157,18 @@ export function mergeScannedItems(existing: ScannedReturnItem[], incoming: Scann
 
     if (targetIdx >= 0) {
       const prev = result[targetIdx];
+      const cleanItem: any = {};
+      for (const [k, v] of Object.entries(item)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanItem[k] = v;
+        }
+      }
       const merged: ScannedReturnItem = {
         ...prev,
-        ...item,
-        id: prev.id || item.id,
+        ...cleanItem,
+        id: prev.id || cleanItem.id || item.id,
+        batchId: cleanItem.batchId || prev.batchId,
+        scannedAt: cleanItem.scannedAt || prev.scannedAt || new Date().toISOString(),
       };
       result[targetIdx] = merged;
       if (idKey) idToIndex.set(idKey, targetIdx);
@@ -164,6 +210,8 @@ const STORAGE_KEYS = {
   SUPABASE_CONFIG: 'emiza_supabase_config_v3',
   AUTH_SESSION: 'emiza_auth_session_v3',
   ACTIVE_DEVICES: 'emiza_active_devices_v3',
+  DASHBOARD_DATE_FILTER: 'emiza_dashboard_filter_v3',
+  DASHBOARD_SELECTED_DATE: 'emiza_dashboard_selected_date_v3',
 };
 
 // Auto-purge any stale mock/test scan keys and sanitize stored batches
@@ -497,6 +545,12 @@ export const StorageService = {
     return newLog;
   },
 
+  getDashboardDateFilter: (defaultFilter: string = 'today'): string => loadItem(STORAGE_KEYS.DASHBOARD_DATE_FILTER, defaultFilter),
+  saveDashboardDateFilter: (filter: string) => saveItem(STORAGE_KEYS.DASHBOARD_DATE_FILTER, filter),
+
+  getDashboardSelectedDate: (defaultDate: string = ''): string => loadItem(STORAGE_KEYS.DASHBOARD_SELECTED_DATE, defaultDate),
+  saveDashboardSelectedDate: (dateStr: string) => saveItem(STORAGE_KEYS.DASHBOARD_SELECTED_DATE, dateStr),
+
   // Apply full authoritative remote server store to local cache
   applyRemoteStore: (remoteStore: any): { batches: ReturnBatch[]; scannedItems: ScannedReturnItem[]; gateEntries: InwardGateEntry[] } => {
     let mergedBatches = StorageService.getReturnBatches();
@@ -510,7 +564,7 @@ export const StorageService = {
     try {
       if (Array.isArray(remoteStore.gateEntries)) {
         const local = StorageService.getGateEntries();
-        mergedGateEntries = remoteStore.gateEntries.length > 0 ? remoteStore.gateEntries : local;
+        mergedGateEntries = mergeGateEntries(local, remoteStore.gateEntries);
         saveItem(STORAGE_KEYS.GATE_ENTRIES, mergedGateEntries);
       }
       if (Array.isArray(remoteStore.batches)) {

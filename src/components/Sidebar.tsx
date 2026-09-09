@@ -6,7 +6,6 @@ import {
   Scan,
   Layers,
   BarChart3,
-  Settings,
   LogOut,
   Users,
 } from 'lucide-react';
@@ -25,9 +24,7 @@ export type ActiveTab =
   | 'reports'
   | 'notifications'
   | 'masters'
-  | 'user_management'
-  | 'supabase_hub'
-  | 'settings';
+  | 'user_management';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -97,12 +94,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: BarChart3,
       badge: null,
     },
-    {
-      id: 'settings' as ActiveTab,
-      label: 'Settings & Cloud Sync',
-      icon: Settings,
-      badge: null,
-    },
   ];
 
   const isItemActive = (itemId: ActiveTab): boolean => {
@@ -116,7 +107,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         itemId === 'locations')
     )
       return activeTab === itemId;
-    if (activeTab === 'supabase_hub' && itemId === 'settings') return true;
     return false;
   };
 
